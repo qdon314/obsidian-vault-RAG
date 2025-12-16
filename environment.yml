@@ -1,0 +1,14 @@
+name: rag-obsidian
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - llama-index
+      - chromadb
+      - sentence-transformers
+      - python-dotenv
+      - rich
+      - llama-index-vector-stores-chroma
+      - llama-index-embeddings-huggingface
