@@ -1,0 +1,60 @@
+[project]
+name = "rag-obsidian"
+version = "0.1.0"
+description = "Local-first RAG system over an Obsidian vault with retrieval logging and grounded generation"
+readme = "README.md"
+requires-python = ">=3.11"
+
+authors = [
+  { name = "Quentin Donnelly" }
+]
+
+keywords = [
+  "rag",
+  "llm",
+  "retrieval",
+  "embeddings",
+  "obsidian",
+  "chroma"
+]
+
+dependencies = [
+  "llama-index",
+  "chromadb",
+  "sentence-transformers",
+  "python-dotenv",
+  "rich",
+
+  # LlamaIndex integrations
+  "llama-index-vector-stores-chroma",
+  "llama-index-embeddings-huggingface"
+]
+
+[project.optional-dependencies]
+ollama = [
+  "llama-index-llms-ollama"
+]
+
+openai = [
+  "openai",
+  "llama-index-llms-openai"
+]
+
+dev = [
+  "pytest",
+  "ruff",
+  "black"
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
