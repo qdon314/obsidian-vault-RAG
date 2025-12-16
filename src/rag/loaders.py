@@ -2,6 +2,9 @@ from pathlib import Path
 from llama_index.core import Document
 
 def load_markdown_files(vault_path: str) -> list[Document]:
+    """
+    Load markdown files from a vault path.
+    """
     root = Path(vault_path)
     if not root.exists():
         raise FileNotFoundError(f"VAULT_PATH not found: {root}")
