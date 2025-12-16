@@ -1,19 +1,23 @@
-from llama_index.core import VectorStoreIndex, StorageContext
+from llama_index.core import VectorStoreIndex, StorageContext, Document
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core.settings import Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 import chromadb
 
-def build_or_load_index(docs, chroma_path: str) -> VectorStoreIndex:
+def build_or_load_index(docs: list[Document] | None, chroma_path: str) -> VectorStoreIndex:
     """
     Build or load an index from a list of documents or an existing Chroma collection.
     If `docs` is provided, build a new index from the documents.
     If `docs` is None, load an existing index from the Chroma collection.
     
-    :param docs: List of documents to build an index from, or None to load an existing index.
-    :param chroma_path: Path to the Chroma database.
-    :return: A VectorStoreIndex object.
+    Args:
+        docs (list[Document] | None): List of documents to build the index from, or None to load an existing index.
+        chroma_path (str): Path to the Chroma database.
+    
+    
+    Returns:
+        VectorStoreIndex: The built or loaded index.
     """
     # Local embedding model (fast, good enough to start)
     Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
