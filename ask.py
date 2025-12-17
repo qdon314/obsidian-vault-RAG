@@ -1,4 +1,4 @@
-import sys
+import sys, argparse
 from rich import print as rprint
 from collections import OrderedDict
 from typing import List
@@ -11,6 +11,7 @@ from src.rag.debug import dump_retrieval, dump_response
 from llama_index.core import get_response_synthesizer
 from llama_index.core.schema import NodeWithScore
 from llama_index.core.settings import Settings
+from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 
 def dedupe_by_source(nodes: List[NodeWithScore], key: str = "source_path") -> List[NodeWithScore]:
     """Keep only the best-scoring node per source_path (or other metadata key)."""
@@ -53,19 +54,87 @@ def _set_llm():
             presence_penalty=0.0,
         ) 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python ask.py \"your question here\"")
-        sys.exit(1)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Ask a question against the Obsidian RAG index."
+    )
 
-    query = sys.argv[1]
+    # Positional argument: the query
+    parser.add_argument(
+        "query",
+        type=str,
+        help="The question to ask the knowledge base",
+    )
+
+    # Retrieval controls
+    parser.add_argument(
+        "--retrieve-k",
+        type=int,
+        default=30,
+        help="Number of chunks to retrieve from the vector store (default: 30)",
+    )
+
+    parser.add_argument(
+        "--context-k",
+        type=int,
+        default=5,
+        help="Number of chunks to include in the LLM context after filtering (default: 5)",
+    )
+
+    # Debug / dumping
+    parser.add_argument(
+        "--dump-all",
+        action="store_true",
+        help="Dump all retrieved chunks (before dedupe/rerank), not just context chunks",
+    )
+
+    parser.add_argument(
+        "--no-dedupe",
+        action="store_true",
+        help="Disable deduplication by source_path",
+    )
+
+    # Future-proofing flags (safe to ignore for now)
+    parser.add_argument(
+        "--tag",
+        action="append",
+        help="Restrict retrieval to notes with this tag (can be repeated)",
+    )
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run retrieval only; do not call the LLM",
+    )
+
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+
+    query = args.query
 
     _set_llm()
 
     index = build_or_load_index(docs=None, chroma_path=CHROMA_PATH)
 
     # Retriever + query engine
-    retriever = index.as_retriever(similarity_top_k=30)
+    filters = MetadataFilters(
+        filters=[
+            ExactMatchFilter(
+                key="classification",
+                value="note",  # excludes MOCs
+            ),
+            ExactMatchFilter(key="is_ai", value="True"),
+        ]
+    )
+
+    retriever = index.as_retriever(
+        similarity_top_k=args.retrieve_k,
+        filters=filters,
+        vector_store_query_mode="mmr",
+    )
+    
     nodes = retriever.retrieve(query)
     
     if not nodes:
@@ -73,14 +142,16 @@ def main():
             "No retrieved nodes. Index may be empty or not ingested yet."
         )
 
-    nodes = dedupe_by_source(nodes, key="source_path")
+    nodes = sorted(nodes, key=lambda n: (n.score is None, -(n.score or 0.0)))
     
-    # Amount of chunks for context
-    CONTEXT_K = 5
-    nodes_for_answer = nodes[:CONTEXT_K]
-    
+    if not args.no_dedupe:
+        nodes = dedupe_by_source(nodes, key="source_path")
+
+    nodes_for_answer = nodes[:args.context_k]
+    dump_nodes = nodes if args.dump_all else nodes_for_answer
+
     retrieved = []
-    for n in nodes_for_answer:
+    for n in dump_nodes:
         meta = n.node.metadata or {}
         
         text = getattr(n.node, "text", None)
@@ -90,9 +161,10 @@ def main():
             
         retrieved.append({
             "score": float(n.score) if n.score is not None else None,
+            "node_id": getattr(n.node, "node_id", None),
             "source_path": meta.get("source_path"),
             "file_name": meta.get("file_name"),
-            "directory": meta.get("dir"),
+            "root_dir": meta.get("root_dir"),
             "frontmatter_tags": meta.get("frontmatter_tags"),
             "inline_tags": meta.get("inline_tags"),
             "text_preview": (text or "")[:600],
@@ -100,6 +172,10 @@ def main():
 
     dump_path = dump_retrieval(query, retrieved)
     rprint(f"[bold]Retrieval dump saved:[/bold] {dump_path}\n")
+
+    if args.dry_run:
+        rprint("[yellow]Dry run enabled — skipping LLM generation[/yellow]")
+        return
 
     synthesizer = get_response_synthesizer(
         text_qa_template=QA_TEMPLATE,
@@ -113,7 +189,7 @@ def main():
         response_text=response_text,
         citations=[
             n.node.metadata.get("file_name")
-            for n in nodes
+            for n in nodes_for_answer
             if n.node.metadata and "file_name" in n.node.metadata
         ],
     )
