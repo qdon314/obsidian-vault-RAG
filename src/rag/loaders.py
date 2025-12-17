@@ -17,19 +17,18 @@ def load_markdown_files(vault_path: str, as_obsidian: bool = False) -> list[Docu
         if as_obsidian:
             frontmatter, content = split_obsidian_frontmatter(text)
             normalized_frontmatter = extract_and_normalize_frontmatter(frontmatter, ["tags"])
-            text = f"{normalized_frontmatter}\n\n{content}"
             frontmatter_tags = normalized_frontmatter.get("tags", [])
             inline_tags = extract_inline_tags(content)
-            all_tags = frontmatter_tags + inline_tags
             
         docs.append(
             Document(
-                text=text,
+                text=content,
                 metadata={
                     "directory": str(path.parent),
                     "source_path": str(path),
                     "file_name": path.name,
-                    "tags": ", ".join(all_tags) if as_obsidian else [], # type: ignore
+                    "frontmatter_tags": ", ".join(frontmatter_tags) if as_obsidian else [], # type: ignore
+                    "inline_tags": ", ".join(inline_tags) if as_obsidian else [], # type: ignore
                 },
             )
         )
