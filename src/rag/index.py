@@ -22,7 +22,7 @@ def build_or_load_index(docs: list[Document] | None, chroma_path: str) -> Vector
         VectorStoreIndex: The built or loaded index.
     """
     # Local embedding model (fast, good enough to start)
-    Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/bge-m3")
+    Settings.embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
     client = chromadb.PersistentClient(path=chroma_path)
     collection = client.get_or_create_collection("obsidian_notes")
