@@ -2,8 +2,10 @@ from llama_index.core import VectorStoreIndex, StorageContext, Document
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.core.settings import Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-
+from llama_index.core.node_parser import SentenceSplitter
 import chromadb
+
+splitter = SentenceSplitter(chunk_size=512, chunk_overlap=20)
 
 def build_or_load_index(docs: list[Document] | None, chroma_path: str) -> VectorStoreIndex:
     """
@@ -33,4 +35,8 @@ def build_or_load_index(docs: list[Document] | None, chroma_path: str) -> Vector
         return VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
     # Build index
-    return VectorStoreIndex.from_documents(docs, storage_context=storage_context)
+    return VectorStoreIndex.from_documents(
+            docs,
+            storage_context=storage_context,
+            transformations=[splitter],
+        )
