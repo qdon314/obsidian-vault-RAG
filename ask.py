@@ -21,12 +21,23 @@ def _set_llm():
     # pip install llama-index-llms-ollama
     # from config import OLLAMA_BASE_URL, OLLAMA_MODEL
     # from llama_index.llms.ollama import Ollama
-    # Settings.llm = Ollama(model=OLLAMA_MODEL, base_url=OLLAMA_BASE_URL)
+    # Settings.llm = Ollama(
+    #        model=OLLAMA_MODEL,
+    #        base_url=OLLAMA_BASE_URL,
+    #        request_timeout=90,  # seconds
+    #    )
 
     # --- Option B: OpenAI (hosted) ---
     # pip install openai llama-index-llms-openai
-    # from llama_index.llms.openai import OpenAI
-    # Settings.llm = OpenAI(model="gpt-4o-mini")  # change if you want
+    from llama_index.llms.openai import OpenAI
+    Settings.llm = OpenAI(
+            model="gpt-4.1-mini-2025-04-14",
+            temperature=0.0,
+            top_p=1.0,
+            max_output_tokens=512,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+        ) 
 
 def main():
     if len(sys.argv) < 2:
@@ -40,7 +51,7 @@ def main():
     index = build_or_load_index(docs=None, chroma_path=CHROMA_PATH)
 
     # Retriever + query engine
-    retriever = index.as_retriever(similarity_top_k=8)
+    retriever = index.as_retriever(similarity_top_k=3)
     nodes = retriever.retrieve(query)
     
     if not nodes:
@@ -61,6 +72,8 @@ def main():
             "score": float(n.score) if n.score is not None else None,
             "source_path": meta.get("source_path"),
             "file_name": meta.get("file_name"),
+            "directory": meta.get("dir"),
+            "tags": meta.get("tags"),
             "text_preview": (text or "")[:600],
         })
 
@@ -69,7 +82,7 @@ def main():
 
     # Use QueryEngine with grounded prompt
     query_engine = index.as_query_engine(
-        similarity_top_k=8,
+        similarity_top_k=3,
         text_qa_template=QA_TEMPLATE,
     )
 
