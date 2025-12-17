@@ -1,12 +1,26 @@
 import sys
 from rich import print as rprint
+from collections import OrderedDict
+from typing import List
 
 from config import CHROMA_PATH
 from src.rag.index import build_or_load_index
 from src.rag.prompting import QA_TEMPLATE
 from src.rag.debug import dump_retrieval, dump_response
 
+from llama_index.core import get_response_synthesizer
+from llama_index.core.schema import NodeWithScore
 from llama_index.core.settings import Settings
+
+def dedupe_by_source(nodes: List[NodeWithScore], key: str = "source_path") -> List[NodeWithScore]:
+    """Keep only the best-scoring node per source_path (or other metadata key)."""
+    best = OrderedDict()
+    for n in nodes:
+        meta = (n.node.metadata or {})
+        k = meta.get(key) or f"__missing__::{id(n.node)}"
+        if k not in best:
+            best[k] = n
+    return list(best.values())
 
 def _set_llm():
     """
@@ -51,7 +65,7 @@ def main():
     index = build_or_load_index(docs=None, chroma_path=CHROMA_PATH)
 
     # Retriever + query engine
-    retriever = index.as_retriever(similarity_top_k=3)
+    retriever = index.as_retriever(similarity_top_k=30)
     nodes = retriever.retrieve(query)
     
     if not nodes:
@@ -59,8 +73,14 @@ def main():
             "No retrieved nodes. Index may be empty or not ingested yet."
         )
 
+    nodes = dedupe_by_source(nodes, key="source_path")
+    
+    # Amount of chunks for context
+    CONTEXT_K = 5
+    nodes_for_answer = nodes[:CONTEXT_K]
+    
     retrieved = []
-    for n in nodes:
+    for n in nodes_for_answer:
         meta = n.node.metadata or {}
         
         text = getattr(n.node, "text", None)
@@ -73,20 +93,19 @@ def main():
             "source_path": meta.get("source_path"),
             "file_name": meta.get("file_name"),
             "directory": meta.get("dir"),
-            "tags": meta.get("tags"),
+            "frontmatter_tags": meta.get("frontmatter_tags"),
+            "inline_tags": meta.get("inline_tags"),
             "text_preview": (text or "")[:600],
         })
 
     dump_path = dump_retrieval(query, retrieved)
     rprint(f"[bold]Retrieval dump saved:[/bold] {dump_path}\n")
 
-    # Use QueryEngine with grounded prompt
-    query_engine = index.as_query_engine(
-        similarity_top_k=3,
+    synthesizer = get_response_synthesizer(
         text_qa_template=QA_TEMPLATE,
-    )
-
-    response = query_engine.query(query)
+        response_mode="compact",) # type: ignore
+    
+    response = synthesizer.synthesize(query, nodes_for_answer)
     response_text = str(response)
 
     response_path = dump_response(
