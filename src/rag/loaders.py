@@ -1,8 +1,8 @@
 from pathlib import Path
 from llama_index.core import Document
-from rag.utils.parsing import split_obsidian_frontmatter, extract_and_normalize_frontmatter, extract_inline_tags
+from rag.utils.parsing import docs_from_markdown, split_obsidian_frontmatter, extract_and_normalize_frontmatter, extract_inline_tags, docs_from_obsidian_note
 
-def load_markdown_files(vault_path: str, as_obsidian: bool = False) -> list[Document]:
+def load_markdown_files(vault_path: str, split_on_headers: bool = False, as_obsidian: bool = False) -> list[Document]:
     """
     Load markdown files from a vault path.
     """
@@ -21,10 +21,7 @@ def load_markdown_files(vault_path: str, as_obsidian: bool = False) -> list[Docu
             inline_tags = extract_inline_tags(content)
         
         dirs = extract_dirs(path)
-        docs.append(
-            Document(
-                text=content,
-                metadata={
+        base_metadata ={
                     "source_path": str(path),
                     "root_dir": dirs["root_dir"],
                     "relative_dir": dirs["relative_dir"],
@@ -33,9 +30,18 @@ def load_markdown_files(vault_path: str, as_obsidian: bool = False) -> list[Docu
                     "frontmatter_tags": ", ".join(frontmatter_tags) if as_obsidian else [], # type: ignore
                     "inline_tags": ", ".join(inline_tags) if as_obsidian else [], # type: ignore
                     "classification": classify_note(path, normalized_frontmatter),
-                },
+                }
+        
+        if split_on_headers:
+            for split_doc in docs_from_markdown(content, base_metadata):
+                docs.append(split_doc)
+        else:
+            docs.append(
+                Document(
+                    text=content,
+                    metadata=dict(base_metadata)
+                )
             )
-        )
     return docs
 
 def classify_note(path: Path, frontmatter: dict) -> str:
@@ -64,3 +70,5 @@ def extract_dirs(path: Path) -> dict[str, str]:
         "relative_dir": parts[-2] if len(parts) > 1 else "",
         "is_ai": "False",
     }
+    
+
