@@ -38,5 +38,4 @@ def build_or_load_index(docs: list[Document] | None, chroma_path: str) -> Vector
     return VectorStoreIndex.from_documents(
             docs,
             storage_context=storage_context,
-            transformations=[splitter],
         )

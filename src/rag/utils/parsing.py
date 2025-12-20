@@ -5,7 +5,7 @@ import yaml
 from typing import Iterator, Optional, Tuple, Dict, Any
 from pathlib import Path
 
-from langchain_text_splitters import MarkdownHeaderTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from llama_index.core import Document
 
 def split_obsidian_frontmatter(raw_obsidian_text: str) -> Tuple[Dict[str, Any], str]:
@@ -91,6 +91,13 @@ _headers_to_split_on=[
     ("#####", "h5"),
     ("######", "h6"),
 ]
+
+# Overlap-enabled chunker (character-based; good enough to start)
+chunk_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1200,      # tune
+    chunk_overlap=200,    # tune
+    separators=["\n\n", "\n", " ", ""],  # keeps paragraphs together when possible
+)
 def split_markdown_with_langchain(markdown_str: str):
     splitter = MarkdownHeaderTextSplitter(headers_to_split_on=_headers_to_split_on)
     return splitter.split_text(markdown_str)
@@ -100,6 +107,10 @@ def docs_from_markdown(markdown_str: str, base_meta: dict) -> list[Document]:
     docs = []
 
     for s in sections:
+        section_text = (s.page_content or "").strip()
+        if not section_text:
+            continue
+        
         meta = dict(base_meta)
 
         section_header = next(
@@ -112,7 +123,12 @@ def docs_from_markdown(markdown_str: str, base_meta: dict) -> list[Document]:
             prefix, label = section_header
             meta["section_heading"] = f"{prefix} {s.metadata[label]}"
 
-        docs.append(Document(text=s.page_content, metadata=meta))
+        chunks = chunk_splitter.split_text(section_text)
+        for idx, chunk in enumerate(chunks):
+            meta["chunk_idx"] = idx
+            meta["chunk_total"] = len(chunks)
+
+            docs.append(Document(text=chunk, metadata=meta))
 
     return docs
 

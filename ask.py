@@ -103,6 +103,8 @@ def main():
             "frontmatter_tags": meta.get("frontmatter_tags"),
             "inline_tags": meta.get("inline_tags"),
             "text_preview": (text or "")[:600],
+            "chunk_idx": meta.get("chunk_idx"),
+            "chunk_total": meta.get("chunk_total"),
         })
 
     dump_path = dump_retrieval(query, retrieved)
