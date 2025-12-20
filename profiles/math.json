@@ -1,0 +1,11 @@
+{
+  "retrieve_k": 50,
+  "context_k": 5,
+  "ai_only": true,
+  "include_moc": false,
+  "dedupe": true,
+  "mmr": true,
+  "mmr_lambda": 0.7,
+  "rerank": true,
+  "rerank_candidates": 20
+}
