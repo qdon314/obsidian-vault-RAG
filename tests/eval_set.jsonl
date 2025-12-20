@@ -1,0 +1,4 @@
+{"query": "What is cross entropy?", "expected_files": ["Cross Entropy.md"]}
+{"query": "Explain multi-head attention", "expected_files": ["Multi-Head Attention.md"]}
+{"query": "What is the transformer model?", "expected_files": ["Transformer Model.md"]}
+{"query": "Can you explain the concept of attention in machine learning?", "expected_files": ["Attention Mechanism.md"]}
