@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import Tuple, Dict, Any
 import yaml
+from typing import Iterator, Optional, Tuple, Dict, Any
+from pathlib import Path
 
-def split_obsidian_frontmatter(raw_obsidian_text: str) -> tuple[dict[str, Any], str]:
+from langchain_text_splitters import MarkdownHeaderTextSplitter
+from llama_index.core import Document
+
+def split_obsidian_frontmatter(raw_obsidian_text: str) -> Tuple[Dict[str, Any], str]:
     """
     Split a string into frontmatter and content, handling YAML frontmatter.
     
@@ -46,7 +50,7 @@ def split_obsidian_frontmatter(raw_obsidian_text: str) -> tuple[dict[str, Any], 
     return frontmatter, content
 
 
-def extract_and_normalize_frontmatter(frontmatter: dict[str, Any], keys: list[str]) -> dict[str,list[str]]:
+def extract_and_normalize_frontmatter(frontmatter: Dict[str, Any], keys: list[str]) -> Dict[str,list[str]]:
     """
     Extract and normalize values from the frontmatter.
     Args:
@@ -77,4 +81,92 @@ def extract_inline_tags(content: str) -> list[str]:
     """
     INLINE_TAG_RE = re.compile(r"(?<!\w)#([\w/-]+)")
     return list(set(INLINE_TAG_RE.findall(content)))
+
+# ------------------ Langchain Splitter ------------------
+_headers_to_split_on=[
+    ("#", "h1"),
+    ("##", "h2"),
+    ("###", "h3"),
+    ("####", "h4"),
+    ("#####", "h5"),
+    ("######", "h6"),
+]
+def split_markdown_with_langchain(markdown_str: str):
+    splitter = MarkdownHeaderTextSplitter(headers_to_split_on=_headers_to_split_on)
+    return splitter.split_text(markdown_str)
+
+def docs_from_markdown(markdown_str: str, base_meta: dict) -> list[Document]:
+    sections = split_markdown_with_langchain(markdown_str)
+    docs = []
+
+    for s in sections:
+        meta = dict(base_meta)
+
+        section_header = next(
+            ((prefix, label) for prefix, label in _headers_to_split_on
+             if s.metadata.get(label) is not None),
+            None
+        )
+
+        if section_header is not None:
+            prefix, label = section_header
+            meta["section_heading"] = f"{prefix} {s.metadata[label]}"
+
+        docs.append(Document(text=s.page_content, metadata=meta))
+
+    return docs
+
+# ------------------ Custom Splitter ------------------
+
+def split_markdown_by_heading(markdown_str: str, min_level: int = 2) -> Iterator[Tuple[Optional[str], str]]:
+    """
+    Yield (heading, section_text). Heading includes markdown hashes.
+    Splits on headings of level >= min_level (default: ## and deeper).
+    """
+    HEADER_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
     
+    # Normalize newlines
+    markdown_str = markdown_str.replace("\r\n", "\n").replace("\r", "\n")
+    
+    matches = list(HEADER_RE.finditer(markdown_str))
+    if not matches:
+        yield (None, markdown_str)
+        return
+
+    # Only use headings >= min_level as split points
+    split_points: list[re.Match] = []
+    for match in matches:
+        level = len(match.group(1))
+        if level >= min_level:
+            split_points.append(match)
+
+    if not split_points:
+        yield (None, markdown_str)
+        return
+
+    # Preamble before first heading
+    first: re.Match = split_points[0]
+    pre = markdown_str[:first.start()].strip()
+    if pre:
+        yield (None, pre)
+
+    for i, match in enumerate(split_points):        
+        # End is start of next heading or end of file
+        end = split_points[i + 1].start() if i + 1 < len(split_points) else len(markdown_str)
+        
+        # Skip empty sections
+        heading = match.group(0).strip()
+        section = markdown_str[match.end():end].strip()
+        yield (heading, section)
+        
+def docs_from_obsidian_note(content: str, base_meta: dict) -> list[Document]:
+    docs = []
+    for heading, section_text in split_markdown_by_heading(content, min_level=2):
+        text = section_text.strip()
+        if not text:
+            continue
+        meta = dict(base_meta)
+        meta["inline_tags"] = ", ".join(extract_inline_tags(text))
+        meta["section_heading"] = heading
+        docs.append(Document(text=text, metadata=meta))
+    return docs
