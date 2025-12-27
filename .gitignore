@@ -210,3 +210,7 @@ __marimo__/
 data/
 logs/
 
+src/rag/adapters/.DS_Store
+config.py
+.vscode/settings.json
+config.py
