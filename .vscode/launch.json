@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+      "name": "Python: ask script (with args)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/ask.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "--index",
+        "obsidian_index",
+        "--q",
+        "How would you describe scaled dot-product attention?",
+        "--use-openai-embeddings"
+      ],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Python: build script (with args)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/build_index.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "--corpus",
+        "/Users/quentindonnelly/Documents/Personal & Professional",
+        "--index-name",
+        "obsidian_index",
+        "--extensions",
+        ".md",
+        "--use-openai-embeddings"
+      ],
+        "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
