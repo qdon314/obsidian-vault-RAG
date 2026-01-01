@@ -47,6 +47,23 @@ class Chunk:
 
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
+# --------------------------
+# Core Content Metadata Objects
+# --------------------------
+
+@dataclass(frozen=True, slots=True)
+class IngestReport:
+    """
+    Summary statistics from an ingestion run.
+    """
+    scanned: int
+    loaded: int
+    skipped_hidden: int
+    skipped_extension: int
+    skipped_too_large: int
+    skipped_empty: int
+    failed: int
+    by_extension: Mapping[str, int] = field(default_factory=dict)
 
 # -------------------------
 # Retrieval / ranking objects
