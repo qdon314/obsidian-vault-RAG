@@ -1,0 +1,27 @@
+# Canonical configuration for the RAG system
+# TODO: Adjust paths and settings as needed. This is a stand-in.
+
+[paths]
+# Path to the Obsidian vault
+vault_dir = "~/obsidian-vault"
+index_dir = "artifacts/indexes/obsidian_index"
+
+[chunking]
+method = "markdown"
+chunk_size = 800
+chunk_overlap = 120
+
+[embeddings]
+provider = "openai"
+model = "text-embedding-3-large"
+
+[llm]
+provider = "openai"
+model = "gpt-4.1-mini"
+
+[retrieval]
+top_k = 8
+
+[rerank]
+enabled = true
+keep_k = 4
