@@ -7,7 +7,6 @@ from typing import Any, Optional
 
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
 
-
 _WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")          # [[target]] or [[target|alias]]
 _EMBED_RE = re.compile(r"!\[\[([^\]]+)\]\]")           # ![[target]] or ![[target|alias]]
 _TAG_RE = re.compile(r"(?<!\w)#([A-Za-z0-9/_-]+)")     # #tag #a/b etc.
@@ -214,7 +213,7 @@ class ObsidianMarkdownLoader:
       - wikilink stripping ([[...]] -> alias/target) outside code fences
       - preserves code blocks (included as-is)
     """
-    vault_root: Path
+    vault_dir: Path
     text_loader: TextLoader = TextLoader()
     expand_embeds: bool = True
     max_embed_depth: int = 4
@@ -260,7 +259,7 @@ class ObsidianMarkdownLoader:
             # Expand embeds within non-code text
             def repl(m: re.Match[str]) -> str:
                 target = m.group(1)
-                embed_path = _resolve_embed_target(self.vault_root, current_file, target)
+                embed_path = _resolve_embed_target(self.vault_dir, current_file, target)
                 if embed_path is None:
                     return ""
 
