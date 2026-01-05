@@ -5,6 +5,17 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+import os
+
+class Secrets:
+    def __init__(self, use_openai: bool):
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+
+        if not self.openai_api_key and use_openai:
+            raise RuntimeError(
+                "OPENAI_API_KEY is required but not set in environment"
+            )
+
 
 @dataclass(frozen=True)
 class Paths:
@@ -50,9 +61,16 @@ class Settings:
     llm: LLM
     retrieval: Retrieval
     rerank: Rerank
+    secrets: Secrets
 
 
 def load_settings(path: str | Path = "settings.toml") -> Settings:
+    def using_openai(raw: dict) -> bool:
+        return (
+            raw.get("embeddings", {}).get("provider", "") == "openai"
+            or raw.get("llm", {}).get("provider", "") == "openai"
+        )
+    
     path = Path(path)
 
     if not path.exists():
@@ -63,7 +81,7 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
 
     def expand(p: str) -> Path:
         return Path(os.path.expandvars(os.path.expanduser(p))).resolve()
-
+    
     try:
         return Settings(
             paths=Paths(
@@ -75,13 +93,13 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
                 chunk_size=int(raw["chunking"]["chunk_size"]),
                 chunk_overlap=int(raw["chunking"]["chunk_overlap"]),
             ),
-            embeddings=Embeddings(
-                provider=raw["embeddings"]["provider"],
-                model=raw["embeddings"]["model"],
-            ),
             llm=LLM(
                 provider=raw["llm"]["provider"],
                 model=raw["llm"]["model"],
+            ),
+            embeddings=Embeddings(
+                provider=raw["embeddings"]["provider"],
+                model=raw["embeddings"]["model"],
             ),
             retrieval=Retrieval(
                 top_k=int(raw["retrieval"]["top_k"]),
@@ -90,6 +108,7 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
                 enabled=bool(raw["rerank"]["enabled"]),
                 keep_k=int(raw["rerank"]["keep_k"]),
             ),
+            secrets=Secrets(use_openai=using_openai(raw)),
         )
     except KeyError as e:
         raise KeyError(f"Missing config key: {e}") from e

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from os import getenv
-
+from rag import settings
 from rag.adapters.chunking.fixed import FixedChunker
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
-# from rag.adapters.embedding.openai_embedder import OpenAIEmbedder --- IGNORE ---
+from rag.adapters.embedding.openai_embedder import OpenAIEmbedder
 from rag.adapters.generation.openai_chat import OpenAIChatGenerator
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.adapters.vectorstores.in_memory_store import InMemoryVectorStore
@@ -31,15 +30,16 @@ class Container:
 def build_container() -> Container:
     # Later: read these from config/env
     chunker = FixedChunker(chunk_size=1200, overlap=150)
-    embedder = DummyEmbedder(dim=128)
-    
-    # If you want OpenAI embeddings, swap to:
-    # embedder = OpenAIEmbedder(api_key=api_key, model="text-embedding-3-small")
-    
+    _settings = settings.load_settings()
+
+
+
     context_builder = SimpleContextBuilder(min_score=None, max_chunks=10, dedupe=True, include_scores=False)
     
-    api_key = getenv("OPENAI_API_KEY", "")
-    generator = OpenAIChatGenerator(api_key=api_key, model=getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"))
+    
+    api_key = str(_settings.secrets.openai_api_key)
+    embedder = OpenAIEmbedder(api_key=api_key, model=str(_settings.embeddings.model))
+    generator = OpenAIChatGenerator(api_key=api_key, model=str(_settings.llm.model))
     store = InMemoryVectorStore()
     retriever = VectorRetriever(embedder=embedder, store=store)
     return Container(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from os import getenv
+from src.rag import settings
 
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
@@ -31,9 +31,10 @@ def main() -> None:
     store = JsonlVectorStore(path=index_dir)
     store.load()
 
+    _settings = settings.load_settings()
     if args.use_openai_embeddings:
-        api_key = getenv("OPENAI_API_KEY", "")
-        embedder = OpenAIEmbedder(api_key=api_key, model="text-embedding-3-small")
+        api_key = _settings.secrets.openai_api_key
+        embedder = OpenAIEmbedder(api_key=str(api_key), model=_settings.embeddings.model)
     else:
         embedder = DummyEmbedder(dim=args.embed_dim)
         
@@ -43,7 +44,7 @@ def main() -> None:
     retriever = VectorRetriever(embedder=embedder, store=store)
     context_builder = SimpleContextBuilder(max_chunks=10, dedupe=True)
 
-    generator = OpenAIChatGenerator(api_key=getenv("OPENAI_API_KEY", ""), model=getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"))
+    generator = OpenAIChatGenerator(api_key=str(_settings.secrets.openai_api_key), model=_settings.llm.model)
 
     ans = rag_answer(
         args.q,

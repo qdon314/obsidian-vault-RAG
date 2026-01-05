@@ -1,5 +1,4 @@
 from __future__ import annotations
-from os import getenv
 
 import argparse
 import json
@@ -7,6 +6,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from src.rag import settings
 
 from rag.adapters.chunking.fixed import FixedChunker
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
@@ -44,7 +44,7 @@ def build_argparser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_argparser().parse_args()
-
+    _settings = settings.load_settings()
     artifacts_dir = Path(args.artifacts_dir).resolve()
     index_dir = artifacts_dir / "indexes" / args.index_name
     index_dir.mkdir(parents=True, exist_ok=True)
@@ -69,8 +69,8 @@ def main() -> None:
 
     # Embedder
     if args.use_openai_embeddings:
-        api_key = getenv("OPENAI_API_KEY", "")
-        embedder = OpenAIEmbedder(api_key=api_key, model="text-embedding-3-small")
+        api_key = str(_settings.secrets.openai_api_key)
+        embedder = OpenAIEmbedder(api_key=api_key, model=_settings.embeddings.model)
     else:
         embedder = DummyEmbedder(dim=args.embed_dim)
 
