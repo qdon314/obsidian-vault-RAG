@@ -209,6 +209,7 @@ __marimo__/
 # Outputs
 data/
 logs/
+artifacts/
 
 src/rag/adapters/.DS_Store
 config.py
