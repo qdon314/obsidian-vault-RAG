@@ -1,0 +1,28 @@
+{
+  "summary": {
+    "num_queries": 1.0,
+    "avg_retrieved": 10.0,
+    "recall@5": 0.0,
+    "recall@10": 1.0,
+    "mrr": 0.125
+  },
+  "per_query": [
+    {
+      "qid": "q1",
+      "query": "How do you evaluate retrieval quality?",
+      "relevant_count": 1,
+      "retrieved_top10": [
+        "doc_demo_001:fixed_chars_v1:1:1050-2250",
+        "doc_demo_001:fixed_chars_v1:2:2100-3300",
+        "doc_demo_001:fixed_chars_v1:3:3150-4350",
+        "doc_demo_001:fixed_chars_v1:6:6300-7500",
+        "doc_demo_001:fixed_chars_v1:5:5250-6450",
+        "doc_demo_001:fixed_chars_v1:9:9450-9600",
+        "doc_demo_001:fixed_chars_v1:4:4200-5400",
+        "doc_demo_001:fixed_chars_v1:0:0-1200",
+        "doc_demo_001:fixed_chars_v1:8:8400-9600",
+        "doc_demo_001:fixed_chars_v1:7:7350-8550"
+      ]
+    }
+  ]
+}
