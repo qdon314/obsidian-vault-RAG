@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping, Optional
 
-from rag.ports import Embedder, VectorStore
+from rag.ports import Embedder, VectorStore, Retriever
 from rag.domain.models import Candidate
 
 
 @dataclass(frozen=True, slots=True)
-class VectorRetriever:
+class VectorRetriever(Retriever):
     """
     Retrieves candidates by embedding the query and searching the vector store.
     """

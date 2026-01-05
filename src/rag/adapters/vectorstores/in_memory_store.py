@@ -5,7 +5,7 @@ from math import sqrt
 from typing import Mapping, Optional, Sequence
 
 from rag.domain.models import Candidate, Chunk
-
+from rag.ports import VectorStore
 Vector = list[float]
 
 
@@ -22,7 +22,7 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
 
 
 @dataclass(slots=True)
-class InMemoryVectorStore:
+class InMemoryVectorStore(VectorStore):
     """
     Simple cosine-similarity vector store to validate architecture.
 

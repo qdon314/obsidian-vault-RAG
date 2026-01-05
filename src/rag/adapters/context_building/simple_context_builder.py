@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Mapping, Optional, Sequence
 
 from rag.domain.models import Candidate, Citation, ContextPack, Chunk
-
+from rag.ports import ContextBuilder
 
 def _estimate_tokens(text: str) -> int:
     """
@@ -20,7 +20,7 @@ def _normalize_for_dedupe(text: str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
-class SimpleContextBuilder:
+class SimpleContextBuilder(ContextBuilder):
     """
     Builds a context pack from candidates:
       - optional score thresholding

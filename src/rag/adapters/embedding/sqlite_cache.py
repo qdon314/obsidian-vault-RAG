@@ -13,12 +13,13 @@ Vector = list[float]
 
 
 def _key_for_text(model_name: str, text: str) -> str:
+    """Deterministic key for (model_name, text) pair."""
     h = sha256(text.encode("utf-8")).hexdigest()
     return sha256(f"{model_name}|{h}".encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
-class CachedEmbedder:
+class CachedEmbedder(Embedder):
     """
     Wraps any Embedder with a disk cache (SQLite).
     Keyed by (model_name, text hash) so it is stable across runs.

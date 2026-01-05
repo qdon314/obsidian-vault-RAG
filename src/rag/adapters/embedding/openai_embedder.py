@@ -6,12 +6,13 @@ from typing import Mapping, Optional, Sequence
 # Requires: pip install openai, and set OPENAI_API_KEY in env
 from openai import OpenAI
 
+from rag.ports import Embedder
 
 Vector = list[float]
 
 
 @dataclass(frozen=True, slots=True)
-class OpenAIEmbedder:
+class OpenAIEmbedder(Embedder):
     """
     OpenAI embeddings adapter.
 

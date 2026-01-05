@@ -8,7 +8,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 from rag.domain.models import Candidate, Chunk
 from rag.utils.json_sanitize import json_sanitize
-
+from rag.ports import VectorStore
 Vector = list[float]
 
 
@@ -55,7 +55,7 @@ def _chunk_from_dict(d: Mapping[str, Any]) -> Chunk:
 
 
 @dataclass(slots=True)
-class JsonlVectorStore:
+class JsonlVectorStore(VectorStore):
     """
     Disk-persisted store, loaded into memory for search.
 

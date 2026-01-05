@@ -4,10 +4,11 @@ from dataclasses import dataclass
 from typing import Mapping, Optional
 
 from rag.domain.models import Chunk, Document
+from rag.ports import Chunker
 
 
 @dataclass(frozen=True, slots=True)
-class FixedChunker:
+class FixedChunker(Chunker):
     """
     Simple character-based chunker (good enough to validate architecture).
 
@@ -19,7 +20,7 @@ class FixedChunker:
     chunk_size: int = 1200
     overlap: int = 150
     strategy_name: str = "fixed_chars_v1"
-
+    
     def chunk(self, doc: Document, *, metadata: Optional[Mapping[str, object]] = None) -> list[Chunk]:
         text = doc.text or ""
         if not text.strip():
