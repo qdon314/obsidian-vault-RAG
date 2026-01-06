@@ -77,3 +77,7 @@ class InMemoryVectorStore(VectorStore):
     def save(self) -> None:
         """In-memory store has no persistence; no-op."""
         pass
+    
+    def load(self) -> None:
+        """In-memory store has no persistence; no-op."""
+        pass

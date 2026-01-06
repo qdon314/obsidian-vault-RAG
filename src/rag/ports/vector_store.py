@@ -37,3 +37,7 @@ class VectorStore(Protocol):
     def save(self) -> None:
         """Persist the store to disk, if applicable."""
         ...
+
+    def load(self) -> None:
+        """Load the store from disk, if applicable."""
+        ...
