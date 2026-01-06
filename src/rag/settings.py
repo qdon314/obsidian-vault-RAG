@@ -56,6 +56,7 @@ class Context:
     dedupe: bool = True
     include_scores: bool = False
     min_score: Optional[float] = None
+    token_budget: int = 1500
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,6 +177,7 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
         dedupe=bool(context_tbl.get("dedupe", True)),
         include_scores=bool(context_tbl.get("include_scores", False)),
         min_score=context_tbl.get("min_score", None),
+        token_budget=int(context_tbl.get("token_budget", 1500)),
     )
 
     # Embeddings
