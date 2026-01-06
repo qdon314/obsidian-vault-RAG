@@ -33,3 +33,7 @@ class VectorStore(Protocol):
 
     def count(self) -> int:
         ...
+    
+    def save(self) -> None:
+        """Persist the store to disk, if applicable."""
+        ...

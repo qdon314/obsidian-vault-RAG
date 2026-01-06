@@ -73,3 +73,7 @@ class InMemoryVectorStore(VectorStore):
 
     def count(self) -> int:
         return len(self._chunks)
+    
+    def save(self) -> None:
+        """In-memory store has no persistence; no-op."""
+        pass
