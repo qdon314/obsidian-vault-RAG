@@ -1,27 +1,94 @@
 # Canonical configuration for the RAG system
-# TODO: Adjust paths and settings as needed. This is a stand-in.
+# Settings define defaults.
+# Containers compose adapters.
+# CLI overrides settings via ContainerOverrides.
 
+
+# -------------------------------------------------------------------
+# Paths
+# -------------------------------------------------------------------
 [paths]
-# Path to the Obsidian vault
 vault_dir = "~/obsidian-vault"
-index_dir = "artifacts/indexes/obsidian_index"
+artifacts_dir = "artifacts"
 
+# Default index location (used unless overridden by CLI)
+index_dir = "artifacts/indexes/default"
+
+
+# -------------------------------------------------------------------
+# Ingestion
+# -------------------------------------------------------------------
+[ingestion]
+recursive = true
+skip_hidden = true
+allowed_extensions = [".md", ".txt"]
+
+# Obsidian-specific options
+expand_embeds = true
+max_embed_depth = 4
+
+
+# -------------------------------------------------------------------
+# Chunking
+# -------------------------------------------------------------------
 [chunking]
-method = "markdown"
+backend = "fixed"          # future-proofing
 chunk_size = 800
-chunk_overlap = 120
+overlap = 120
 
+
+# -------------------------------------------------------------------
+# Context building
+# -------------------------------------------------------------------
+[context]
+max_chunks = 5
+dedupe = true
+include_scores = false
+min_score = 0.2           # optional similarity cutoff
+
+
+# -------------------------------------------------------------------
+# Embeddings
+# -------------------------------------------------------------------
 [embeddings]
-provider = "openai"
+backend = "openai"         # "openai" | "dummy"
 model = "text-embedding-3-large"
 
-[llm]
-provider = "openai"
-model = "gpt-4.1-mini"
+# Used only when backend = "dummy"
+dummy_dim = 128
 
+
+# -------------------------------------------------------------------
+# Vector store
+# -------------------------------------------------------------------
+[vectorstore]
+backend = "memory"         # "memory" | "jsonl"
+
+# Used only when backend = "jsonl"
+jsonl_dir = "artifacts/indexes/default"
+
+
+# -------------------------------------------------------------------
+# Retrieval
+# -------------------------------------------------------------------
 [retrieval]
 top_k = 8
 
+
+# -------------------------------------------------------------------
+# Reranking
+# -------------------------------------------------------------------
 [rerank]
 enabled = true
+backend = "heuristic"      # "heuristic" | "noop"
 keep_k = 4
+
+
+# -------------------------------------------------------------------
+# LLM / Generation
+# -------------------------------------------------------------------
+[llm]
+backend = "openai"
+model = "gpt-4.1-mini"
+temperature = 0.2
+max_tokens = 1024

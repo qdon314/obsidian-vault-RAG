@@ -32,7 +32,6 @@
         "obsidian_index",
         "--extensions",
         ".md",
-        "--use-openai-embeddings"
       ],
         "envFile": "${workspaceFolder}/.env"
     }
