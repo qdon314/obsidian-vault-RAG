@@ -77,7 +77,7 @@ class JsonlVectorStore(VectorStore):
         if not self.data_file.exists():
             return
 
-        for i, line in enumerate(self.data_file.read_text(encoding="utf-8").splitlines()):
+        for i, line in enumerate(self.data_file.read_text(encoding="utf-8").splitlines(), start=1):
             if not line.strip():
                 continue
             try:
