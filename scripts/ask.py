@@ -4,10 +4,12 @@ import argparse
 from dataclasses import replace
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from rag.adapters.embedding.sqlite_cache import CachedEmbedder
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.app.container import ContainerOverrides, build_container
-from rag.app.pipeline import rag_answer
+from rag.app.query_runner import run_query
 
 
 def build_argparser() -> argparse.ArgumentParser:
@@ -30,6 +32,7 @@ def build_argparser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_argparser().parse_args()
+    load_dotenv()
 
     artifacts_dir = Path(args.artifacts_dir).resolve()
     index_dir = artifacts_dir / "indexes" / args.index
@@ -65,20 +68,15 @@ def main() -> None:
     top_k = args.top_k if args.top_k is not None else cfg.retrieval.top_k
     token_budget = args.token_budget if args.token_budget is not None else 1800
 
-    ans = rag_answer(
+    run_query(
         args.q,
         retriever=container.retriever,
         context_builder=container.context_builder,
         generator=container.generator,
+        logger=container.logger,
         top_k=top_k,
         token_budget=token_budget,
     )
-
-    print("\n=== ANSWER ===\n")
-    print(ans.text)
-    print("\n=== CITATIONS ===")
-    for i, c in enumerate(ans.citations, start=1):
-        print(f"[{i}] {c.uri} chunk={c.chunk_id}")
 
 
 if __name__ == "__main__":
