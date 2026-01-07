@@ -6,6 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from rag import settings
 from rag.adapters.embedding.sqlite_cache import CachedEmbedder
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.app.container import ContainerOverrides, build_container
@@ -46,7 +47,6 @@ def main() -> None:
     )
 
     # Grab cfg so we can use cfg.retrieval.top_k default if user didn't pass --top-k
-    from rag import settings
     cfg = settings.load_settings()
 
     base = build_container(cfg=cfg, overrides=overrides)
@@ -71,6 +71,8 @@ def main() -> None:
     run_query(
         args.q,
         retriever=container.retriever,
+        reranker=container.reranker,
+        keep_k=cfg.rerank.keep_k,
         context_builder=container.context_builder,
         generator=container.generator,
         logger=container.logger,
