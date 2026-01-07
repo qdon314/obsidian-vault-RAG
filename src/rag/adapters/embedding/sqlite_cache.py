@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Mapping, Optional, Sequence
 
 from rag.ports import Embedder
 
@@ -15,7 +15,7 @@ Vector = list[float]
 def _key_for_text(model_name: str, text: str) -> str:
     """Deterministic key for (model_name, text) pair."""
     h = sha256(text.encode("utf-8")).hexdigest()
-    return sha256(f"{model_name}|{h}".encode("utf-8")).hexdigest()
+    return sha256(f"{model_name}|{h}".encode()).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,7 +71,7 @@ class CachedEmbedder(Embedder):
                 new_vecs = self.embedder.embed_texts(missing_texts, metadata=metadata)
 
                 rows = []
-                for i, vec in zip(missing_idx, new_vecs):
+                for i, vec in zip(missing_idx, new_vecs, strict=False):
                     k = keys[i]
                     found[k] = vec
                     rows.append((k, self.model_name, json.dumps(vec)))

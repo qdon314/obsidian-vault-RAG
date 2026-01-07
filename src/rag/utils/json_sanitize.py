@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 
 def json_sanitize(x: Any) -> Any:

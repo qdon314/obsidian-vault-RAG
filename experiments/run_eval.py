@@ -4,12 +4,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from experiments.metrics import RetrievalResult, summarize
 from rag.app.container import build_container
 from rag.app.pipeline import index_document, retrieve_candidates
 from rag.domain.models import Document
-
-from experiments.metrics import RetrievalResult, summarize
-
 
 EVAL_QUERIES_PATH = Path("experiments/eval_queries.jsonl")
 RESULTS_DIR = Path("experiments/results")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping, Optional
 
 # Requires: pip install openai
 from openai import OpenAI
@@ -28,7 +28,7 @@ class OpenAIChatGenerator(Generator):
         query: str,
         context: ContextPack,
         *,
-        metadata: Optional[Mapping[str, object]] = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> Answer:
         client = OpenAI(api_key=self.api_key)
 

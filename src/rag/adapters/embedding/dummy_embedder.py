@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import Mapping, Optional, Sequence
 
 from rag.ports import Embedder
 
@@ -26,7 +26,7 @@ class DummyEmbedder(Embedder):
         self,
         texts: Sequence[str],
         *,
-        metadata: Optional[Mapping[str, object]] = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> list[Vector]:
         out: list[Vector] = []
         for text in texts:

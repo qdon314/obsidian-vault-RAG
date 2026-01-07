@@ -2,8 +2,9 @@ import json
 from pathlib import Path
 from statistics import mean
 
-from src.rag.index import build_or_load_index
 from config import CHROMA_PATH
+from src.rag.index import build_or_load_index
+
 
 def load_jsonl(path: str):
     for line in Path(path).read_text(encoding="utf-8").splitlines():

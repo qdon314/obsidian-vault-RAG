@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Mapping, Protocol
+from collections.abc import Mapping
+from typing import Protocol
 
 from rag.domain.models import Answer, ContextPack
 

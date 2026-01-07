@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Optional, Sequence
 
 # Requires: pip install openai, and set OPENAI_API_KEY in env
 from openai import OpenAI
@@ -31,7 +31,7 @@ class OpenAIEmbedder(Embedder):
         self,
         texts: Sequence[str],
         *,
-        metadata: Optional[Mapping[str, object]] = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> list[Vector]:
         client = OpenAI(api_key=self.api_key)
         resp = client.embeddings.create(model=self.model, input=list(texts))

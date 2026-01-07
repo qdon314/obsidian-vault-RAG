@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
 
@@ -49,10 +49,7 @@ def split_obsidian_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         import yaml  # type: ignore
 
         loaded = yaml.safe_load(fm_text)
-        if isinstance(loaded, dict):
-            fm = loaded
-        else:
-            fm = {}
+        fm = loaded if isinstance(loaded, dict) else {}
     except Exception:
         # Minimal parsing: key: value, tags: [a, b] / tags: a
         for line in fm_text.splitlines():
@@ -74,7 +71,7 @@ def split_obsidian_frontmatter(text: str) -> tuple[dict[str, Any], str]:
 
 
 def _extract_inline_tags(text: str) -> list[str]:
-    return sorted(set(m.group(1) for m in _TAG_RE.finditer(text)))
+    return sorted({m.group(1) for m in _TAG_RE.finditer(text)})
 
 
 def _normalize_tags(value: Any) -> list[str]:
@@ -156,7 +153,7 @@ def _strip_wikilinks_outside_code(text: str) -> str:
     return "".join(out)
 
 
-def _resolve_embed_target(vault_root: Path, current_file: Path, target: str) -> Optional[Path]:
+def _resolve_embed_target(vault_root: Path, current_file: Path, target: str) -> Path | None:
     """
     Resolve Obsidian embed target:
       - 'Note Name' -> find 'Note Name.md' anywhere (best-effort)
@@ -187,7 +184,7 @@ def _resolve_embed_target(vault_root: Path, current_file: Path, target: str) -> 
             return p2
 
         # Fallback: search by filename within vault
-        name = cand.name if cand.suffix else cand.name  # same
+        name = cand.name or cand.suffix  # same
         matches = list(vault_root.rglob(name))
         for m in matches:
             if m.is_file():
@@ -214,11 +211,11 @@ class ObsidianMarkdownLoader:
       - preserves code blocks (included as-is)
     """
     vault_dir: Path
-    text_loader: TextLoader = TextLoader()
+    text_loader: TextLoader = field(default_factory=TextLoader)
     expand_embeds: bool = True
     max_embed_depth: int = 4
 
-    def load(self, path: Path) -> Optional[tuple[str, dict[str, Any]]]:
+    def load(self, path: Path) -> tuple[str, dict[str, Any]] | None:
         raw = self.text_loader.load(path)
         if raw is None:
             return None

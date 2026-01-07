@@ -4,9 +4,9 @@ import argparse
 from dataclasses import replace
 from pathlib import Path
 
-from rag.app.container import build_container, ContainerOverrides
 from rag.adapters.embedding.sqlite_cache import CachedEmbedder
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
+from rag.app.container import ContainerOverrides, build_container
 from rag.app.pipeline import rag_answer
 
 

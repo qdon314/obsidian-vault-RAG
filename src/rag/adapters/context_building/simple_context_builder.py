@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Optional, Sequence
 
-from rag.domain.models import Candidate, Citation, ContextPack, Chunk
+from rag.domain.models import Candidate, Chunk, Citation, ContextPack
 from rag.ports import ContextBuilder
+
 
 def _estimate_tokens(text: str) -> int:
     """
@@ -28,7 +29,7 @@ class SimpleContextBuilder(ContextBuilder):
       - pack chunks into a token budget
       - produce citations for provenance
     """
-    min_score: Optional[float] = None
+    min_score: float | None = None
     max_chunks: int = 12
     dedupe: bool = True
     include_scores: bool = False
@@ -39,7 +40,7 @@ class SimpleContextBuilder(ContextBuilder):
         candidates: Sequence[Candidate],
         *,
         token_budget: int,
-        metadata: Optional[Mapping[str, object]] = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> ContextPack:
         # Prefer rerank_score when present, else retrieval score.
         def candidate_key(c: Candidate) -> float:
@@ -67,7 +68,6 @@ class SimpleContextBuilder(ContextBuilder):
                     continue
                 seen.add(sig)
 
-            # Budget check: we’ll include a small label + chunk text
             label = f"[{len(chosen)+1}]"
             if self.include_scores:
                 label += f" score={score:.4f}"
@@ -110,7 +110,7 @@ class SimpleContextBuilder(ContextBuilder):
             metadata={**(dict(metadata) if metadata else {}), "tokens_used_est": tokens_used},
         )
 
-    def _render_context(self, chunks: Sequence[Chunk], ordered_scores: Optional[Sequence[Candidate]] = None) -> str:
+    def _render_context(self, chunks: Sequence[Chunk], ordered_scores: Sequence[Candidate] | None = None) -> str:
         lines: list[str] = []
         lines.append("You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.\n")
         lines.append("If the answer is not supported by the CONTEXT, say you don't know.\n")

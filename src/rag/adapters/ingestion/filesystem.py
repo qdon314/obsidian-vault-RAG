@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
-from typing import Mapping, Optional, Sequence, Tuple
 
-from rag.domain.models import Document, IngestReport
-from rag.adapters.ingestion.loaders.text_loader import TextLoader
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
+from rag.adapters.ingestion.loaders.text_loader import TextLoader
+from rag.domain.models import Document, IngestReport
+from rag.ports import Ingestor
 
 
 def _is_hidden(path: Path) -> bool:
@@ -21,7 +22,7 @@ def _hash_text(text: str) -> str:
 
 def _stable_doc_id(uri: str, text_hash: str) -> str:
     # Stable across runs; changes when file content changes.
-    return sha256(f"{uri}|{text_hash}".encode("utf-8")).hexdigest()
+    return sha256(f"{uri}|{text_hash}".encode()).hexdigest()
 
 def _iter_files(inputs: Sequence[str], *, recursive: bool) -> list[Path]:
     files: list[Path] = []
@@ -40,7 +41,7 @@ def _iter_files(inputs: Sequence[str], *, recursive: bool) -> list[Path]:
 
         # Case 2: glob pattern (ONLY if relative)
         if p.is_absolute():
-            # Absolute path that doesn't exist → skip safely
+            # Absolute path that doesn't exist -> skip safely
             continue
 
         for m in Path(".").glob(inp):
@@ -55,7 +56,7 @@ def _iter_files(inputs: Sequence[str], *, recursive: bool) -> list[Path]:
 
 
 @dataclass(frozen=True, slots=True)
-class FilesystemIngestor:
+class FilesystemIngestor(Ingestor):
     allowed_extensions: set[str] = field(
         default_factory=lambda: {".md", ".txt", ".py", ".json", ".yaml", ".yml"}
     )
@@ -63,15 +64,16 @@ class FilesystemIngestor:
     skip_hidden: bool = True
     source_name: str = "filesystem"
 
+    # injected
     text_loader: TextLoader = field(default_factory=TextLoader)
-    markdown_loader: Optional[ObsidianMarkdownLoader] = None
+    markdown_loader: ObsidianMarkdownLoader | None = None
 
     def ingest(
         self,
         inputs: Sequence[str],
         *,
         metadata: Mapping[str, object] | None = None,
-    ) -> Tuple[list[Document], IngestReport]:
+    ) -> tuple[list[Document], IngestReport]:
         base_meta = dict(metadata) if metadata else {}
 
         scanned = loaded = 0
@@ -83,7 +85,6 @@ class FilesystemIngestor:
 
         for path in files:
             scanned += 1
-
             try:
                 if self.skip_hidden and _is_hidden(path):
                     skipped_hidden += 1

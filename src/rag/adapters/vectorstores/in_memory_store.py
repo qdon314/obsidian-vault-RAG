@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import sqrt
-from typing import Mapping, Optional, Sequence
 
 from rag.domain.models import Candidate, Chunk
 from rag.ports import VectorStore
+
 Vector = list[float]
 
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 def _norm(a: Sequence[float]) -> float:
@@ -36,7 +37,7 @@ class InMemoryVectorStore(VectorStore):
         *,
         chunks: Sequence[Chunk],
         vectors: Sequence[Vector],
-        metadata: Optional[Mapping[str, object]] = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> None:
         if len(chunks) != len(vectors):
             raise ValueError("chunks and vectors must have the same length")
@@ -49,20 +50,17 @@ class InMemoryVectorStore(VectorStore):
         *,
         query_vector: Vector,
         top_k: int,
-        filters: Optional[Mapping[str, object]] = None,
-        metadata: Optional[Mapping[str, object]] = None,
+        filters: Mapping[str, object] | None = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> list[Candidate]:
         # Very basic filter support: match chunk.metadata[key] == value
         def allowed(chunk: Chunk) -> bool:
             if not filters:
                 return True
-            for k, v in filters.items():
-                if chunk.metadata.get(k) != v:
-                    return False
-            return True
+            return all(chunk.metadata.get(k) == v for k, v in filters.items())
 
         scored: list[Candidate] = []
-        for chunk, vec in zip(self._chunks, self._vectors):
+        for chunk, vec in zip(self._chunks, self._vectors, strict=False):
             if not allowed(chunk):
                 continue
             score = _cosine(query_vector, vec)

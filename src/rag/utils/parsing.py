@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import re
-import yaml
-from typing import Iterator, Optional, Tuple, Dict, Any
-from pathlib import Path
+from collections.abc import Iterator
+from typing import Any
 
+import yaml
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 from llama_index.core import Document
 
-def split_obsidian_frontmatter(raw_obsidian_text: str) -> Tuple[Dict[str, Any], str]:
+
+def split_obsidian_frontmatter(raw_obsidian_text: str) -> tuple[dict[str, Any], str]:
     """
     Split a string into frontmatter and content, handling YAML frontmatter.
     
@@ -50,7 +51,7 @@ def split_obsidian_frontmatter(raw_obsidian_text: str) -> Tuple[Dict[str, Any], 
     return frontmatter, content
 
 
-def extract_and_normalize_frontmatter(frontmatter: Dict[str, Any], keys: list[str]) -> Dict[str,list[str]]:
+def extract_and_normalize_frontmatter(frontmatter: dict[str, Any], keys: list[str]) -> dict[str,list[str]]:
     """
     Extract and normalize values from the frontmatter.
     Args:
@@ -134,7 +135,7 @@ def docs_from_markdown(markdown_str: str, base_meta: dict) -> list[Document]:
 
 # ------------------ Custom Splitter ------------------
 
-def split_markdown_by_heading(markdown_str: str, min_level: int = 2) -> Iterator[Tuple[Optional[str], str]]:
+def split_markdown_by_heading(markdown_str: str, min_level: int = 2) -> Iterator[tuple[str | None, str]]:
     """
     Yield (heading, section_text). Heading includes markdown hashes.
     Splits on headings of level >= min_level (default: ## and deeper).

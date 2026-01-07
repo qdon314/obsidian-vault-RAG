@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Mapping, Optional, Sequence
-
+from datetime import UTC, datetime
+from typing import Any
 
 # -------------------------
 # Core content objects
@@ -37,13 +37,13 @@ class Chunk:
 
     # Provenance within the document
     chunk_index: int
-    start_char: Optional[int] = None
-    end_char: Optional[int] = None
+    start_char: int | None = None
+    end_char: int | None = None
 
     # Helpful for markdown/code corpora
-    section_heading: Optional[str] = None
-    section_path: Optional[str] = None  # e.g. "H1 > H2 > H3"
-    language: Optional[str] = None      # e.g. "python", "markdown"
+    section_heading: str | None = None
+    section_path: str | None = None  # e.g. "H1 > H2 > H3"
+    language: str | None = None      # e.g. "python", "markdown"
 
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
@@ -79,7 +79,7 @@ class Candidate:
     """
     chunk: Chunk
     score: float
-    rerank_score: Optional[float] = None
+    rerank_score: float | None = None
 
     # Optional: store "why" for debugging (LLM reranker rationale, match highlights, etc.)
     debug: Mapping[str, Any] = field(default_factory=dict)
@@ -93,11 +93,11 @@ class Citation:
     chunk_id: str
     doc_id: str
     uri: str
-    quote: Optional[str] = None  # small excerpt used/displayed
-    section_heading: Optional[str] = None
-    section_path: Optional[str] = None
-    start_char: Optional[int] = None
-    end_char: Optional[int] = None
+    quote: str | None = None  # small excerpt used/displayed
+    section_heading: str | None = None
+    section_path: str | None = None
+    start_char: int | None = None
+    end_char: int | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -127,7 +127,7 @@ class Answer:
     text: str
     citations: Sequence[Citation] = field(default_factory=tuple)
     abstained: bool = False
-    confidence: Optional[float] = None  # optional; only if you compute one
+    confidence: float | None = None  # optional; only if you compute one
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -144,7 +144,7 @@ class QueryTrace:
     trace_id: str
     query: str
     created_at: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
+        default_factory=lambda: datetime.now(UTC)
     )
 
     # Retrieval
@@ -156,10 +156,10 @@ class QueryTrace:
     packed_chunk_ids: Sequence[str] = field(default_factory=tuple)
 
     # Generation
-    model: Optional[str] = None
-    latency_ms: Optional[int] = None
-    estimated_cost_usd: Optional[float] = None
+    model: str | None = None
+    latency_ms: int | None = None
+    estimated_cost_usd: float | None = None
 
     # Final
-    answer: Optional[Answer] = None
+    answer: Answer | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)

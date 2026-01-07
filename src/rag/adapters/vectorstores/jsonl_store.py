@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import sqrt
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any
 
 from rag.domain.models import Candidate, Chunk
-from rag.utils.json_sanitize import json_sanitize
 from rag.ports import VectorStore
+from rag.utils.json_sanitize import json_sanitize
+
 Vector = list[float]
 
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 def _norm(a: Sequence[float]) -> float:
@@ -106,7 +108,7 @@ class JsonlVectorStore(VectorStore):
         tmp_file = self.data_file.with_suffix(".jsonl.tmp")
 
         with tmp_file.open("w", encoding="utf-8") as f:
-            for ch, vec in zip(self._chunks, self._vectors):
+            for ch, vec in zip(self._chunks, self._vectors, strict=False):
                 row = {"chunk": _chunk_to_dict(ch), "vector": vec}
                 safe_row = json_sanitize(row)
                 f.write(json.dumps(safe_row, ensure_ascii=False))
@@ -136,19 +138,16 @@ class JsonlVectorStore(VectorStore):
         *,
         query_vector: Vector,
         top_k: int,
-        filters: Optional[Mapping[str, object]] = None,
-        metadata: Optional[Mapping[str, object]] = None,
+        filters: Mapping[str, object] | None = None,
+        metadata: Mapping[str, object] | None = None,
     ) -> list[Candidate]:
         def allowed(c: Chunk) -> bool:
             if not filters:
                 return True
-            for k, v in filters.items():
-                if c.metadata.get(k) != v:
-                    return False
-            return True
+            return all(c.metadata.get(k) == v for k, v in filters.items())
 
         scored: list[Candidate] = []
-        for chunk, vec in zip(self._chunks, self._vectors):
+        for chunk, vec in zip(self._chunks, self._vectors, strict=False):
             if not allowed(chunk):
                 continue
             score = _cosine(query_vector, vec)
