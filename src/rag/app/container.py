@@ -14,6 +14,8 @@ from rag.adapters.ingestion.filesystem import FilesystemIngestor
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
 from rag.adapters.logging.jsonl_logger import JsonlQueryLogger
+from rag.adapters.reranking.rerank_heuristic import HeuristicReranker
+from rag.adapters.reranking.rerank_noop import NoOpReranker
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.adapters.vectorstores.in_memory_store import InMemoryVectorStore
 from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
@@ -24,6 +26,7 @@ from rag.ports import (
     Generator,
     Ingestor,
     QueryLogger,
+    Reranker,
     Retriever,
     VectorStore,
 )
@@ -37,8 +40,9 @@ class Container:
     generator: Generator
     ingestor: Ingestor
     store: VectorStore = field(repr=False)
-    retriever: Retriever
-    logger: QueryLogger
+    retriever: Retriever = field(repr=False)
+    logger: QueryLogger = field(repr=False)
+    reranker: Reranker = field(repr=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +124,13 @@ def build_container(
 
     # IMPORTANT: retriever must be built from the chosen embedder+store
     retriever = VectorRetriever(embedder=embedder, store=store)
-
+    
+    # ----- reranker (optional)
+    if not cfg.rerank.enabled or cfg.rerank.backend == "noop":
+        reranker = NoOpReranker()
+    else:
+        reranker = HeuristicReranker()
+        
     # ----- logger (for query tracing)
     logger = JsonlQueryLogger(path=cfg.paths.artifacts_dir / "logs" / "queries.jsonl")
 
@@ -131,6 +141,7 @@ def build_container(
         generator=generator,
         ingestor=ingestor,
         store=store,
+        reranker=reranker,
         retriever=retriever,
         logger=logger,
     )

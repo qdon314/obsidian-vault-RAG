@@ -150,6 +150,12 @@ class QueryTrace:
     # Retrieval
     top_k: int = 10
     retrieved: Sequence[Candidate] = field(default_factory=tuple)
+    
+    # Rerank
+    reranked: Sequence[Candidate] = field(default_factory=tuple)
+    keep_k: int | None = None
+    reranker: str | None = None
+
 
     # Context build
     token_budget: int = 0

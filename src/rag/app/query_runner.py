@@ -8,16 +8,19 @@ from datetime import UTC, datetime
 
 from rag.domain.models import Answer, QueryTrace
 from rag.ports import ContextBuilder, Generator, QueryLogger, Retriever
+from rag.ports.reranker import Reranker
 
 
 def run_query(
     query: str,
     *,
     retriever: Retriever,
+    reranker: Reranker,
     context_builder: ContextBuilder,
     generator: Generator,
     logger: QueryLogger,
     top_k: int,
+    keep_k: int | None,
     token_budget: int,
     filters: Mapping[str, object] | None = None,
     metadata: Mapping[str, object] | None = None,
@@ -38,6 +41,14 @@ def run_query(
     t0 = time.perf_counter()
     candidates = retriever.retrieve(query, top_k=top_k, filters=filters, metadata=metadata)
     t_retrieval_ms = int((time.perf_counter() - t0) * 1000)
+
+    # Rerank
+    t0 = time.perf_counter()
+    reranked_candidates = reranker.rerank(query, candidates)
+    t_rerank_ms = int((time.perf_counter() - t0) * 1000)
+    if keep_k is not None:
+        reranked_candidates = reranked_candidates[:keep_k]
+    candidates = reranked_candidates
 
     # Context build
     t1 = time.perf_counter()
@@ -61,11 +72,14 @@ def run_query(
         ),
         model=getattr(generator, "model_name", None),
         latency_ms=total_ms,
-
+        reranked=reranked_candidates,
+        keep_k=keep_k,
+        reranker=getattr(reranker, "name", None),
         metadata={
             **trace.metadata,
             "timing_ms": {
                 "retrieval": t_retrieval_ms,
+                "rerank": t_rerank_ms,
                 "context": t_context_ms,
                 "generation": t_gen_ms,
                 "total": total_ms,
