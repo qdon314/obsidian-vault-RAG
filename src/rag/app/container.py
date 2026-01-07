@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Literal
+
 from rag import settings
 from rag.adapters.chunking.fixed import FixedChunker
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
@@ -10,31 +13,20 @@ from rag.adapters.generation.openai_chat import OpenAIChatGenerator
 from rag.adapters.ingestion.filesystem import FilesystemIngestor
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
+from rag.adapters.logging.jsonl_logger import JsonlQueryLogger
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.adapters.vectorstores.in_memory_store import InMemoryVectorStore
 from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
-
-from rag.ports import Chunker, Embedder, Retriever, VectorStore, Generator, ContextBuilder, Ingestor
-
-from pathlib import Path
-from typing import Optional, Literal
-
-@dataclass(frozen=True, slots=True)
-class ContainerOverrides:
-    embedder_backend: Optional[Literal["openai", "dummy"]] = None
-    dummy_embed_dim: Optional[int] = None
-
-    store_backend: Optional[Literal["memory", "jsonl"]] = None
-    jsonl_index_dir: Optional[Path] = None
-
-    chunk_size: Optional[int] = None
-    chunk_overlap: Optional[int] = None
-
-    vault_dir: Optional[Path] = None
-    
-    top_k: Optional[int] = None
-    rerank_backend: Optional[Literal["heuristic", "noop"]] = None
-    rerank_enabled: Optional[bool] = None
+from rag.ports import (
+    Chunker,
+    ContextBuilder,
+    Embedder,
+    Generator,
+    Ingestor,
+    QueryLogger,
+    Retriever,
+    VectorStore,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,13 +37,32 @@ class Container:
     generator: Generator
     ingestor: Ingestor
     store: VectorStore = field(repr=False)
-    retriever: Retriever = field(repr=False)
+    retriever: Retriever
+    logger: QueryLogger
+
+
+@dataclass(frozen=True, slots=True)
+class ContainerOverrides:
+    embedder_backend: Literal["openai", "dummy"] | None = None
+    dummy_embed_dim: int | None = None
+
+    store_backend: Literal["memory", "jsonl"] | None = None
+    jsonl_index_dir: Path | None = None
+
+    chunk_size: int | None = None
+    chunk_overlap: int | None = None
+
+    vault_dir: Path | None = None
+
+    top_k: int | None = None
+    rerank_backend: Literal["heuristic", "noop"] | None = None
+    rerank_enabled: bool | None = None
 
 
 def build_container(
     *,
-    cfg: Optional[settings.Settings] = None,
-    overrides: Optional[ContainerOverrides] = None,
+    cfg: settings.Settings | None = None,
+    overrides: ContainerOverrides | None = None,
 ) -> Container:
     cfg = cfg or settings.load_settings()
     ovrds = overrides or ContainerOverrides()
@@ -85,7 +96,9 @@ def build_container(
     api_key = str(cfg.secrets.openai_api_key)
     embedder_backend = ovrds.embedder_backend or cfg.embeddings.backend  # e.g. "openai"
     if embedder_backend == "dummy":
-        dim = ovrds.dummy_embed_dim if ovrds.dummy_embed_dim is not None else cfg.embeddings.dummy_dim
+        dim = (
+            ovrds.dummy_embed_dim if ovrds.dummy_embed_dim is not None else cfg.embeddings.dummy_dim
+        )
         embedder = DummyEmbedder(dim=dim)
     else:
         embedder = OpenAIEmbedder(api_key=api_key, model=str(cfg.embeddings.model))
@@ -100,12 +113,16 @@ def build_container(
     else:
         index_dir = ovrds.jsonl_index_dir or cfg.vectorstore.jsonl_dir or cfg.paths.index_dir
         if index_dir is None:
-            raise ValueError("jsonl_index_dir (override) or vectorstore.jsonl_dir (settings) is required")
+            raise ValueError(
+                "jsonl_index_dir (override) or vectorstore.jsonl_dir (settings) is required"
+            )
         store = JsonlVectorStore(path=index_dir)
-
 
     # IMPORTANT: retriever must be built from the chosen embedder+store
     retriever = VectorRetriever(embedder=embedder, store=store)
+
+    # ----- logger (for query tracing)
+    logger = JsonlQueryLogger(path=cfg.paths.artifacts_dir / "logs" / "queries.jsonl")
 
     return Container(
         chunker=chunker,
@@ -115,4 +132,5 @@ def build_container(
         ingestor=ingestor,
         store=store,
         retriever=retriever,
+        logger=logger,
     )
