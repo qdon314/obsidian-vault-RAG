@@ -3,13 +3,13 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import asdict, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from rag.app.container import build_container, ContainerOverrides
 from rag.adapters.embedding.sqlite_cache import CachedEmbedder
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
+from rag.app.container import ContainerOverrides, build_container
 from rag.app.pipeline import index_document
 
 
@@ -40,7 +40,7 @@ def build_argparser() -> argparse.ArgumentParser:
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def main() -> None:

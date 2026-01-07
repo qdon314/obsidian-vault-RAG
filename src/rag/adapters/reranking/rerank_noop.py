@@ -1,6 +1,8 @@
 from __future__ import annotations
-from rag.ports import Reranker
+
 from rag.domain.models import Candidate
+from rag.ports import Reranker
+
 
 class NoOpReranker(Reranker):
     @property

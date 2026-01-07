@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping, Optional
 
 from rag.domain.models import Chunk, Document
 from rag.ports import Chunker
@@ -21,7 +21,7 @@ class FixedChunker(Chunker):
     overlap: int = 150
     strategy_name: str = "fixed_chars_v1"
     
-    def chunk(self, doc: Document, *, metadata: Optional[Mapping[str, object]] = None) -> list[Chunk]:
+    def chunk(self, doc: Document, *, metadata: Mapping[str, object] | None = None) -> list[Chunk]:
         text = doc.text or ""
         if not text.strip():
             return []

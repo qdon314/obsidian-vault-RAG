@@ -4,8 +4,7 @@ import os
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Optional
-
+from typing import Literal
 
 # ----------------------------
 # Secrets
@@ -13,10 +12,10 @@ from typing import Literal, Optional
 
 @dataclass(frozen=True, slots=True)
 class Secrets:
-    openai_api_key: Optional[str]
+    openai_api_key: str | None
 
     @staticmethod
-    def from_env(*, require_openai: bool) -> "Secrets":
+    def from_env(*, require_openai: bool) -> Secrets:
         key = os.getenv("OPENAI_API_KEY")
         if require_openai and not key:
             raise RuntimeError("OPENAI_API_KEY is required but not set in environment")
@@ -55,7 +54,7 @@ class Context:
     max_chunks: int = 5
     dedupe: bool = True
     include_scores: bool = False
-    min_score: Optional[float] = None
+    min_score: float | None = None
     token_budget: int = 1500
 
 
@@ -69,7 +68,7 @@ class Embeddings:
 @dataclass(frozen=True, slots=True)
 class VectorStore:
     backend: Literal["memory", "jsonl"] = "memory"
-    jsonl_dir: Optional[Path] = None  # only required when backend="jsonl"
+    jsonl_dir: Path | None = None  # only required when backend="jsonl"
 
 
 @dataclass(frozen=True, slots=True)

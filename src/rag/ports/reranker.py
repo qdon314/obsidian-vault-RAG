@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Mapping, Protocol, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Protocol
 
 from rag.domain.models import Candidate
 

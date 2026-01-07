@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+
 
 def _looks_binary(data: bytes) -> bool:
     """
@@ -32,7 +32,7 @@ class TextLoader:
     prefer_encoding: str = "utf-8"
     fallback_encoding: str = "latin-1"
 
-    def load(self, path: Path) -> Optional[str]:
+    def load(self, path: Path) -> str | None:
         try:
             size = path.stat().st_size
             if size > self.max_bytes:

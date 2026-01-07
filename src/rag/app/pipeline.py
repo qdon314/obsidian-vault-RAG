@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Mapping, Optional
+from collections.abc import Mapping
 
-from rag.domain.models import Candidate, Chunk, Document, Answer
-from rag.ports import Chunker, Embedder, Retriever, VectorStore, Generator, ContextBuilder
+from rag.domain.models import Answer, Candidate, Chunk, Document
+from rag.ports import Chunker, ContextBuilder, Embedder, Generator, Retriever, VectorStore
 
 
 def index_document(
@@ -12,7 +12,7 @@ def index_document(
     chunker: Chunker,
     embedder: Embedder,
     store: VectorStore,
-    metadata: Optional[Mapping[str, object]] = None,
+    metadata: Mapping[str, object] | None = None,
 ) -> int:
     chunks: list[Chunk] = chunker.chunk(doc, metadata=metadata)
     if not chunks:
@@ -29,8 +29,8 @@ def rag_answer(
     generator: Generator,
     top_k: int = 10,
     token_budget: int = 1800,
-    filters: Optional[Mapping[str, object]] = None,
-    metadata: Optional[Mapping[str, object]] = None,
+    filters: Mapping[str, object] | None = None,
+    metadata: Mapping[str, object] | None = None,
 ) -> Answer:
     candidates: list[Candidate] = retriever.retrieve(query, top_k=top_k, filters=filters, metadata=metadata)
     context = context_builder.build(query, candidates, token_budget=token_budget, metadata=metadata)
@@ -41,7 +41,7 @@ def retrieve_candidates(
     *,
     retriever: Retriever,
     top_k: int = 10,
-    filters: Optional[Mapping[str, object]] = None,
-    metadata: Optional[Mapping[str, object]] = None,
+    filters: Mapping[str, object] | None = None,
+    metadata: Mapping[str, object] | None = None,
 ) -> list[Candidate]:
     return retriever.retrieve(q, top_k=top_k, filters=filters, metadata=metadata)
