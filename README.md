@@ -20,11 +20,11 @@ This project is a place to explore how choices around chunking, embeddings, retr
 
 ```
 Documents
-  → Ingestion & Chunking
-    → Embeddings
-      → Vector Retrieval
-        → (Optional) Reranking
-          → LLM Generation
+  -> Ingestion & Chunking
+    -> Embeddings
+      -> Vector Retrieval
+        -> (Optional) Reranking
+          -> LLM Generation
 ```
 
 ### Design goals
@@ -215,6 +215,13 @@ python -m scripts.ask \
   --index my_index \
   --q "my query" \
   [--use-openai-embeddings]
+```
+
+### Easy Make Commands
+```bash
+make index
+make ask QUERY="Give me the info, Lobowski"
+make tail-logs
 ```
 
 ---
