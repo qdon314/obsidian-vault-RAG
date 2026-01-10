@@ -1,16 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 
-from rag.eval.models import RetrievalSummary
-
-
-@dataclass(frozen=True, slots=True)
-class RetrievalResult:
-    qid: str
-    retrieved_chunk_ids: tuple[str, ...]
-    relevant_chunk_ids: set[str]
+from rag.eval.models import RetrievalResult, RetrievalSummary
 
 
 def recall_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:

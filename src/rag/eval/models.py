@@ -5,9 +5,14 @@ from datetime import datetime
 from typing import Any
 
 from rag.domain.models import Answer
-from rag.eval.metrics import RetrievalResult
 from rag.eval.schema import Difficulty, QueryType
 
+
+@dataclass(frozen=True, slots=True)
+class RetrievalResult:
+    qid: str
+    retrieved_chunk_ids: tuple[str, ...]
+    relevant_chunk_ids: set[str]
 
 @dataclass(frozen=True, slots=True)
 class RetrievalSummary:
