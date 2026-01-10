@@ -14,7 +14,6 @@
         "obsidian_index",
         "--q",
         "How would you describe scaled dot-product attention?",
-        "--use-openai-embeddings"
       ],
       "envFile": "${workspaceFolder}/.env"
     },
@@ -34,6 +33,30 @@
         ".md",
       ],
         "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Python: eval script (with args)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/experiments/run_eval.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "--queries",
+        "experiments/generated_queries.jsonl",
+      ],
+        "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Python: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+      ],
+      "envFile": "${workspaceFolder}/.env"
     }
   ]
 }
