@@ -47,6 +47,22 @@ class Chunk:
 
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Chunk:
+        """Create a Chunk from a dictionary, ignoring unknown keys."""
+        return cls(
+            chunk_id=data["chunk_id"],
+            doc_id=data["doc_id"],
+            text=data["text"],
+            chunk_index=data["chunk_index"],
+            start_char=data.get("start_char"),
+            end_char=data.get("end_char"),
+            section_heading=data.get("section_heading"),
+            section_path=data.get("section_path"),
+            language=data.get("language"),
+            metadata=data.get("metadata", {}),
+        )
+
 # --------------------------
 # Core Content Metadata Objects
 # --------------------------
