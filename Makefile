@@ -4,6 +4,7 @@ ARTIFACTS_DIR ?= artifacts
 INDEX ?= obsidian
 CORPUS ?= ~/obsidian-vault
 QUERY ?= "What is this project about?"
+NUM_LOGS ?= 20
 
 help:  ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -51,4 +52,7 @@ ask-dummy:  ## Ask using DummyEmbedder
 
 tail-logs:  ## Tail JSONL query logs
 	tail -n 20 $(ARTIFACTS_DIR)/logs/queries.jsonl | jq .
+
+tail-logs:  ## Tail JSONL query logs
+	tail -n $(NUM_LOGS) $(ARTIFACTS_DIR)/logs/queries.jsonl | jq .
 
