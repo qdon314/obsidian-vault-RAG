@@ -219,25 +219,11 @@ def main() -> None:
     starter_queries = create_starter_queries(chunks, existing_queries)
     logger.info(f"Created {len(starter_queries)} starter queries")
 
-    # Save to file
+    # Save to file as proper JSONL (one JSON object per line, no comments)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write("# STARTER EVALUATION QUERIES\n")
-        f.write("# This file contains:\n")
-        f.write("# 1. Queries derived from your actual usage (if available)\n")
-        f.write("# 2. Template queries for you to fill in\n")
-        f.write("# 3. Query suggestions based on your indexed content\n")
-        f.write("#\n")
-        f.write("# NEXT STEPS:\n")
-        f.write("# 1. Review each query below\n")
-        f.write("# 2. Replace [TODO] placeholders with actual content\n")
-        f.write("# 3. Update relevant_chunk_ids with correct chunk IDs\n")
-        f.write("# 4. Add expected_answer for answer quality evaluation\n")
-        f.write("# 5. Validate with: python experiments/curate_queries.py --validate experiments/starter_queries.jsonl\n")
-        f.write("#\n\n")
-
         for query in starter_queries:
-            f.write(json.dumps(query.to_dict(), indent=2) + "\n")
+            f.write(json.dumps(query.to_dict()) + "\n")
 
     logger.info(f"Saved starter queries to {output_path}")
 
