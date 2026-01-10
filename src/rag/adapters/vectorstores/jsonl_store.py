@@ -96,11 +96,7 @@ class JsonlVectorStore(VectorStore):
     def save(self) -> None:
         """
         Persist the in-memory chunks+vectors to disk as JSONL.
-
-        Portfolio-grade behaviors:
-        - sanitize the entire row so everything is JSON-serializable
-        - write to a temp file first
-        - atomic replace to avoid corrupted/truncated files
+        Uses atomic replace to avoid partial writes.
         """
 
         self.path.mkdir(parents=True, exist_ok=True)
