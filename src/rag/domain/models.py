@@ -129,7 +129,15 @@ class Answer:
     abstained: bool = False
     confidence: float | None = None  # optional; only if you compute one
     metadata: Mapping[str, Any] = field(default_factory=dict)
-
+    
+@dataclass(frozen=True, slots=True)
+class QueryRunResult:
+    trace_id: str
+    answer: Answer
+    retrieved_chunk_ids: tuple[str, ...]
+    reranked_chunk_ids: tuple[str, ...]
+    packed_chunk_ids: tuple[str, ...]
+    latency_ms: int
 
 # -------------------------
 # Query tracing

@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
 
-from rag.domain.models import Answer, QueryTrace
+from rag.domain.models import QueryRunResult, QueryTrace
 from rag.ports import ContextBuilder, Generator, QueryLogger, Retriever
 from rag.ports.reranker import Reranker
 
@@ -24,7 +24,32 @@ def run_query(
     token_budget: int,
     filters: Mapping[str, object] | None = None,
     metadata: Mapping[str, object] | None = None,
-) -> Answer:
+) -> QueryRunResult:
+    """
+    Execute a full RAG query pipeline: retrieve, rerank, build context, and generate.
+
+    Pipeline stages:
+        1. Retrieval: Fetch top_k candidate chunks from the vector store
+        2. Reranking: Re-score candidates and optionally truncate to keep_k
+        3. Context building: Pack chunks into a prompt within token_budget
+        4. Generation: Generate an answer using the LLM
+
+    Args:
+        query: The user's natural language query.
+        retriever: Retriever implementation for vector similarity search.
+        reranker: Reranker implementation to re-score retrieved candidates.
+        context_builder: Builds the final context string from candidates.
+        generator: LLM generator to produce the answer.
+        logger: QueryLogger to record the trace for observability.
+        top_k: Number of candidates to retrieve from the vector store.
+        keep_k: If set, truncate reranked candidates to this count before context building.
+        token_budget: Maximum tokens allowed for the context window.
+        filters: Optional metadata filters to apply during retrieval.
+        metadata: Optional metadata passed through the pipeline for logging/customization.
+
+    Returns:
+        An Answer object containing the generated response and citations.
+    """
     trace_id = uuid.uuid4().hex
     started = time.perf_counter()
 
@@ -39,12 +64,12 @@ def run_query(
 
     # Retrieval
     t0 = time.perf_counter()
-    candidates = retriever.retrieve(query, top_k=top_k, filters=filters, metadata=metadata)
+    retrieved_candidates = retriever.retrieve(query, top_k=top_k, filters=filters, metadata=metadata)
     t_retrieval_ms = int((time.perf_counter() - t0) * 1000)
 
-    # Rerank
+    # Rerank - if reranking is disabled, this is a no-op
     t0 = time.perf_counter()
-    reranked_candidates = reranker.rerank(query, candidates)
+    reranked_candidates = reranker.rerank(query, retrieved_candidates, metadata=metadata)
     t_rerank_ms = int((time.perf_counter() - t0) * 1000)
     if keep_k is not None:
         reranked_candidates = reranked_candidates[:keep_k]
@@ -61,18 +86,23 @@ def run_query(
     t_gen_ms = int((time.perf_counter() - t2) * 1000)
 
     total_ms = int((time.perf_counter() - started) * 1000)
+    
+    retrieved_ids = tuple(c.chunk.chunk_id for c in retrieved_candidates)
+    reranked_ids = tuple(c.chunk.chunk_id for c in reranked_candidates)
+
+    packed_ids = tuple(
+        getattr(c, "chunk_id", None) or c.chunk.chunk_id
+        for c in getattr(context, "chunks", [])
+    )
 
     # Fill trace (immutably)
     trace = replace(
         trace,
-        retrieved=tuple(candidates),
-        packed_chunk_ids=tuple(
-            getattr(c, "chunk_id", None) or c.chunk.chunk_id
-            for c in getattr(context, "chunks", [])
-        ),
+        retrieved=tuple(retrieved_candidates),
+        reranked=tuple(reranked_candidates),
+        packed_chunk_ids=packed_ids,
         model=getattr(generator, "model_name", None),
         latency_ms=total_ms,
-        reranked=reranked_candidates,
         keep_k=keep_k,
         reranker=getattr(reranker, "name", None),
         metadata={
@@ -89,4 +119,12 @@ def run_query(
     )
 
     logger.log(trace)
-    return answer
+    
+    return QueryRunResult(
+        trace_id=trace_id,
+        answer=answer,
+        retrieved_chunk_ids=retrieved_ids,
+        reranked_chunk_ids=reranked_ids,
+        packed_chunk_ids=packed_ids,
+        latency_ms=total_ms
+    )
