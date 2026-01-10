@@ -1,3 +1,3 @@
 ### Current focus:
-- <one sentence>
-- <one sentence>
+- Iterate on evaluation / observability
+    - Plan for analyzing output of evaluation runs
