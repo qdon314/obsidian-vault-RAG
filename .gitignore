@@ -211,7 +211,8 @@ data/
 logs/
 artifacts/
 
-src/rag/adapters/.DS_Store
+# IDEs and editors
+**/.DS_Store
 config.py
 .vscode/settings.json
 config.py
