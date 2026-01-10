@@ -308,6 +308,7 @@ def run_full_eval(
     Returns:
         EvalRun containing per-query results, aggregate metrics, and run metadata.
     """
+    container.store.load()
     run_id = uuid.uuid4().hex
     started_at = datetime.now(UTC)
 
@@ -535,8 +536,12 @@ def save_run(run: EvalRun, output_dir: Path, run_name: str | None = None) -> Eva
 
     metrics_file = output_dir / f"metrics_{name}.json"
     # summarize() now returns RetrievalSummary dataclass; use .to_dict() for flat output if you want
+    meta_dict = asdict(run.meta)
+    # Convert datetime to ISO string for JSON serialization
+    if meta_dict.get("started_at") and hasattr(meta_dict["started_at"], "isoformat"):
+        meta_dict["started_at"] = meta_dict["started_at"].isoformat()
     metrics_payload = {
-        "meta": asdict(run.meta),
+        "meta": meta_dict,
         "overall": run.aggregates.overall.to_dict(),
         "by_type": {k: v.to_dict() for k, v in run.aggregates.by_type.items()},
         "by_difficulty": {k: v.to_dict() for k, v in run.aggregates.by_difficulty.items()},
