@@ -146,7 +146,7 @@ def render_chunk_browser() -> Chunk | None:
             value=chunk.text,
             height=200,
             disabled=True,
-            key="chunk_preview",
+            key=f"chunk_preview_{chunk.chunk_id}",
         )
 
         return chunk
