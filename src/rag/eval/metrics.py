@@ -142,16 +142,16 @@ def summarize(results: Iterable[RetrievalResult], *, ks: Sequence[int] = (5, 10)
     n = len(results)
     avg_retrieved = sum(len(r.retrieved_chunk_ids) for r in results) / n
 
-    recall_at_k = {}
-    precision_at_k = {}
-    hit_rate_at_k = {}
-    ndcg_at_k = {}
+    recall_at_k_res = {}
+    precision_at_k_res = {}
+    hit_rate_at_k_res = {}
+    ndcg_at_k_res = {}
 
     for k in ks:
-        recall_at_k[k] = sum(recall_at_k_fn(r, k) for r in results) / n
-        precision_at_k[k] = sum(precision_at_k_fn(r, k) for r in results) / n
-        hit_rate_at_k[k] = sum(hit_rate_at_k_fn(r, k) for r in results) / n
-        ndcg_at_k[k] = sum(ndcg_at_k_fn(r, k) for r in results) / n
+        recall_at_k_res[k] = sum(recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        precision_at_k_res[k] = sum(precision_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        hit_rate_at_k_res[k] = sum(hit_rate_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        ndcg_at_k_res[k] = sum(ndcg_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
 
     mrr_score = sum(mrr(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results) / n
     map_score = sum(average_precision(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results) / n
@@ -159,23 +159,10 @@ def summarize(results: Iterable[RetrievalResult], *, ks: Sequence[int] = (5, 10)
     return RetrievalSummary(
         num_queries=n,
         avg_retrieved=avg_retrieved,
-        recall_at_k=recall_at_k,
-        precision_at_k=precision_at_k,
-        hit_rate_at_k=hit_rate_at_k,
-        ndcg_at_k=ndcg_at_k,
+        recall_at_k=recall_at_k_res,
+        precision_at_k=precision_at_k_res,
+        hit_rate_at_k=hit_rate_at_k_res,
+        ndcg_at_k=ndcg_at_k_res,
         mrr=mrr_score,
         map=map_score,
     )
-
-
-def recall_at_k_fn(r: RetrievalResult, k: int) -> float:
-    return recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k)
-
-def precision_at_k_fn(r: RetrievalResult, k: int) -> float:
-    return precision_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k)
-
-def hit_rate_at_k_fn(r: RetrievalResult, k: int) -> float:
-    return hit_rate_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k)
-
-def ndcg_at_k_fn(r: RetrievalResult, k: int) -> float:
-    return ndcg_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k)
