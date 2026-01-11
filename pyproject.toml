@@ -40,6 +40,10 @@ openai = [
   "llama-index-llms-openai"
 ]
 
+ui = [
+  "streamlit>=1.30.0",
+]
+
 dev = [
   "pytest",
   "ruff",
