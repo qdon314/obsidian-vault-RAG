@@ -26,6 +26,17 @@ class Difficulty(str, Enum):
 
 
 @dataclass(frozen=True, slots=True)
+class QuerySuggestion:
+    """A suggested query generated from a chunk by an LLM."""
+
+    query: str
+    query_type: QueryType
+    difficulty: Difficulty
+    requires_synthesis: bool
+    notes: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class EvalQuery:
     """
     A single evaluation query with ground truth annotations.
