@@ -20,16 +20,24 @@ def _generate_qid(output_path) -> str:
 
 
 def render_query_editor(
-    chunk: Chunk,
+    chunks: list[Chunk],
     suggestion: QuerySuggestion | None = None,
 ) -> bool:
     """
     Render the query editor form.
 
+    Args:
+        chunks: List of chunks to use as ground truth (one or more)
+        suggestion: Optional query suggestion to pre-fill form
+
     Returns True if a query was saved, False otherwise.
     """
     state = get_state()
     store = get_eval_store()
+
+    if not chunks:
+        st.warning("No chunks selected.")
+        return False
 
     st.subheader("Edit Query")
 
@@ -39,6 +47,10 @@ def render_query_editor(
     default_difficulty = suggestion.difficulty if suggestion else Difficulty.EASY
     default_synthesis = suggestion.requires_synthesis if suggestion else False
     default_notes = suggestion.notes if suggestion else ""
+
+    # Auto-set requires_synthesis if multiple chunks
+    if len(chunks) > 1 and not default_synthesis:
+        default_synthesis = True
 
     # Use session state for query text to persist edits
     if state.query_text:
@@ -124,9 +136,10 @@ def render_query_editor(
 
         st.divider()
 
-        # Chunk info (read-only)
-        st.markdown("**Ground truth chunk:**")
-        st.code(chunk.chunk_id, language=None)
+        # Chunk info (read-only) - show all selected chunks
+        st.markdown(f"**Ground truth chunks ({len(chunks)}):**")
+        for chunk in chunks:
+            st.code(chunk.chunk_id, language=None)
 
         # Submit buttons
         col1, col2 = st.columns(2)
@@ -143,7 +156,7 @@ def render_query_editor(
     # Handle skip
     if skip_clicked:
         reset_selection()
-        st.info("Skipped. Select another chunk.")
+        st.info("Skipped. Select chunks for the next query.")
         return False
 
     # Handle save
@@ -156,9 +169,12 @@ def render_query_editor(
         # Parse tags
         tags = [t.strip() for t in tags_input.split(",") if t.strip()]
 
-        # Create EvalQuery
+        # Create EvalQuery with all chunk IDs
         qid = _generate_qid(state.output_path)
-        relevant_chunk_ids = set() if is_unanswerable else {chunk.chunk_id}
+        relevant_chunk_ids = set() if is_unanswerable else {c.chunk_id for c in chunks}
+
+        # Store all source chunk IDs in metadata
+        source_chunk_ids = [c.chunk_id for c in chunks]
 
         query = EvalQuery(
             qid=qid,
@@ -174,7 +190,7 @@ def render_query_editor(
             created_by="curated",
             is_unanswerable=is_unanswerable,
             unanswerable_reason=unanswerable_reason,
-            metadata={"source_chunk_id": chunk.chunk_id},
+            metadata={"source_chunk_ids": source_chunk_ids},
         )
 
         # Save

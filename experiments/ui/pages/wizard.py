@@ -2,7 +2,7 @@
 Wizard-style page for query curation.
 
 Steps:
-1. Select a chunk from the browser
+1. Select chunks (can add multiple)
 2. Generate query suggestions (optional)
 3. Edit and save the query
 """
@@ -16,7 +16,44 @@ from experiments.ui.components import (
     render_query_editor,
     render_query_generator,
 )
-from experiments.ui.state import get_state
+from experiments.ui.state import (
+    add_chunk_to_selection,
+    get_state,
+    remove_chunk_from_selection,
+)
+
+
+def _render_selected_chunks() -> None:
+    """Render the list of currently selected chunks with remove buttons."""
+    state = get_state()
+
+    if not state.selected_chunks:
+        st.info("No chunks added yet. Browse and add chunks below.")
+        return
+
+    st.markdown(f"**{len(state.selected_chunks)} chunk(s) selected:**")
+
+    for chunk in state.selected_chunks:
+        col1, col2, col3 = st.columns([3, 2, 1])
+
+        with col1:
+            # Show chunk preview
+            preview = chunk.text[:80].replace("\n", " ") + "..."
+            st.markdown(f"**{chunk.section_heading or 'No heading'}**")
+            st.caption(preview)
+
+        with col2:
+            # Show source
+            uri = chunk.metadata.get("uri", "")
+            if uri:
+                from pathlib import Path
+
+                st.caption(Path(uri).name)
+
+        with col3:
+            if st.button("Remove", key=f"remove_{chunk.chunk_id}"):
+                remove_chunk_from_selection(chunk.chunk_id)
+                st.rerun()
 
 
 def render_wizard_page() -> None:
@@ -28,36 +65,73 @@ def render_wizard_page() -> None:
     st.divider()
 
     # Step 1: Chunk selection
-    st.header("Step 1: Select a Chunk")
-    selected_chunk = render_chunk_browser()
+    st.header("Step 1: Select Chunks")
 
-    if not selected_chunk:
-        st.info("Select a chunk to continue.")
+    # Show currently selected chunks
+    _render_selected_chunks()
+
+    st.divider()
+
+    # Chunk browser for adding more
+    with st.expander("Browse & Add Chunks", expanded=len(state.selected_chunks) == 0):
+        selected_chunk = render_chunk_browser()
+
+        if selected_chunk:
+            # Check if already added
+            already_added = selected_chunk.chunk_id in {
+                c.chunk_id for c in state.selected_chunks
+            }
+
+            if already_added:
+                st.success("This chunk is already in your selection.")
+            else:
+                if st.button("Add this chunk", type="primary", key="add_chunk_btn"):
+                    add_chunk_to_selection(selected_chunk)
+                    st.rerun()
+
+    # Can't proceed without at least one chunk
+    if not state.selected_chunks:
+        st.warning("Add at least one chunk to continue.")
         return
 
     st.divider()
 
     # Step 2: Query generation (optional)
     st.header("Step 2: Generate Query (Optional)")
-    suggestion = render_query_generator(selected_chunk)
+
+    # Use first chunk for generation (or could combine later)
+    primary_chunk = state.selected_chunks[0]
+    if len(state.selected_chunks) > 1:
+        st.caption(
+            f"Query suggestions will be based on the first chunk: "
+            f"'{primary_chunk.section_heading or 'No heading'}'"
+        )
+
+    suggestion = render_query_generator(primary_chunk)
 
     st.divider()
 
     # Step 3: Edit and save
     st.header("Step 3: Edit & Save")
 
-    # Show the chunk content again for reference
-    with st.expander("Show chunk content for reference", expanded=True):
-        st.text_area(
-            "Chunk text",
-            value=selected_chunk.text,
-            height=150,
-            disabled=True,
-            key="chunk_reference",
-        )
+    # Show all selected chunks for reference
+    with st.expander(
+        f"Show selected chunks ({len(state.selected_chunks)})", expanded=True
+    ):
+        for i, chunk in enumerate(state.selected_chunks):
+            st.markdown(f"**Chunk {i + 1}: {chunk.section_heading or 'No heading'}**")
+            st.text_area(
+                f"Content",
+                value=chunk.text,
+                height=120,
+                disabled=True,
+                key=f"chunk_ref_{i}",
+            )
+            if i < len(state.selected_chunks) - 1:
+                st.divider()
 
-    saved = render_query_editor(selected_chunk, suggestion)
+    saved = render_query_editor(state.selected_chunks, suggestion)
 
     if saved:
         st.balloons()
-        st.info("Query saved! Select another chunk to continue, or close the app.")
+        st.info("Query saved! Select chunks for the next query, or close the app.")

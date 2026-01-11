@@ -35,7 +35,8 @@ class CurationState:
 
     # Selection state
     selected_doc_id: str | None = None
-    selected_chunk: Chunk | None = None
+    selected_chunk: Chunk | None = None  # Currently browsing chunk
+    selected_chunks: list[Chunk] = field(default_factory=list)  # All chunks for this query
 
     # Generation state
     suggestions: list[QuerySuggestion] = field(default_factory=list)
@@ -114,10 +115,24 @@ def reset_selection() -> None:
     """Reset selection state for next query."""
     state = get_state()
     state.selected_chunk = None
+    state.selected_chunks = []
     state.suggestions = []
     state.selected_suggestion_idx = None
     state.query_text = ""
     state.expected_answer = ""
+
+
+def add_chunk_to_selection(chunk: Chunk) -> None:
+    """Add a chunk to the current selection (if not already added)."""
+    state = get_state()
+    if chunk.chunk_id not in {c.chunk_id for c in state.selected_chunks}:
+        state.selected_chunks.append(chunk)
+
+
+def remove_chunk_from_selection(chunk_id: str) -> None:
+    """Remove a chunk from the current selection."""
+    state = get_state()
+    state.selected_chunks = [c for c in state.selected_chunks if c.chunk_id != chunk_id]
 
 
 def increment_counter() -> None:
