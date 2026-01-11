@@ -1,3 +1,6 @@
+# Re-export QuerySuggestion from eval.schema for convenience
+from rag.eval.schema import QuerySuggestion
+
 from .chunk_loader import ChunkLoader
 from .chunker import Chunker
 from .context_builder import ContextBuilder
@@ -10,9 +13,6 @@ from .query_suggester import QuerySuggester
 from .reranker import Reranker
 from .retriever import Retriever
 from .vector_store import VectorStore
-
-# Re-export QuerySuggestion from eval.schema for convenience
-from rag.eval.schema import QuerySuggestion
 
 __all__ = [
     "ChunkLoader",

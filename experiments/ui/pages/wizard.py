@@ -1,7 +1,11 @@
 """
 Wizard-style page for query curation.
 
-Steps:
+Modes:
+- Create: Select chunks, generate suggestions, edit and save new queries
+- Review: View, edit, and delete existing queries
+
+Steps (Create mode):
 1. Select chunks (can add multiple)
 2. Generate query suggestions (optional)
 3. Edit and save the query
@@ -13,8 +17,10 @@ import streamlit as st
 
 from experiments.ui.components import (
     render_chunk_browser,
+    render_query_edit_form,
     render_query_editor,
     render_query_generator,
+    render_query_list,
 )
 from experiments.ui.state import (
     add_chunk_to_selection,
@@ -56,8 +62,8 @@ def _render_selected_chunks() -> None:
                 st.rerun()
 
 
-def render_wizard_page() -> None:
-    """Render the query curation wizard."""
+def _render_create_tab() -> None:
+    """Render the Create New Query tab content."""
     state = get_state()
 
     # Progress indicator
@@ -121,7 +127,7 @@ def render_wizard_page() -> None:
         for i, chunk in enumerate(state.selected_chunks):
             st.markdown(f"**Chunk {i + 1}: {chunk.section_heading or 'No heading'}**")
             st.text_area(
-                f"Content",
+                "Content",
                 value=chunk.text,
                 height=120,
                 disabled=True,
@@ -135,3 +141,30 @@ def render_wizard_page() -> None:
     if saved:
         st.balloons()
         st.info("Query saved! Select chunks for the next query, or close the app.")
+
+
+def _render_review_tab() -> None:
+    """Render the Review/Edit Existing Queries tab content."""
+    state = get_state()
+
+    # If editing a specific query, show the edit form
+    if state.editing_query:
+        updated = render_query_edit_form()
+        if updated:
+            st.rerun()
+        return
+
+    # Otherwise show the query list
+    render_query_list()
+
+
+def render_wizard_page() -> None:
+    """Render the query curation wizard with tabs for create/review modes."""
+    # Tab selection
+    tab_create, tab_review = st.tabs(["Create New Query", "Review Existing"])
+
+    with tab_create:
+        _render_create_tab()
+
+    with tab_review:
+        _render_review_tab()

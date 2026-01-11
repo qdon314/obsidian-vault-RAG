@@ -13,7 +13,7 @@ from rag.adapters.chunk_loading import JsonlChunkLoader
 from rag.adapters.eval_persistence import JsonlEvalStore
 from rag.adapters.query_suggestion import OpenAIQuerySuggester
 from rag.domain.models import Chunk
-from rag.eval.schema import QuerySuggestion
+from rag.eval.schema import EvalQuery, QuerySuggestion
 from rag.settings import load_settings
 
 
@@ -48,6 +48,10 @@ class CurationState:
 
     # Stats
     query_counter: int = 0
+
+    # Edit mode state
+    existing_queries: list[EvalQuery] = field(default_factory=list)
+    editing_query: EvalQuery | None = None  # Query currently being edited
 
 
 def init_state() -> None:
@@ -139,3 +143,51 @@ def increment_counter() -> None:
     """Increment the query counter."""
     state = get_state()
     state.query_counter += 1
+
+
+def load_existing_queries() -> None:
+    """Load existing queries from the output file."""
+    state = get_state()
+    store = get_eval_store()
+    state.existing_queries = store.load_queries(state.output_path)
+
+
+def set_editing_query(query: EvalQuery | None) -> None:
+    """Set the query to edit (or None to clear)."""
+    state = get_state()
+    state.editing_query = query
+
+
+def update_query(updated_query: EvalQuery) -> None:
+    """Update an existing query in the file."""
+    state = get_state()
+    store = get_eval_store()
+
+    # Replace the query in the list
+    new_queries = [
+        updated_query if q.qid == updated_query.qid else q
+        for q in state.existing_queries
+    ]
+
+    # Save all queries
+    store.save_queries(new_queries, state.output_path)
+
+    # Reload
+    state.existing_queries = new_queries
+    state.editing_query = None
+
+
+def delete_query(qid: str) -> None:
+    """Delete a query from the file."""
+    state = get_state()
+    store = get_eval_store()
+
+    # Remove from list
+    new_queries = [q for q in state.existing_queries if q.qid != qid]
+
+    # Save all queries
+    store.save_queries(new_queries, state.output_path)
+
+    # Reload
+    state.existing_queries = new_queries
+    state.editing_query = None
