@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 import streamlit as st
 
-from experiments.ui.state import get_eval_store, get_state, increment_counter, reset_selection
+from eval.app.state import get_eval_store, get_state, increment_counter, reset_selection
 from rag.domain.models import Chunk
 from rag.eval.schema import Difficulty, EvalQuery, QuerySuggestion, QueryType
 

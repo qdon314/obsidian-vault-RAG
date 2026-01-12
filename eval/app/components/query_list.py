@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from experiments.ui.state import (
+from eval.app.state import (
     delete_query,
     get_state,
     load_existing_queries,

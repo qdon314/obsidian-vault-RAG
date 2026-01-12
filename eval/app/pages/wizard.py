@@ -15,14 +15,14 @@ from __future__ import annotations
 
 import streamlit as st
 
-from experiments.ui.components import (
+from eval.app.components import (
     render_chunk_browser,
     render_query_edit_form,
     render_query_editor,
     render_query_generator,
     render_query_list,
 )
-from experiments.ui.state import (
+from eval.app.state import (
     add_chunk_to_selection,
     get_state,
     remove_chunk_from_selection,

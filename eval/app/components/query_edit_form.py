@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 import streamlit as st
 
-from experiments.ui.state import get_state, set_editing_query, update_query
+from eval.app.state import get_state, set_editing_query, update_query
 from rag.eval.schema import Difficulty, EvalQuery, QueryType
 
 

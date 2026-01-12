@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from experiments.ui.state import get_query_suggester, get_state
+from eval.app.state import get_query_suggester, get_state
 from rag.domain.models import Chunk
 from rag.eval.schema import QuerySuggestion
 

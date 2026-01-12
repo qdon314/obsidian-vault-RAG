@@ -19,8 +19,8 @@ from pathlib import Path
 
 import streamlit as st
 
-from experiments.ui.pages import render_wizard_page
-from experiments.ui.state import get_eval_store, get_state, init_services, init_state, load_chunks
+from eval.app.pages import render_wizard_page
+from eval.app.state import get_eval_store, get_state, init_services, init_state, load_chunks
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent

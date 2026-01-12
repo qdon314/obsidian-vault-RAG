@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from experiments.ui.state import get_state, load_chunks
+from eval.app.state import get_state, load_chunks
 from rag.domain.models import Chunk
 
 
