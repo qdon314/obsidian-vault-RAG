@@ -17,16 +17,15 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import streamlit as st
+
+from experiments.ui.pages import render_wizard_page
+from experiments.ui.state import get_eval_store, get_state, init_services, init_state, load_chunks
+
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
-
-import streamlit as st  # noqa: E402
-
-from experiments.ui.pages import render_wizard_page  # noqa: E402
-from experiments.ui.state import get_eval_store, get_state, init_services, init_state  # noqa: E402
-
 
 def render_sidebar() -> None:
     """Render the sidebar with configuration options."""
@@ -56,12 +55,17 @@ def render_sidebar() -> None:
     # Stats
     st.sidebar.subheader("Stats")
 
+    # Load chunks if not loaded yet
+    if not state.chunks:
+        with st.sidebar, st.spinner("Loading chunks..."):
+            load_chunks()
+
     # Chunk count
     if state.chunks:
         st.sidebar.metric("Loaded chunks", len(state.chunks))
         st.sidebar.metric("Documents", len(state.chunks_by_doc))
     else:
-        st.sidebar.info("Chunks not loaded yet.")
+        st.sidebar.warning("No chunks found. Check your chunks path.")
 
     # Query count
     if state.output_path.exists():
