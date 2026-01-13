@@ -62,6 +62,42 @@ class Chunk:
             language=data.get("language"),
             metadata=data.get("metadata", {}),
         )
+        
+    def to_dict(self) -> dict[str, Any]:
+        """Convert Chunk to a dictionary."""
+        return {
+            "chunk_id": self.chunk_id,
+            "doc_id": self.doc_id,
+            "text": self.text,
+            "chunk_index": self.chunk_index,
+            "start_char": self.start_char,
+            "end_char": self.end_char,
+            "section_heading": self.section_heading,
+            "section_path": self.section_path,
+            "language": self.language,
+            "metadata": self.metadata,
+        }
+    
+    @classmethod
+    def to_record(cls, ch: Chunk) -> dict[str, object]:
+        """Convert Chunk to a flat record for filtering."""
+        # Start with "first-class" fields
+        rec: dict[str, object] = {
+            "chunk_id": ch.chunk_id,
+            "doc_id": ch.doc_id,
+            "chunk_index": ch.chunk_index,
+            "start_char": ch.start_char,
+            "end_char": ch.end_char,
+            "section_heading": ch.section_heading,
+            "section_path": ch.section_path,
+            "language": ch.language,
+        }
+        
+        # Add metadata fields
+        for k, v in ch.metadata.items():
+            rec[k] = v
+        
+        return rec
 
 # --------------------------
 # Core Content Metadata Objects
