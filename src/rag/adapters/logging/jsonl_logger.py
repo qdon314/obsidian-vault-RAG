@@ -49,6 +49,6 @@ def _redact(obj: Any) -> Any:
             else:
                 out[k] = _redact(v)
         return out
-    if isinstance(obj, list):
+    if isinstance(obj, (list, tuple)):
         return [_redact(x) for x in obj]
     return obj
