@@ -5,10 +5,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import sqrt
 from pathlib import Path
-from typing import Any
 
+from rag.adapters.filters.inmemory_evaluator import InMemoryFilterEvaluator
+from rag.domain.filters import Where
 from rag.domain.models import Candidate, Chunk
-from rag.ports import VectorStore
+from rag.ports import FilterEvaluator, VectorStore
 from rag.utils.json_sanitize import json_sanitize
 
 Vector = list[float]
@@ -24,37 +25,7 @@ def _norm(a: Sequence[float]) -> float:
 
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
     return _dot(a, b) / (_norm(a) * _norm(b))
-
-
-def _chunk_to_dict(ch: Chunk) -> dict[str, Any]:
-    return {
-        "chunk_id": ch.chunk_id,
-        "doc_id": ch.doc_id,
-        "text": ch.text,
-        "chunk_index": ch.chunk_index,
-        "start_char": ch.start_char,
-        "end_char": ch.end_char,
-        "section_heading": ch.section_heading,
-        "section_path": ch.section_path,
-        "language": ch.language,
-        "metadata": dict(ch.metadata),
-    }
-
-
-def _chunk_from_dict(d: Mapping[str, Any]) -> Chunk:
-    return Chunk(
-        chunk_id=str(d["chunk_id"]),
-        doc_id=str(d["doc_id"]),
-        text=str(d["text"]),
-        chunk_index=int(d["chunk_index"]),
-        start_char=d.get("start_char"),
-        end_char=d.get("end_char"),
-        section_heading=d.get("section_heading"),
-        section_path=d.get("section_path"),
-        language=d.get("language"),
-        metadata=d.get("metadata", {}) or {},
-    )
-
+  
 
 @dataclass(slots=True)
 class JsonlVectorStore(VectorStore):
@@ -67,6 +38,7 @@ class JsonlVectorStore(VectorStore):
     path: Path
     _chunks: list[Chunk] = field(default_factory=list)
     _vectors: list[Vector] = field(default_factory=list)
+    _filter_eval: FilterEvaluator = field(default_factory=InMemoryFilterEvaluator)
 
     @property
     def data_file(self) -> Path:
@@ -90,7 +62,7 @@ class JsonlVectorStore(VectorStore):
                     f"Invalid JSON on {self.data_file} line {i}: {e}\n"
                     f"Snippet: {snippet}"
                 ) from e
-            self._chunks.append(_chunk_from_dict(row["chunk"]))
+            self._chunks.append(Chunk.from_dict(row["chunk"]))
             self._vectors.append(list(row["vector"]))
 
     def save(self) -> None:
@@ -105,7 +77,7 @@ class JsonlVectorStore(VectorStore):
 
         with tmp_file.open("w", encoding="utf-8") as f:
             for ch, vec in zip(self._chunks, self._vectors, strict=False):
-                row = {"chunk": _chunk_to_dict(ch), "vector": vec}
+                row = {"chunk": ch.to_dict(), "vector": vec}
                 safe_row = json_sanitize(row)
                 f.write(json.dumps(safe_row, ensure_ascii=False))
                 f.write("\n")
@@ -134,23 +106,21 @@ class JsonlVectorStore(VectorStore):
         *,
         query_vector: Vector,
         top_k: int,
-        filters: Mapping[str, object] | None = None,
+        where: Where = None,
         metadata: Mapping[str, object] | None = None,
     ) -> list[Candidate]:
-        def allowed(c: Chunk) -> bool:
-            if not filters:
-                return True
-            return all(c.metadata.get(k) == v for k, v in filters.items())
-
         scored: list[Candidate] = []
         for chunk, vec in zip(self._chunks, self._vectors, strict=False):
-            if not allowed(chunk):
-                continue
+            if where is not None:
+                rec = Chunk.to_record(chunk)
+                if not self._filter_eval.matches(where, rec):
+                    continue
             score = _cosine(query_vector, vec)
             scored.append(Candidate(chunk=chunk, score=score))
 
         scored.sort(key=lambda c: c.score, reverse=True)
         return scored[:top_k]
+
 
     def count(self) -> int:
         return len(self._chunks)

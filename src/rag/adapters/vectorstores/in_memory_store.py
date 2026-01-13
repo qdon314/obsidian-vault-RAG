@@ -4,6 +4,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import sqrt
 
+from rag.adapters.filters.inmemory_evaluator import InMemoryFilterEvaluator
+from rag.domain.filters import Where
 from rag.domain.models import Candidate, Chunk
 from rag.ports import VectorStore
 
@@ -31,6 +33,7 @@ class InMemoryVectorStore(VectorStore):
     """
     _chunks: list[Chunk] = field(default_factory=list)
     _vectors: list[Vector] = field(default_factory=list)
+    _filter_eval: InMemoryFilterEvaluator = field(default_factory=InMemoryFilterEvaluator)
 
     def upsert(
         self,
@@ -50,19 +53,15 @@ class InMemoryVectorStore(VectorStore):
         *,
         query_vector: Vector,
         top_k: int,
-        filters: Mapping[str, object] | None = None,
+        where: Where = None,
         metadata: Mapping[str, object] | None = None,
-    ) -> list[Candidate]:
-        # Very basic filter support: match chunk.metadata[key] == value
-        def allowed(chunk: Chunk) -> bool:
-            if not filters:
-                return True
-            return all(chunk.metadata.get(k) == v for k, v in filters.items())
-
+    ) -> list[Candidate]:        
         scored: list[Candidate] = []
         for chunk, vec in zip(self._chunks, self._vectors, strict=False):
-            if not allowed(chunk):
-                continue
+            if where is not None:
+                rec = Chunk.to_record(chunk)
+                if not self._filter_eval.matches(where, rec):
+                    continue
             score = _cosine(query_vector, vec)
             scored.append(Candidate(chunk=chunk, score=score))
 
