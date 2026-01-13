@@ -67,8 +67,13 @@ class Embeddings:
 
 @dataclass(frozen=True, slots=True)
 class VectorStore:
-    backend: Literal["memory", "jsonl"] = "memory"
+    backend: Literal["memory", "jsonl", "qdrant"] = "memory"
     jsonl_dir: Path | None = None  # only required when backend="jsonl"
+    # Qdrant-specific settings
+    qdrant_collection: str = "chunks"
+    qdrant_url: str | None = None  # remote Qdrant server URL
+    qdrant_path: Path | None = None  # local disk path for Qdrant
+    qdrant_api_key: str | None = None  # API key for Qdrant Cloud
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,9 +194,14 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
     # Vectorstore
     vs_backend = str(vectorstore_tbl.get("backend", "memory"))
     jsonl_dir = vectorstore_tbl.get("jsonl_dir", None)
+    qdrant_path = vectorstore_tbl.get("qdrant_path", None)
     vectorstore = VectorStore(
         backend=vs_backend,  # type: ignore[arg-type]
         jsonl_dir=expand(jsonl_dir) if isinstance(jsonl_dir, str) else None,
+        qdrant_collection=str(vectorstore_tbl.get("qdrant_collection", "chunks")),
+        qdrant_url=vectorstore_tbl.get("qdrant_url", None),
+        qdrant_path=expand(qdrant_path) if isinstance(qdrant_path, str) else None,
+        qdrant_api_key=vectorstore_tbl.get("qdrant_api_key", None),
     )
 
     # LLM

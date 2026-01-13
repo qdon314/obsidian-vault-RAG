@@ -63,10 +63,16 @@ dummy_dim = 128
 # Vector store
 # -------------------------------------------------------------------
 [vectorstore]
-backend = "memory"         # "memory" | "jsonl"
+backend = "jsonl"         # "memory" | "jsonl" | "qdrant"
 
 # Used only when backend = "jsonl"
-jsonl_dir = "artifacts/indexes/default"
+jsonl_dir = "artifacts/indexes/obsidian_index"
+
+# Used only when backend = "qdrant"
+# qdrant_collection = "chunks"
+# qdrant_url = "http://localhost:6333"  # for remote Qdrant server
+# qdrant_path = "artifacts/qdrant"      # for local disk persistence
+# qdrant_api_key = "..."                # for Qdrant Cloud
 
 
 # -------------------------------------------------------------------

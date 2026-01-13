@@ -50,8 +50,13 @@ class ContainerOverrides:
     embedder_backend: Literal["openai", "dummy"] | None = None
     dummy_embed_dim: int | None = None
 
-    store_backend: Literal["memory", "jsonl"] | None = None
+    store_backend: Literal["memory", "jsonl", "qdrant"] | None = None
     jsonl_index_dir: Path | None = None
+
+    # Qdrant overrides
+    qdrant_collection: str | None = None
+    qdrant_url: str | None = None
+    qdrant_path: Path | None = None
 
     chunk_size: int | None = None
     chunk_overlap: int | None = None
@@ -111,10 +116,34 @@ def build_container(
     generator = OpenAIChatGenerator(api_key=api_key, model=str(cfg.llm.model))
 
     # ----- store selection
-    store_backend = ovrds.store_backend or cfg.vectorstore.backend  # "memory" vs "jsonl"
+    store_backend = ovrds.store_backend or cfg.vectorstore.backend  # "memory", "jsonl", or "qdrant"
     if store_backend == "memory":
         store = InMemoryVectorStore()
+    elif store_backend == "qdrant":
+        from rag.adapters.vectorstores.qdrant_store import QdrantVectorStore
+
+        # Determine vector size based on embedder
+        if embedder_backend == "dummy":
+            vector_size = ovrds.dummy_embed_dim or cfg.embeddings.dummy_dim
+        else:
+            # OpenAI embedding dimensions by model
+            model = cfg.embeddings.model
+            if "3-large" in model:
+                vector_size = 3072
+            elif "3-small" in model or "ada" in model:
+                vector_size = 1536
+            else:
+                vector_size = 1536  # default fallback
+
+        store = QdrantVectorStore(
+            collection_name=ovrds.qdrant_collection or cfg.vectorstore.qdrant_collection,
+            vector_size=vector_size,
+            url=ovrds.qdrant_url or cfg.vectorstore.qdrant_url,
+            path=str(ovrds.qdrant_path or cfg.vectorstore.qdrant_path) if (ovrds.qdrant_path or cfg.vectorstore.qdrant_path) else None,
+            api_key=cfg.vectorstore.qdrant_api_key,
+        )
     else:
+        # jsonl backend
         index_dir = ovrds.jsonl_index_dir or cfg.vectorstore.jsonl_dir or cfg.paths.index_dir
         if index_dir is None:
             raise ValueError(
