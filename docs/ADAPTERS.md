@@ -1,0 +1,765 @@
+# Adapters Reference
+
+Complete documentation for all adapter implementations in the RAG system. Adapters are concrete implementations of the port interfaces.
+
+## Table of Contents
+
+- [Chunking Adapters](#chunking-adapters)
+- [Embedding Adapters](#embedding-adapters)
+- [Vector Store Adapters](#vector-store-adapters)
+- [Retrieval Adapters](#retrieval-adapters)
+- [Reranking Adapters](#reranking-adapters)
+- [Context Building Adapters](#context-building-adapters)
+- [Generation Adapters](#generation-adapters)
+- [Ingestion Adapters](#ingestion-adapters)
+- [Logging Adapters](#logging-adapters)
+
+---
+
+## Chunking Adapters
+
+### FixedChunker
+
+**Location:** `src/rag/adapters/chunking/fixed.py`
+
+Character-based chunker with configurable size and overlap.
+
+```python
+@dataclass(frozen=True, slots=True)
+class FixedChunker:
+    chunk_size: int = 1200       # Characters per chunk
+    overlap: int = 150           # Overlap between consecutive chunks
+    strategy_name: str = "fixed_chars_v1"
+```
+
+**Behavior:**
+- Splits document text into fixed-size character chunks
+- Uses configurable overlap to preserve context across boundaries
+- Generates stable chunk IDs: `{doc_id}:{strategy}:{index}:{start}-{end}`
+- Preserves document metadata in each chunk
+- Skips empty chunks
+
+**Example:**
+```python
+from rag.adapters.chunking.fixed import FixedChunker
+from rag.domain.models import Document
+
+chunker = FixedChunker(chunk_size=800, overlap=120)
+doc = Document(doc_id="doc1", text="...", source="filesystem", uri="/path/file.md")
+chunks = chunker.chunk(doc)
+```
+
+**Chunk ID Format:**
+```
+doc123:fixed_chars_v1:0:0-800      # First chunk
+doc123:fixed_chars_v1:1:680-1480   # Second chunk (with overlap)
+```
+
+---
+
+## Embedding Adapters
+
+### OpenAIEmbedder
+
+**Location:** `src/rag/adapters/embedding/openai_embedder.py`
+
+Production embedder using OpenAI's embedding API.
+
+```python
+@dataclass(frozen=True, slots=True)
+class OpenAIEmbedder:
+    api_key: str
+    model: str = "text-embedding-3-small"
+```
+
+**Features:**
+- Uses official OpenAI Python client
+- Returns vectors in same order as input texts
+- Supports batch embedding
+
+**Supported Models:**
+| Model | Dimensions | Use Case |
+|-------|------------|----------|
+| `text-embedding-3-large` | 3072 | Highest quality |
+| `text-embedding-3-small` | 1536 | Good balance of quality/cost |
+| `text-embedding-ada-002` | 1536 | Legacy model |
+
+**Example:**
+```python
+from rag.adapters.embedding.openai_embedder import OpenAIEmbedder
+
+embedder = OpenAIEmbedder(
+    api_key="sk-...",
+    model="text-embedding-3-large"
+)
+vectors = embedder.embed_texts(["Hello world", "Goodbye world"])
+```
+
+### DummyEmbedder
+
+**Location:** `src/rag/adapters/embedding/dummy_embedder.py`
+
+Random vector embedder for testing without API costs.
+
+```python
+@dataclass(frozen=True, slots=True)
+class DummyEmbedder:
+    dim: int = 128
+```
+
+**Use Cases:**
+- Testing pipeline without API calls
+- Development without incurring costs
+- CI/CD environments
+
+**Example:**
+```python
+from rag.adapters.embedding.dummy_embedder import DummyEmbedder
+
+embedder = DummyEmbedder(dim=128)
+vectors = embedder.embed_texts(["test text"])  # Returns random vectors
+```
+
+### SqliteCacheEmbedder
+
+**Location:** `src/rag/adapters/embedding/sqlite_cache.py`
+
+Caching wrapper that stores embeddings in SQLite.
+
+**Features:**
+- Wraps any embedder
+- Caches text → vector mappings
+- Reduces API calls for repeated texts
+
+**Example:**
+```python
+from rag.adapters.embedding.sqlite_cache import SqliteCacheEmbedder
+from rag.adapters.embedding.openai_embedder import OpenAIEmbedder
+
+base_embedder = OpenAIEmbedder(api_key="sk-...")
+cached_embedder = SqliteCacheEmbedder(
+    embedder=base_embedder,
+    cache_path="./cache/embeddings.db"
+)
+```
+
+---
+
+## Vector Store Adapters
+
+### JsonlVectorStore
+
+**Location:** `src/rag/adapters/vectorstores/jsonl_store.py`
+
+Disk-persisted store using JSONL format.
+
+```python
+@dataclass(slots=True)
+class JsonlVectorStore:
+    path: Path
+```
+
+**File Structure:**
+```
+{path}/
+└── chunks.jsonl    # One JSON object per line
+```
+
+**JSONL Format:**
+```json
+{"chunk": {"chunk_id": "...", "doc_id": "...", "text": "..."}, "vector": [0.1, 0.2, ...]}
+```
+
+**Features:**
+- Human-readable format for inspection
+- Atomic save with temp file swap
+- In-memory search with cosine similarity
+- Filter support via `InMemoryFilterEvaluator`
+
+**Methods:**
+| Method | Description |
+|--------|-------------|
+| `load()` | Load chunks from `chunks.jsonl` into memory |
+| `save()` | Persist in-memory data to `chunks.jsonl` |
+| `upsert()` | Add chunks and vectors to memory |
+| `search()` | Cosine similarity search |
+| `count()` | Return number of stored chunks |
+
+**Example:**
+```python
+from pathlib import Path
+from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
+
+store = JsonlVectorStore(path=Path("./artifacts/index"))
+store.load()  # Load existing data
+store.upsert(chunks=[chunk1, chunk2], vectors=[vec1, vec2])
+store.save()  # Persist to disk
+```
+
+### InMemoryVectorStore
+
+**Location:** `src/rag/adapters/vectorstores/in_memory_store.py`
+
+Pure in-memory store without persistence.
+
+**Use Cases:**
+- Unit tests
+- Experiments where persistence isn't needed
+- Quick prototyping
+
+**Example:**
+```python
+from rag.adapters.vectorstores.in_memory_store import InMemoryVectorStore
+
+store = InMemoryVectorStore()
+store.upsert(chunks=[chunk], vectors=[vector])
+results = store.search(query_vector=query_vec, top_k=5)
+```
+
+### QdrantVectorStore
+
+**Location:** `src/rag/adapters/vectorstores/qdrant_store.py`
+
+Qdrant-backed vector store for scalable similarity search. Supports both local and remote Qdrant instances.
+
+```python
+@dataclass(slots=True)
+class QdrantVectorStore:
+    collection_name: str           # Name of the Qdrant collection
+    vector_size: int               # Dimension of vectors (must match embedder output)
+    url: str | None = None         # Qdrant server URL (for remote)
+    path: str | None = None        # Path for local disk persistence
+    api_key: str | None = None     # API key for Qdrant Cloud
+    distance: Distance = Distance.COSINE  # Distance metric
+```
+
+**Deployment Modes:**
+
+| Mode | Configuration | Description |
+|------|---------------|-------------|
+| In-memory | No `url` or `path` | Fast, non-persistent (testing) |
+| Local disk | Set `path` | Persistent local storage |
+| Remote server | Set `url` | Connect to Qdrant server |
+| Qdrant Cloud | Set `url` + `api_key` | Managed cloud service |
+
+**Features:**
+- Auto-creates collections with proper vector configuration
+- Uses `QdrantFilterCompiler` for metadata filtering
+- Supports cosine, Euclidean, and dot product distances
+- Chunk IDs are hashed to UUIDs for Qdrant compatibility
+- Uses `Chunk.to_dict()` / `Chunk.from_dict()` for serialization
+
+**Methods:**
+| Method | Description |
+|--------|-------------|
+| `upsert()` | Add chunks and vectors to collection |
+| `search()` | Vector similarity search with optional filters |
+| `count()` | Return number of stored points |
+| `save()` | No-op (Qdrant handles persistence) |
+| `load()` | Ensure collection exists |
+| `clear()` | Delete all points in collection |
+| `delete_collection()` | Delete the entire collection |
+
+**Example:**
+```python
+from rag.adapters.vectorstores.qdrant_store import QdrantVectorStore
+
+# In-memory mode (testing)
+store = QdrantVectorStore(
+    collection_name="chunks",
+    vector_size=3072
+)
+
+# Local disk persistence
+store = QdrantVectorStore(
+    collection_name="chunks",
+    vector_size=3072,
+    path="./artifacts/qdrant"
+)
+
+# Remote Qdrant server
+store = QdrantVectorStore(
+    collection_name="chunks",
+    vector_size=3072,
+    url="http://localhost:6333"
+)
+
+# Qdrant Cloud
+store = QdrantVectorStore(
+    collection_name="chunks",
+    vector_size=3072,
+    url="https://your-cluster.qdrant.io",
+    api_key="your-api-key"
+)
+
+# Search with filters
+from rag.domain.filters import Eq, And
+results = store.search(
+    query_vector=query_vec,
+    top_k=10,
+    where=And(clauses=[Eq(field="source", value="filesystem")])
+)
+```
+
+**Installation:**
+```bash
+pip install -e ".[qdrant]"
+```
+
+---
+
+## Retrieval Adapters
+
+### VectorRetriever
+
+**Location:** `src/rag/adapters/retrieval/vector_retriever.py`
+
+Composes an Embedder and VectorStore for retrieval.
+
+```python
+@dataclass(frozen=True, slots=True)
+class VectorRetriever:
+    embedder: Embedder
+    store: VectorStore
+```
+
+**Workflow:**
+1. Embed the query text
+2. Search the vector store with the query vector
+3. Return top-k candidates
+
+**Example:**
+```python
+from rag.adapters.retrieval.vector_retriever import VectorRetriever
+
+retriever = VectorRetriever(embedder=embedder, store=store)
+candidates = retriever.retrieve("What is X?", top_k=10)
+```
+
+---
+
+## Reranking Adapters
+
+### HeuristicReranker
+
+**Location:** `src/rag/adapters/reranking/rerank_heuristic.py`
+
+Cheap reranker using lexical overlap and diversification.
+
+```python
+class HeuristicReranker:
+    def __init__(
+        self,
+        *,
+        overlap_weight: float = 0.15,
+        diversify: bool = True,
+        max_per_doc: int = 3
+    ):
+```
+
+**Parameters:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `overlap_weight` | 0.15 | Weight for lexical overlap boost |
+| `diversify` | True | Enable document diversification |
+| `max_per_doc` | 3 | Max chunks from same document |
+
+**Algorithm:**
+1. Start with vector similarity score
+2. Calculate lexical overlap: `common_tokens / query_tokens`
+3. New score = `base_score + overlap_weight * overlap`
+4. If diversifying, limit chunks per document
+
+**Example:**
+```python
+from rag.adapters.reranking.rerank_heuristic import HeuristicReranker
+
+reranker = HeuristicReranker(overlap_weight=0.2, diversify=True, max_per_doc=2)
+reranked = reranker.rerank("What is X?", candidates)
+```
+
+### NoOpReranker
+
+**Location:** `src/rag/adapters/reranking/rerank_noop.py`
+
+Pass-through reranker that returns candidates unchanged.
+
+**Use Cases:**
+- Baseline experiments (vector similarity only)
+- When reranking is disabled
+
+**Example:**
+```python
+from rag.adapters.reranking.rerank_noop import NoOpReranker
+
+reranker = NoOpReranker()
+# Returns candidates unchanged
+reranked = reranker.rerank("query", candidates)
+```
+
+---
+
+## Context Building Adapters
+
+### SimpleContextBuilder
+
+**Location:** `src/rag/adapters/context_building/simple_context_builder.py`
+
+Builds context within token budget with deduplication.
+
+```python
+@dataclass(frozen=True, slots=True)
+class SimpleContextBuilder:
+    min_score: float | None = None    # Optional score threshold
+    max_chunks: int = 12              # Max chunks to include
+    dedupe: bool = True               # Remove near-duplicates
+    include_scores: bool = False      # Show scores in context
+```
+
+**Algorithm:**
+1. Sort candidates by `rerank_score` (or `score` if no reranking)
+2. For each candidate:
+   - Skip if below `min_score`
+   - Skip if dedupe enabled and similar chunk already seen
+   - Estimate tokens: `~4 chars/token`
+   - Break if exceeds `token_budget`
+   - Add to context and create citation
+3. Render formatted context string
+
+**Token Estimation:**
+```python
+def _estimate_tokens(text: str) -> int:
+    return max(1, len(text) // 4)  # ~4 chars per token
+```
+
+**Rendered Context Format:**
+```
+You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.
+If the answer is not supported by the CONTEXT, say you don't know.
+CONTEXT:
+[1]
+Source: Document Title /path/to/file.md
+Chunk text content here...
+
+[2]
+Source: Another Doc /path/to/other.md
+More chunk content...
+```
+
+**Example:**
+```python
+from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
+
+builder = SimpleContextBuilder(
+    min_score=0.5,
+    max_chunks=5,
+    dedupe=True
+)
+context_pack = builder.build("What is X?", candidates, token_budget=1500)
+```
+
+---
+
+## Generation Adapters
+
+### OpenAIChatGenerator
+
+**Location:** `src/rag/adapters/generation/openai_chat.py`
+
+OpenAI chat completions generator.
+
+```python
+@dataclass(frozen=True, slots=True)
+class OpenAIChatGenerator:
+    api_key: str
+    model: str = "gpt-4o-mini"
+    temperature: float = 0.2
+```
+
+**System Prompt:**
+```
+You are a precise assistant. Use only the provided CONTEXT.
+If the answer cannot be found in the CONTEXT, say you don't know.
+```
+
+**User Prompt Format:**
+```
+{rendered_context}
+QUESTION:
+{query}
+
+Answer clearly and cite chunk numbers like [1], [2] where relevant.
+```
+
+**Abstention Detection:**
+The generator detects abstention by checking for phrases like:
+- "i don't know"
+- "i do not know"
+- "not enough information"
+- "cannot determine"
+- "no information"
+
+**Example:**
+```python
+from rag.adapters.generation.openai_chat import OpenAIChatGenerator
+
+generator = OpenAIChatGenerator(
+    api_key="sk-...",
+    model="gpt-4o-mini",
+    temperature=0.2
+)
+answer = generator.generate("What is X?", context_pack)
+```
+
+---
+
+## Ingestion Adapters
+
+### FilesystemIngestor
+
+**Location:** `src/rag/adapters/ingestion/filesystem.py`
+
+Walks directory tree and loads documents.
+
+**Features:**
+- Recursive directory traversal
+- Skips hidden files (optional)
+- Filters by file extension
+- Delegates to format-specific loaders
+
+**Configuration via Settings:**
+```toml
+[ingestion]
+recursive = true
+skip_hidden = true
+allowed_extensions = [".md", ".txt"]
+```
+
+**Example:**
+```python
+from rag.adapters.ingestion.filesystem import FilesystemIngestor
+from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
+from rag.adapters.ingestion.loaders.text_loader import TextLoader
+
+ingestor = FilesystemIngestor(
+    text_loader=TextLoader(),
+    markdown_loader=ObsidianMarkdownLoader(vault_dir=Path("~/vault"))
+)
+documents, report = ingestor.ingest(["/path/to/vault"])
+```
+
+### ObsidianMarkdownLoader
+
+**Location:** `src/rag/adapters/ingestion/loaders/obsidian_markdown_loader.py`
+
+Loads Markdown files with Obsidian-specific features.
+
+**Features:**
+- Expands transclusions/embeds (`![[filename]]` syntax)
+- Preserves heading hierarchy
+- Configurable embed depth limit
+
+**Configuration:**
+```toml
+[ingestion]
+expand_embeds = true
+max_embed_depth = 4
+```
+
+### TextLoader
+
+**Location:** `src/rag/adapters/ingestion/loaders/text_loader.py`
+
+Simple plain text file loader.
+
+---
+
+## Logging Adapters
+
+### JsonlQueryLogger
+
+**Location:** `src/rag/adapters/logging/jsonl_logger.py`
+
+Appends QueryTrace objects to JSONL file.
+
+```python
+@dataclass(frozen=True, slots=True)
+class JsonlQueryLogger:
+    path: Path
+    redact_text: bool = False  # Optional text redaction
+```
+
+**Features:**
+- Atomic append (POSIX-safe for single process)
+- Optional text redaction for privacy
+- Human-readable JSON format
+
+**Output Location:**
+```
+artifacts/logs/queries.jsonl
+```
+
+**Example Log Entry:**
+```json
+{
+  "trace_id": "abc123",
+  "query": "What is X?",
+  "created_at": "2024-01-15T10:30:00Z",
+  "top_k": 8,
+  "retrieved": [...],
+  "reranked": [...],
+  "packed_chunk_ids": ["chunk1", "chunk2"],
+  "model": "gpt-4o-mini",
+  "latency_ms": 1234,
+  "answer": {...},
+  "metadata": {
+    "timing_ms": {
+      "retrieval": 100,
+      "rerank": 50,
+      "context": 20,
+      "generation": 1000,
+      "total": 1234
+    }
+  }
+}
+```
+
+---
+
+## Filter Adapters
+
+The filter system provides a backend-agnostic way to express metadata filters using an AST (Abstract Syntax Tree). Filter nodes are defined in `src/rag/domain/filters.py` and compiled to backend-specific representations.
+
+### Filter AST
+
+**Location:** `src/rag/domain/filters.py`
+
+| Filter | Description | Example |
+|--------|-------------|---------|
+| `Eq(field, value)` | Exact equality | `Eq("source", "filesystem")` |
+| `In(field, values)` | Membership check | `In("type", ["md", "txt"])` |
+| `Contains(field, value)` | Array contains value | `Contains("tags", "python")` |
+| `Prefix(field, prefix)` | String prefix match | `Prefix("uri", "/docs/")` |
+| `Range(field, gte, lte, gt, lt)` | Range query | `Range("score", gte=0.5)` |
+| `And(clauses)` | All clauses must match | `And([Eq(...), Eq(...)])` |
+| `Or(clauses)` | Any clause must match | `Or([Eq(...), Eq(...)])` |
+| `Not(clause)` | Negation | `Not(Eq("draft", True))` |
+
+### InMemoryFilterEvaluator
+
+**Location:** `src/rag/adapters/filters/inmemory_evaluator.py`
+
+Evaluates filter AST against chunk metadata in Python. Used by `JsonlVectorStore` and `InMemoryVectorStore`.
+
+```python
+class InMemoryFilterEvaluator(FilterEvaluator):
+    def matches(self, where: Where, metadata: Mapping[str, object]) -> bool:
+        ...
+```
+
+**Example:**
+```python
+from rag.domain.filters import Eq, And
+from rag.adapters.filters.inmemory_evaluator import InMemoryFilterEvaluator
+
+evaluator = InMemoryFilterEvaluator()
+filter = And(clauses=[
+    Eq(field="source", value="filesystem"),
+    Eq(field="language", value="python")
+])
+
+# Check if metadata matches filter
+matches = evaluator.matches(filter, {"source": "filesystem", "language": "python"})
+
+# Used automatically by JsonlVectorStore during search
+results = store.search(query_vector=vec, top_k=10, where=filter)
+```
+
+### QdrantFilterCompiler
+
+**Location:** `src/rag/adapters/filters/qdrant_compiler.py`
+
+Compiles filter AST to Qdrant's native filter format. Used by `QdrantVectorStore`.
+
+```python
+class QdrantFilterCompiler(FilterCompiler[QdrantFilter]):
+    def compile(self, where: Where) -> QdrantFilter | None:
+        ...
+```
+
+**Filter Translation:**
+
+| Filter AST | Qdrant Equivalent |
+|------------|-------------------|
+| `Eq(field, value)` | `FieldCondition(key=field, match=MatchValue(value=value))` |
+| `In(field, values)` | `FieldCondition(key=field, match=MatchAny(any=values))` |
+| `Contains(field, value)` | `FieldCondition(key=field, match=MatchValue(value=value))` |
+| `Prefix(field, prefix)` | `FieldCondition(key=field, match=MatchText(text=prefix))` |
+| `Range(field, ...)` | `FieldCondition(key=field, range=Range(...))` |
+| `And(clauses)` | `Filter(must=[...])` |
+| `Or(clauses)` | `Filter(should=[...])` |
+| `Not(clause)` | `Filter(must_not=[...])` |
+
+**Example:**
+```python
+from rag.domain.filters import Eq, And, Range
+from rag.adapters.filters.qdrant_compiler import QdrantFilterCompiler
+
+compiler = QdrantFilterCompiler()
+
+# Compile a filter
+filter_ast = And(clauses=[
+    Eq(field="source", value="filesystem"),
+    Range(field="score", gte=0.5, lte=1.0)
+])
+qdrant_filter = compiler.compile(filter_ast)
+
+# Used automatically by QdrantVectorStore during search
+results = store.search(query_vector=vec, top_k=10, where=filter_ast)
+```
+
+**Nested Boolean Logic:**
+
+The compiler supports arbitrarily nested boolean expressions:
+```python
+from rag.domain.filters import Eq, And, Or, Not
+
+complex_filter = And(clauses=[
+    Or(clauses=[
+        Eq(field="type", value="note"),
+        Eq(field="type", value="article")
+    ]),
+    Not(clause=Eq(field="draft", value=True))
+])
+```
+
+---
+
+## Adapter Selection
+
+The `Container` automatically selects adapters based on settings:
+
+| Setting | Options | Adapter |
+|---------|---------|---------|
+| `embeddings.backend` | `"openai"` | `OpenAIEmbedder` |
+| | `"dummy"` | `DummyEmbedder` |
+| `vectorstore.backend` | `"jsonl"` | `JsonlVectorStore` |
+| | `"memory"` | `InMemoryVectorStore` |
+| | `"qdrant"` | `QdrantVectorStore` |
+| `rerank.backend` | `"heuristic"` | `HeuristicReranker` |
+| | `"noop"` | `NoOpReranker` |
+| `rerank.enabled` | `false` | `NoOpReranker` |
+
+**Vector Store Filter Adapters:**
+
+| VectorStore | Filter Adapter |
+|-------------|----------------|
+| `JsonlVectorStore` | `InMemoryFilterEvaluator` |
+| `InMemoryVectorStore` | `InMemoryFilterEvaluator` |
+| `QdrantVectorStore` | `QdrantFilterCompiler` |
+
+**Override via CLI:**
+```bash
+python scripts/build_index.py --use-dummy-embeddings
+python scripts/ask.py --rerank-backend noop
+```

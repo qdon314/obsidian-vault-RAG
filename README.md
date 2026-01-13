@@ -1,12 +1,38 @@
-# Production-Minded RAG System
+# Obsidian Vault RAG
 
-A retrieval-augmented generation (RAG) system for answering questions over a document corpus, with a deliberate focus on retrieval behavior, evaluation, and failure modes rather than prompt tuning or UI polish.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
+A production-minded retrieval-augmented generation (RAG) system for answering questions over document corpora, with a deliberate focus on **retrieval behavior**, **evaluation**, and **failure modes** rather than prompt tuning or UI polish.
 
 ## Why This Exists
 
 In practice, most RAG failures come from retrieval issues, not generation. If the right information isn't surfaced, no amount of prompt engineering fixes the result.
 
-This project explores how choices around chunking, embeddings, retrieval, and reranking actually affect downstream answers—and makes those effects visible.
+This project explores how choices around chunking, embeddings, retrieval, and reranking actually affect downstream answers—and makes those effects visible through comprehensive logging and evaluation.
+
+---
+
+## Quick Start
+
+```bash
+# Clone and setup
+git clone https://github.com/your-username/obsidian-vault-RAG.git
+cd obsidian-vault-RAG
+conda env create -f environment.yml
+conda activate rag-obsidian
+pip install -e ".[openai]"
+
+# Set your API key
+echo "OPENAI_API_KEY='sk-your-key'" > .env
+
+# Build an index
+python scripts/build_index.py --corpus ~/obsidian-vault --index-name my_index
+
+# Ask a question
+python scripts/ask.py --index my_index --q "What are the main concepts?"
+```
 
 ---
 
@@ -20,14 +46,20 @@ Documents
         → (Optional) Reranking
           → Context Building
             → LLM Generation
+              → Answer with Citations
 ```
+
+The system follows **Hexagonal Architecture** (Ports & Adapters), enabling:
+- Clean separation between interfaces and implementations
+- Easy swapping of components (OpenAI ↔ local models)
+- Comprehensive testing through protocol-based interfaces
 
 ### Design Principles
 
-- Components with clear boundaries (ports/adapters pattern)
-- Intermediate results that can be inspected (JSONL logging, query traces)
-- Easy to swap or experiment with retrieval and reranking strategies
-- Evaluation as a first-class concern
+- **Observability First**: Every query generates a complete trace with all intermediate results
+- **Evaluation as First-Class**: Built-in evaluation framework with retrieval and answer quality metrics
+- **Clean Boundaries**: Protocol-based interfaces allow easy component swapping
+- **Reproducibility**: Stable IDs for documents and chunks enable deterministic behavior
 
 ---
 
@@ -57,10 +89,11 @@ scripts/
 └── project_state.py  # Project inspection
 
 experiments/
-├── run_eval.py       # Evaluation runner
+├── run_eval.py                  # Evaluation runner
 ├── generate_queries.py
 ├── curate_queries.py
-└── create_starter_set.py
+├── create_starter_set.py
+└── streamlit_query_curator.py   # Interactive query curation UI
 ```
 
 ---
@@ -68,61 +101,59 @@ experiments/
 ## Features
 
 ### Ingestion
-- **Obsidian-aware loading**: Expands transclusions/embeds, preserves structure
-- **Multiple formats**: Markdown (.md), plain text (.txt)
-- **Document tracking**: Stable doc_id from content hash
+- **Obsidian-aware loading**: Expands transclusions/embeds (`![[...]]` syntax)
+- **Multiple formats**: Markdown (`.md`), plain text (`.txt`)
+- **Document tracking**: Stable `doc_id` from content hash
 
 ### Chunking
 - **Fixed-size chunking**: 800 chars default, 120 char overlap
 - **Metadata preservation**: Section headings, paths, language tags
-- **Chunk provenance**: Stable chunk_id, document offsets
+- **Chunk provenance**: Stable `chunk_id` with document offsets
 
 ### Embeddings
-- **OpenAI backend**: text-embedding-3-large (configurable)
-- **Dummy embedder**: Random vectors for testing/cost-free experiments
+- **OpenAI backend**: `text-embedding-3-large` (configurable)
+- **Dummy embedder**: Random vectors for testing without API costs
 - **SQLite caching**: Persistent embedding cache to reduce API calls
 
 ### Vector Storage
-- **JSONL store**: Human-readable chunks.jsonl + embeddings.jsonl
+- **JSONL store**: Human-readable `chunks.jsonl` for inspection
 - **In-memory store**: For experiments & testing
-- **Cosine similarity search**
+- **Cosine similarity search** with metadata filtering
 
 ### Reranking
-- **Heuristic reranker**: Lexical overlap boost + diversity by doc_id
+- **Heuristic reranker**: Lexical overlap boost + diversity by `doc_id`
 - **No-op reranker**: Baseline (vector similarity only)
 
 ### Context Building
-- **Token budget enforcement**: Fits chunks within max tokens
-- **Deduplication**: Removes duplicate chunks
+- **Token budget enforcement**: Fits chunks within max tokens (~4 chars/token)
+- **Deduplication**: Removes near-duplicate chunks
 
 ### Generation
-- **OpenAI integration**: GPT-4.1-mini (configurable)
+- **OpenAI integration**: `gpt-4o-mini` (configurable)
 - **Temperature control**: 0.2 default for consistency
+- **Abstention detection**: Recognizes "I don't know" responses
 
 ### Query Tracing
-- **Structured QueryTrace**: Documents every retrieval stage
+- **Structured `QueryTrace`**: Documents every retrieval stage
 - **JSONL persistence**: One query per line for analysis
-- **Includes**: Retrieved/reranked chunk IDs, scores, latency
+- **Timing breakdown**: Per-stage latency metrics
 
 ---
 
 ## Evaluation System
 
 ### Retrieval Metrics
-- Recall@k, Precision@k, Hit rate@k
-- Mean Reciprocal Rank (MRR)
-- Average Precision (AP)
-- NDCG@k
+- **Recall@k**, **Precision@k**, **Hit Rate@k**
+- **Mean Reciprocal Rank (MRR)**
+- **Mean Average Precision (MAP)**
+- **NDCG@k**
 
 ### Answer Quality (LLM-as-Judge)
-- Correctness, Completeness, Relevance (0-5 scale)
-- Hallucination detection
-- Semantic similarity
+- **Correctness**, **Completeness**, **Relevance** (0-5 scale)
+- **Hallucination detection**
+- **Semantic similarity**
 
-### Aggregation
-- Overall metrics
-- Breakdowns by query type and difficulty
-- Latency percentiles (p50, p95)
+### Running Evaluations
 
 ```bash
 python -m experiments.run_eval \
@@ -133,11 +164,26 @@ python -m experiments.run_eval \
   --keep-k 4
 ```
 
+### Query Curation UI
+
+Interactive Streamlit tool for creating evaluation datasets:
+
+```bash
+pip install -e ".[ui]"
+streamlit run experiments/streamlit_query_curator.py
+```
+
+Features:
+- Chunk browser with document tree navigation
+- Multi-chunk selection for synthesis queries
+- LLM-generated query suggestions
+- Full `EvalQuery` field editing
+
 ---
 
-## Getting Started
+## Installation
 
-### Requirements
+### Prerequisites
 
 - Python >= 3.11
 - Conda (recommended)
@@ -145,40 +191,56 @@ python -m experiments.run_eval \
 ### Setup
 
 ```bash
+# Create environment
 conda env create -f environment.yml
 conda activate rag-obsidian
-pip install -e ".[openai]"  # or [ollama] for local models
+
+# Install with OpenAI support
+pip install -e ".[openai]"
+
+# Or for local models
+pip install -e ".[ollama]"
+
+# For the Streamlit UI
+pip install -e ".[ui]"
+
+# For development
+pip install -e ".[dev]"
 ```
 
-If using OpenAI, create a `.env` file:
+### API Keys
+
+Create a `.env` file:
 
 ```bash
-OPENAI_API_KEY='your-key-here'
+OPENAI_API_KEY='sk-your-key-here'
 ```
 
-### Build an Index
+---
+
+## Usage
+
+### Building an Index
 
 ```bash
+# With OpenAI embeddings
 python scripts/build_index.py \
   --corpus ~/obsidian-vault \
   --index-name my_index
-```
 
-Or use dummy embeddings for testing:
-
-```bash
+# With dummy embeddings (free, for testing)
 python scripts/build_index.py \
   --corpus ~/obsidian-vault \
-  --index-name my_index \
+  --index-name test_index \
   --use-dummy-embeddings
 ```
 
-### Query the System
+### Querying
 
 ```bash
 python scripts/ask.py \
   --index my_index \
-  --q "What is this project about?"
+  --q "What is the main concept?"
 ```
 
 ### Make Commands
@@ -221,11 +283,55 @@ keep_k = 4
 
 [llm]
 backend = "openai"
-model = "gpt-4.1-mini"
+model = "gpt-4o-mini"
 temperature = 0.2
 ```
 
 CLI flags can override settings for one-off experiments.
+
+---
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+| Document | Description |
+|----------|-------------|
+| [User Guide](docs/USER_GUIDE.md) | Step-by-step usage instructions |
+| [Configuration](docs/CONFIGURATION.md) | Complete settings reference |
+| [Architecture](docs/ARCHITECTURE.md) | System design with diagrams |
+| [API Reference](docs/API_REFERENCE.md) | Domain models and ports |
+| [Adapters](docs/ADAPTERS.md) | Implementation details |
+
+---
+
+## Programmatic Usage
+
+```python
+from rag.app.container import build_container
+from rag.app.query_runner import run_query
+from rag.settings import load_settings
+
+# Build container with settings
+settings = load_settings()
+container = build_container(cfg=settings)
+
+# Run a query
+result = run_query(
+    "What is the main concept?",
+    retriever=container.retriever,
+    reranker=container.reranker,
+    context_builder=container.context_builder,
+    generator=container.generator,
+    logger=container.logger,
+    top_k=8,
+    keep_k=4,
+    token_budget=1500
+)
+
+print(result.answer.text)
+print(f"Latency: {result.latency_ms}ms")
+```
 
 ---
 
@@ -248,3 +354,25 @@ CLI flags can override settings for one-off experiments.
 - Multi-hop retrieval
 - Query decomposition
 - Agent-style orchestration
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## Author
+
+**Quentin Donnelly**
