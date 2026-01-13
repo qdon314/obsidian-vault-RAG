@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Protocol
 
+from rag.domain.filters import Where
 from rag.domain.models import Candidate, Chunk
 
 Vector = list[float]
@@ -27,7 +28,7 @@ class VectorStore(Protocol):
         *,
         query_vector: Vector,
         top_k: int,
-        filters: Mapping[str, object] | None = None,
+        where: Where = None,
         metadata: Mapping[str, object] | None = None,
     ) -> list[Candidate]:
         ...
