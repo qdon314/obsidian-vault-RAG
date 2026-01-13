@@ -6,6 +6,8 @@ from .chunker import Chunker
 from .context_builder import ContextBuilder
 from .embedder import Embedder
 from .eval_store import EvalStore
+from .filter_compiler import FilterCompiler
+from .filter_evaluator import FilterEvaluator
 from .generator import Generator
 from .ingestor import Ingestor
 from .logger import QueryLogger
@@ -20,6 +22,8 @@ __all__ = [
     "ContextBuilder",
     "Embedder",
     "EvalStore",
+    "FilterCompiler",
+    "FilterEvaluator",
     "Generator",
     "Ingestor",
     "QueryLogger",
