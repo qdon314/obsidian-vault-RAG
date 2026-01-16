@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+from rag.domain.filter_serde import deserialize_filter
+from rag.domain.filters import Where
+
+logger = logging.getLogger(__name__)
 
 
 class QueryType(str, Enum):
@@ -71,6 +77,37 @@ class EvalQuery:
     unanswerable_reason: str | None = None  # "not_in_corpus", "ambiguous", etc.
 
     metadata: dict[str, Any] = field(default_factory=dict)
+
+    def get_filter(self) -> Where:
+        """
+        Extract and deserialize the retrieval filter from metadata.
+
+        The filter should be stored in metadata['filter'] as a serialized
+        dictionary matching the Filter DSL format (e.g., {'type': 'Eq', 'field': 'doc_id', 'value': 'abc'}).
+
+        Returns None if no filter is present. Logs a warning and returns None
+        if deserialization fails, allowing graceful degradation.
+
+        Returns:
+            Filter object for use with Retriever.retrieve(where=...), or None
+
+        Example:
+            >>> query = EvalQuery(
+            ...     qid="q1", query="test", relevant_chunk_ids={"c1"},
+            ...     metadata={"filter": {"type": "Eq", "field": "doc_id", "value": "doc123"}}
+            ... )
+            >>> query.get_filter()
+            Eq(field='doc_id', value='doc123')
+        """
+        filter_data = self.metadata.get("filter")
+        if filter_data is None:
+            return None
+
+        try:
+            return deserialize_filter(filter_data)
+        except (ValueError, KeyError, TypeError) as e:
+            logger.warning(f"Failed to deserialize filter for query {self.qid}: {e}")
+            return None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
