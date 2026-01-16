@@ -32,10 +32,17 @@ max_embed_depth = 4
 # Chunking
 # -------------------------------------------------------------------
 [chunking]
-backend = "fixed"          # future-proofing
+backend = "obsidian_structural" # "fixed" | "obsidian_structural"
+
+# Simple fixed-size chunker options
 chunk_size = 800
 overlap = 120
 
+# Obsidian structural chunker options
+target_chars = 4000
+hard_max_chars = 5200
+overlap_blocks = 1
+include_heading_preamble = true
 
 # -------------------------------------------------------------------
 # Context building
