@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
+from tests.conftest import (
+    CODE_BLOCK_NOTE,
+    MOC_NOTE_CONTENT,
+    NOTE_WITH_FRONTMATTER,
+    NOTE_WITH_INLINE_TAGS,
+    NOTE_WITH_WIKILINKS,
+    SIMPLE_NOTE_CONTENT,
+    write_note,
+)
 
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import (
     ObsidianMarkdownLoader,
@@ -263,17 +271,8 @@ class TestStripWikilinksOutsideCode:
 class TestObsidianMarkdownLoader:
     """Tests for ObsidianMarkdownLoader class."""
 
-    @pytest.fixture
-    def temp_vault(self, tmp_path: Path) -> Path:
-        """Create a temporary vault structure for testing."""
-        vault = tmp_path / "vault"
-        vault.mkdir()
-        return vault
-
     def test_load_simple_note(self, temp_vault: Path):
-        note = temp_vault / "simple.md"
-        note.write_text("# Simple Note\n\nJust some content.")
-
+        note = write_note(temp_vault, "simple.md", SIMPLE_NOTE_CONTENT)
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault)
         result = loader.load(note)
 
@@ -283,14 +282,7 @@ class TestObsidianMarkdownLoader:
         assert meta["classification"] == "note"
 
     def test_load_note_with_frontmatter(self, temp_vault: Path):
-        note = temp_vault / "with_fm.md"
-        note.write_text("""---
-title: Test Note
-tags: [python, test]
----
-# Content
-Body text here.""")
-
+        note = write_note(temp_vault, "with_fm.md", NOTE_WITH_FRONTMATTER)
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault)
         result = loader.load(note)
 
@@ -300,9 +292,7 @@ Body text here.""")
         assert meta["frontmatter_tags"] == ["python", "test"]
 
     def test_load_note_with_inline_tags(self, temp_vault: Path):
-        note = temp_vault / "inline_tags.md"
-        note.write_text("Content with #inline and #tags here.")
-
+        note = write_note(temp_vault, "inline_tags.md", NOTE_WITH_INLINE_TAGS)
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault)
         result = loader.load(note)
 
@@ -312,9 +302,7 @@ Body text here.""")
         assert "tags" in meta["inline_tags"]
 
     def test_load_note_with_wikilinks(self, temp_vault: Path):
-        note = temp_vault / "with_links.md"
-        note.write_text("See [[Other Note]] and [[Target|alias]] for more.")
-
+        note = write_note(temp_vault, "with_links.md", NOTE_WITH_WIKILINKS)
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault)
         result = loader.load(note)
 
@@ -325,9 +313,7 @@ Body text here.""")
         assert "[[" not in content
 
     def test_load_moc_note(self, temp_vault: Path):
-        note = temp_vault / "Topic MOC.md"
-        note.write_text("# Topic MOC\n\nIndex of topics.")
-
+        note = write_note(temp_vault, "Topic MOC.md", MOC_NOTE_CONTENT)
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault)
         result = loader.load(note)
 
@@ -341,11 +327,8 @@ Body text here.""")
         assert result is None
 
     def test_embed_expansion_simple(self, temp_vault: Path):
-        embedded = temp_vault / "embedded.md"
-        embedded.write_text("Embedded content here.")
-
-        main = temp_vault / "main.md"
-        main.write_text("Before embed\n![[embedded]]\nAfter embed")
+        write_note(temp_vault, "embedded.md", "Embedded content here.")
+        main = write_note(temp_vault, "main.md", "Before embed\n![[embedded]]\nAfter embed")
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True)
         result = loader.load(main)
@@ -356,11 +339,8 @@ Body text here.""")
         assert "EMBED: embedded.md" in content
 
     def test_embed_expansion_disabled(self, temp_vault: Path):
-        embedded = temp_vault / "embedded.md"
-        embedded.write_text("Embedded content here.")
-
-        main = temp_vault / "main.md"
-        main.write_text("Before embed\n![[embedded]]\nAfter embed")
+        write_note(temp_vault, "embedded.md", "Embedded content here.")
+        main = write_note(temp_vault, "main.md", "Before embed\n![[embedded]]\nAfter embed")
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=False)
         result = loader.load(main)
@@ -370,14 +350,9 @@ Body text here.""")
         assert "Embedded content here" not in content
 
     def test_embed_expansion_nested(self, temp_vault: Path):
-        level2 = temp_vault / "level2.md"
-        level2.write_text("Level 2 content")
-
-        level1 = temp_vault / "level1.md"
-        level1.write_text("Level 1 with ![[level2]]")
-
-        main = temp_vault / "main.md"
-        main.write_text("Main with ![[level1]]")
+        write_note(temp_vault, "level2.md", "Level 2 content")
+        write_note(temp_vault, "level1.md", "Level 1 with ![[level2]]")
+        main = write_note(temp_vault, "main.md", "Main with ![[level1]]")
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True)
         result = loader.load(main)
@@ -388,13 +363,11 @@ Body text here.""")
         assert "Level 2 content" in content
 
     def test_embed_expansion_cycle_protection(self, temp_vault: Path):
-        note_a = temp_vault / "a.md"
-        note_b = temp_vault / "b.md"
-        note_a.write_text("A embeds ![[b]]")
-        note_b.write_text("B embeds ![[a]]")
+        write_note(temp_vault, "a.md", "A embeds ![[b]]")
+        write_note(temp_vault, "b.md", "B embeds ![[a]]")
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True)
-        result = loader.load(note_a)
+        result = loader.load(temp_vault / "a.md")
 
         # Should not infinite loop; cycle should be broken
         assert result is not None
@@ -404,11 +377,8 @@ Body text here.""")
     def test_embed_expansion_max_depth(self, temp_vault: Path):
         # Create chain of 6 notes
         for i in range(6):
-            note = temp_vault / f"note{i}.md"
-            if i < 5:
-                note.write_text(f"Note {i} embeds ![[note{i+1}]]")
-            else:
-                note.write_text(f"Note {i} final")
+            content = f"Note {i} embeds ![[note{i+1}]]" if i < 5 else f"Note {i} final"
+            write_note(temp_vault, f"note{i}.md", content)
 
         loader = ObsidianMarkdownLoader(
             vault_dir=temp_vault, expand_embeds=True, max_embed_depth=4
@@ -424,9 +394,7 @@ Body text here.""")
         # Create a fake image
         img = temp_vault / "image.png"
         img.write_bytes(b"fake png data")
-
-        note = temp_vault / "with_image.md"
-        note.write_text("An image: ![[image.png]]")
+        note = write_note(temp_vault, "with_image.md", "An image: ![[image.png]]")
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True)
         result = loader.load(note)
@@ -436,8 +404,7 @@ Body text here.""")
         assert "[Embedded attachment: image.png]" in content
 
     def test_embed_missing_target(self, temp_vault: Path):
-        note = temp_vault / "broken_embed.md"
-        note.write_text("Embed missing: ![[nonexistent]]")
+        note = write_note(temp_vault, "broken_embed.md", "Embed missing: ![[nonexistent]]")
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True)
         result = loader.load(note)
@@ -450,12 +417,8 @@ Body text here.""")
     def test_embed_in_subdirectory(self, temp_vault: Path):
         subdir = temp_vault / "notes"
         subdir.mkdir()
-
-        embedded = subdir / "embedded.md"
-        embedded.write_text("Nested content")
-
-        main = temp_vault / "main.md"
-        main.write_text("Main ![[embedded]]")
+        (subdir / "embedded.md").write_text("Nested content")
+        main = write_note(temp_vault, "main.md", "Main ![[embedded]]")
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True)
         result = loader.load(main)
@@ -465,15 +428,7 @@ Body text here.""")
         assert "Nested content" in content
 
     def test_code_block_content_preserved(self, temp_vault: Path):
-        note = temp_vault / "code.md"
-        note.write_text("""# Code Example
-```python
-# This [[wikilink]] should stay
-def foo():
-    pass
-```
-Outside code [[stripped]] link.""")
-
+        note = write_note(temp_vault, "code.md", CODE_BLOCK_NOTE)
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault)
         result = loader.load(note)
 
@@ -484,15 +439,12 @@ Outside code [[stripped]] link.""")
         assert "stripped" in content
 
     def test_embed_in_code_block_not_expanded(self, temp_vault: Path):
-        embedded = temp_vault / "embedded.md"
-        embedded.write_text("Should not appear")
-
-        note = temp_vault / "code_embed.md"
-        note.write_text("""Example:
-```
-![[embedded]]
-```
-End.""")
+        write_note(temp_vault, "embedded.md", "Should not appear")
+        note = write_note(
+            temp_vault,
+            "code_embed.md",
+            "Example:\n```\n![[embedded]]\n```\nEnd.",
+        )
 
         loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True)
         result = loader.load(note)

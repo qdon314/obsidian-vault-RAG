@@ -6,6 +6,9 @@ from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+from rag import settings
 from rag.adapters.embedding.sqlite_cache import CachedEmbedder
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
@@ -21,9 +24,15 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--recursive", action="store_true", default=True, help="Recurse into subdirectories (default: true)")
     ap.add_argument("--no-recursive", dest="recursive", action="store_false", help="Disable recursion")
 
-    # These override settings via ContainerOverrides (so chunker is consistent everywhere)
+    # Fixed chunker overrides (only apply when chunking.backend="fixed" in settings)
     ap.add_argument("--chunk-size", type=int, default=None, help="Override chunk size (default: from settings)")
     ap.add_argument("--overlap", type=int, default=None, help="Override chunk overlap (default: from settings)")
+
+    # Obsidian structural chunker overrides (only apply when chunking.backend="obsidian_structural")
+    ap.add_argument("--target-chars", type=int, default=None, help="Override target chars per chunk (default: from settings)")
+    ap.add_argument("--hard-max-chars", type=int, default=None, help="Override hard max chars per chunk (default: from settings)")
+    ap.add_argument("--overlap-blocks", type=int, default=None, help="Override overlap blocks (default: from settings)")
+    ap.add_argument("--no-heading-preamble", dest="include_heading_preamble", action="store_false", default=None, help="Disable heading preamble in chunks")
 
     # Embedder override (optional)
     ap.add_argument("--use-dummy-embeddings", action="store_true", help="Use DummyEmbedder instead of OpenAI")
@@ -45,6 +54,10 @@ def _utcnow_iso() -> str:
 
 def main() -> None:
     args = build_argparser().parse_args()
+    load_dotenv()
+
+    # Load settings early so we can use defaults from config
+    cfg = settings.load_settings()
 
     artifacts_dir = Path(args.artifacts_dir).resolve()
     index_dir = artifacts_dir / "indexes" / args.index_name
@@ -61,8 +74,14 @@ def main() -> None:
     overrides = ContainerOverrides(
         store_backend="jsonl",
         jsonl_index_dir=index_dir,
+        # Fixed chunker overrides
         chunk_size=args.chunk_size,
         chunk_overlap=args.overlap,
+        # Obsidian structural chunker overrides
+        target_chars=args.target_chars,
+        hard_max_chars=args.hard_max_chars,
+        overlap_blocks=args.overlap_blocks,
+        include_heading_preamble=args.include_heading_preamble,
         vault_dir=vault_root,  # indexing corpus defines vault root for ingestion
         embedder_backend="dummy" if args.use_dummy_embeddings else None,
         dummy_embed_dim=args.embed_dim if args.use_dummy_embeddings else None,
@@ -141,12 +160,9 @@ def main() -> None:
         "recursive": args.recursive,
         "doc_count": len(docs),
         "chunk_count": total_chunks,
-        "chunking": {
-            "chunk_size": getattr(container.chunker, "chunk_size", args.chunk_size),
-            "overlap": getattr(container.chunker, "overlap", args.overlap),
-        },
+        "chunking": container.chunker.get_config(),
         "embedding": {
-            "backend": "dummy" if args.use_dummy_embeddings else "openai",
+            "backend": cfg.embeddings.backend if not args.use_dummy_embeddings else "dummy",
             "model": container.embedder.model_name,
             "cached": bool(args.cache_embeddings),
         },

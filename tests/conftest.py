@@ -286,9 +286,52 @@ def query_log_path(tmp_path: Path) -> Path:
     return tmp_path / "queries.jsonl"
 
 
+@pytest.fixture
+def temp_vault(tmp_path: Path) -> Path:
+    """Create an empty temporary vault directory for testing."""
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    return vault
+
+
+# =============================================================================
+# Obsidian Note Content Constants
+# =============================================================================
+
+SIMPLE_NOTE_CONTENT = "# Simple Note\n\nJust some content."
+
+NOTE_WITH_FRONTMATTER = """---
+title: Test Note
+tags: [python, test]
+---
+# Content
+Body text here."""
+
+NOTE_WITH_INLINE_TAGS = "Content with #inline and #tags here."
+
+NOTE_WITH_WIKILINKS = "See [[Other Note]] and [[Target|alias]] for more."
+
+MOC_NOTE_CONTENT = "# Topic MOC\n\nIndex of topics."
+
+CODE_BLOCK_NOTE = """# Code Example
+```python
+# This [[wikilink]] should stay
+def foo():
+    pass
+```
+Outside code [[stripped]] link."""
+
+
 # =============================================================================
 # Helper Functions for Test Data Creation
 # =============================================================================
+
+
+def write_note(vault: Path, name: str, content: str) -> Path:
+    """Write a markdown note to a vault directory."""
+    note = vault / name
+    note.write_text(content)
+    return note
 
 
 def write_chunks_jsonl(

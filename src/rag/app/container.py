@@ -6,6 +6,7 @@ from typing import Literal
 
 from rag import settings
 from rag.adapters.chunking.fixed import FixedChunker
+from rag.adapters.chunking.obsidian_structural import ObsidianStructuralChunker
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
 from rag.adapters.embedding.openai_embedder import OpenAIEmbedder
@@ -58,8 +59,15 @@ class ContainerOverrides:
     qdrant_url: str | None = None
     qdrant_path: Path | None = None
 
+    # Fixed chunker overrides
     chunk_size: int | None = None
     chunk_overlap: int | None = None
+
+    # Obsidian structural chunker overrides
+    target_chars: int | None = None
+    hard_max_chars: int | None = None
+    overlap_blocks: int | None = None
+    include_heading_preamble: bool | None = None
 
     vault_dir: Path | None = None
 
@@ -77,9 +85,21 @@ def build_container(
     ovrds = overrides or ContainerOverrides()
 
     # ----- chunking (defaults from settings, overridden by CLI)
-    chunk_size = ovrds.chunk_size if ovrds.chunk_size is not None else cfg.chunking.chunk_size
-    overlap = ovrds.chunk_overlap if ovrds.chunk_overlap is not None else cfg.chunking.overlap
-    chunker = FixedChunker(chunk_size=chunk_size, overlap=overlap)
+    if cfg.chunking.backend == "obsidian_structural":
+        target_chars = ovrds.target_chars if ovrds.target_chars is not None else cfg.chunking.target_chars
+        hard_max_chars = ovrds.hard_max_chars if ovrds.hard_max_chars is not None else cfg.chunking.hard_max_chars
+        overlap_blocks = ovrds.overlap_blocks if ovrds.overlap_blocks is not None else cfg.chunking.overlap_blocks
+        include_heading_preamble = ovrds.include_heading_preamble if ovrds.include_heading_preamble is not None else cfg.chunking.include_heading_preamble
+        chunker = ObsidianStructuralChunker(
+            target_chars=target_chars,
+            hard_max_chars=hard_max_chars,
+            overlap_blocks=overlap_blocks,
+            include_heading_preamble=include_heading_preamble,
+        )
+    else:
+        chunk_size = ovrds.chunk_size if ovrds.chunk_size is not None else cfg.chunking.chunk_size
+        overlap = ovrds.chunk_overlap if ovrds.chunk_overlap is not None else cfg.chunking.overlap
+        chunker = FixedChunker(chunk_size=chunk_size, overlap=overlap)
 
     # ----- context building
     context_builder = SimpleContextBuilder(

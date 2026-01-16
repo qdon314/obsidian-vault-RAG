@@ -44,9 +44,15 @@ class Ingestion:
 
 @dataclass(frozen=True, slots=True)
 class Chunking:
-    backend: Literal["fixed"] = "fixed"
+    backend: Literal["fixed", "obsidian_structural"] = "fixed"
+    # fixed chunker params
     chunk_size: int = 800
     overlap: int = 120
+    # obsidian_structural chunker params
+    target_chars: int = 4000
+    hard_max_chars: int = 5200
+    overlap_blocks: int = 1
+    include_heading_preamble: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,9 +176,13 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
 
     # Chunking
     chunking = Chunking(
-        backend=str(chunking_tbl.get("backend", "fixed")), # type: ignore
+        backend=str(chunking_tbl.get("backend", "fixed")),  # type: ignore
         chunk_size=int(chunking_tbl.get("chunk_size", 800)),
         overlap=int(chunking_tbl.get("overlap", chunking_tbl.get("chunk_overlap", 120))),
+        target_chars=int(chunking_tbl.get("target_chars", 4000)),
+        hard_max_chars=int(chunking_tbl.get("hard_max_chars", 5200)),
+        overlap_blocks=int(chunking_tbl.get("overlap_blocks", 1)),
+        include_heading_preamble=bool(chunking_tbl.get("include_heading_preamble", True)),
     )
 
     # Context

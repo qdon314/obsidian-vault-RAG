@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 from rag.domain.models import Chunk, Document
 from rag.ports import Chunker
@@ -15,7 +16,6 @@ class FixedChunker(Chunker):
     Strategy:
       - split doc.text into chunks of size `chunk_size`
       - optional overlap in chars
-      - emits stable-ish chunk ids (you'll replace with hashing later)
     """
     chunk_size: int = 1200
     overlap: int = 150
@@ -59,3 +59,11 @@ class FixedChunker(Chunker):
             i += step
 
         return chunks
+
+    def get_config(self) -> dict[str, Any]:
+        return {
+            "backend": "fixed",
+            "chunk_size": self.chunk_size,
+            "overlap": self.overlap,
+            "strategy_name": self.strategy_name,
+        }
