@@ -119,7 +119,7 @@ def make_chunk(
     return Chunk(
         chunk_id=chunk_id,
         doc_id=doc_id,
-        text=doc_id + text, # slight variation to help testing
+        text=text,
         chunk_index=chunk_index,
         start_char=start_char,
         end_char=end_char or (start_char + len(text) if start_char is not None else len(text)),
