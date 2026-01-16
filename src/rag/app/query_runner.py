@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
 
+from rag.domain.filters import Where
 from rag.domain.models import QueryRunResult, QueryTrace
 from rag.ports import ContextBuilder, Generator, QueryLogger, Retriever
 from rag.ports.reranker import Reranker
@@ -22,7 +23,7 @@ def run_query(
     top_k: int,
     keep_k: int | None,
     token_budget: int,
-    filters: Mapping[str, object] | None = None,
+    where: Where = None,
     metadata: Mapping[str, object] | None = None,
 ) -> QueryRunResult:
     """
@@ -44,11 +45,11 @@ def run_query(
         top_k: Number of candidates to retrieve from the vector store.
         keep_k: If set, truncate reranked candidates to this count before context building.
         token_budget: Maximum tokens allowed for the context window.
-        filters: Optional metadata filters to apply during retrieval.
+        where: Optional filter to constrain retrieval (Filter from domain.filters).
         metadata: Optional metadata passed through the pipeline for logging/customization.
 
     Returns:
-        An Answer object containing the generated response and citations.
+        A QueryRunResult containing the generated response, chunk IDs, and timing.
     """
     trace_id = uuid.uuid4().hex
     started = time.perf_counter()
@@ -64,7 +65,7 @@ def run_query(
 
     # Retrieval
     t0 = time.perf_counter()
-    retrieved_candidates = retriever.retrieve(query, top_k=top_k, filters=filters, metadata=metadata)
+    retrieved_candidates = retriever.retrieve(query, top_k=top_k, where=where, metadata=metadata)
     t_retrieval_ms = int((time.perf_counter() - t0) * 1000)
 
     # Rerank - if reranking is disabled, this is a no-op
