@@ -217,9 +217,9 @@ def evaluate_answer_quality(
     Returns:
         AnswerQualityMetrics
     """
-    is_abstained=answer.abstained
-    answer_length=len(answer.text)
-    num_citations=len(answer.citations)
+    is_abstained = answer.abstained
+    answer_length = len(answer.text)
+    num_citations = len(answer.citations)
 
     # If no expected answer, we can't evaluate quality
     if not query.expected_answer:
@@ -228,6 +228,15 @@ def evaluate_answer_quality(
             answer_length=answer_length,
             num_citations=num_citations,
         )
+
+    # Initialize all optional metrics to None
+    semantic_similarity = None
+    correctness = None
+    completeness = None
+    relevance = None
+    hallucination_score = None
+    is_correct = None
+    has_hallucination = None
 
     # Semantic similarity
     if embedder:
@@ -258,13 +267,13 @@ def evaluate_answer_quality(
             has_hallucination = hallucination_score >= 3.0
 
     return AnswerQualityMetrics(
-        semantic_similarity=semantic_similarity if embedder else None,
-        correctness=correctness if use_llm_judge else None,
-        completeness=completeness if use_llm_judge else None,
-        relevance=relevance if use_llm_judge else None,
-        hallucination_score=hallucination_score if use_llm_judge else None,
-        is_correct=is_correct if use_llm_judge else None,
-        has_hallucination=has_hallucination if use_llm_judge else None,
+        semantic_similarity=semantic_similarity,
+        correctness=correctness,
+        completeness=completeness,
+        relevance=relevance,
+        hallucination_score=hallucination_score,
+        is_correct=is_correct,
+        has_hallucination=has_hallucination,
         is_abstained=is_abstained,
         answer_length=answer_length,
         num_citations=num_citations,
@@ -315,10 +324,13 @@ def run_full_eval(
     results: list[EvalResult] = []
 
     for _, q in enumerate(eval_queries, 1):
+        # Extract per-query filter from metadata (if present)
+        query_filter = q.get_filter()
+
         # --- Retrieval only ---
         if not run_generation:
-            cands = container.retriever.retrieve(q.query, top_k=top_k)
-            retrieved_ids = [c.chunk.chunk_id for c in cands]  # <- make Candidate expose chunk_id
+            cands = container.retriever.retrieve(q.query, top_k=top_k, where=query_filter)
+            retrieved_ids = [c.chunk.chunk_id for c in cands]
             retrieval_result = RetrievalResult(
                 qid=q.qid,
                 retrieved_chunk_ids=tuple(retrieved_ids),
@@ -351,6 +363,7 @@ def run_full_eval(
             top_k=top_k,
             keep_k=keep_k,
             token_budget=token_budget,
+            where=query_filter,
         )
         
         if score_ids == "retrieved":
@@ -361,7 +374,6 @@ def run_full_eval(
             raise ValueError("score_ids must be 'retrieved' or 'reranked'")
         
         answer: Answer = run.answer
-        retrieved_ids = list(run.reranked_chunk_ids)  # or run.retrieved_chunk_ids
         retrieval_result = RetrievalResult(
             qid=q.qid,
             retrieved_chunk_ids=chosen_ids,
