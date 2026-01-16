@@ -131,12 +131,18 @@ def add_chunk_to_selection(chunk: Chunk) -> None:
     state = get_state()
     if chunk.chunk_id not in {c.chunk_id for c in state.selected_chunks}:
         state.selected_chunks.append(chunk)
+        # Clear stale suggestions since chunks changed
+        state.suggestions = []
+        state.selected_suggestion_idx = None
 
 
 def remove_chunk_from_selection(chunk_id: str) -> None:
     """Remove a chunk from the current selection."""
     state = get_state()
     state.selected_chunks = [c for c in state.selected_chunks if c.chunk_id != chunk_id]
+    # Clear stale suggestions since chunks changed
+    state.suggestions = []
+    state.selected_suggestion_idx = None
 
 
 def increment_counter() -> None:

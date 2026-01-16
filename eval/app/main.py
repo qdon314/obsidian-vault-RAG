@@ -14,12 +14,14 @@ Usage:
 
 from __future__ import annotations
 
+from dotenv import load_dotenv
+
 import sys
 from pathlib import Path
 
 import streamlit as st
 
-from eval.app.pages import render_wizard_page
+from eval.app.wizard import render_wizard_page
 from eval.app.state import get_eval_store, get_state, init_services, init_state, load_chunks
 
 # Add project root to path for imports
@@ -96,6 +98,7 @@ def render_sidebar() -> None:
 
 def main() -> None:
     """Main Streamlit app entry point."""
+    load_dotenv()  # Load environment variables from .env file
     st.set_page_config(
         page_title="Query Curator",
         page_icon="",
