@@ -14,20 +14,18 @@ Usage:
 
 from __future__ import annotations
 
-from dotenv import load_dotenv
-
-import sys
+import os
 from pathlib import Path
 
 import streamlit as st
+from dotenv import load_dotenv
 
-from eval.app.wizard import render_wizard_page
 from eval.app.state import get_eval_store, get_state, init_services, init_state, load_chunks
+from eval.app.wizard import render_wizard_page
 
-# Add project root to path for imports
-project_root = Path(__file__).parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+PROJECT_ROOT = Path(__file__).parents[2]
+ENV_PATH = PROJECT_ROOT / ".env"
+loaded = load_dotenv(dotenv_path=ENV_PATH, override=False)
 
 def render_sidebar() -> None:
     """Render the sidebar with configuration options."""
@@ -98,7 +96,9 @@ def render_sidebar() -> None:
 
 def main() -> None:
     """Main Streamlit app entry point."""
-    load_dotenv()  # Load environment variables from .env file
+    st.sidebar.caption(f"CWD: {Path.cwd()}")
+    st.sidebar.caption(f"Loaded .env: {loaded} ({ENV_PATH})")
+    st.sidebar.caption(f"OPENAI_API_KEY present: {bool(os.getenv('OPENAI_API_KEY'))}")
     st.set_page_config(
         page_title="Query Curator",
         page_icon="",

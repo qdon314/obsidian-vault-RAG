@@ -12,6 +12,7 @@ Welcome to the Obsidian Vault RAG system documentation.
 | [Architecture](ARCHITECTURE.md) | System design and data flows |
 | [API Reference](API_REFERENCE.md) | Domain models and ports |
 | [Adapters](ADAPTERS.md) | Implementation details |
+| [Evaluation](evaluation/README.md) | Evaluation system and workflows |
 
 ---
 
@@ -68,6 +69,14 @@ Concrete implementation details:
 - Rerankers
 - Context builders
 - Generators
+
+### [Evaluation System](evaluation/README.md)
+
+Comprehensive evaluation documentation:
+- [Query Generation](evaluation/query_generation.md) - Creating eval queries with the UI
+- [Running Evaluations](evaluation/running_evaluations.md) - Using the eval harness
+- [Metrics Reference](evaluation/metrics.md) - Retrieval and answer metrics
+- [Traces and Logging](evaluation/traces_and_logging.md) - Observability and debugging
 
 ---
 

@@ -14,20 +14,23 @@ from rag.adapters.eval_persistence import JsonlEvalStore
 from rag.adapters.query_suggestion import OpenAIQuerySuggester
 from rag.domain.models import Chunk
 from rag.eval.schema import EvalQuery, QuerySuggestion
-from rag.settings import load_settings
+from rag.settings import Settings, load_settings
 
 
 @dataclass
 class CurationState:
     """State for the query curation wizard."""
 
-    # Configuration
-    chunks_path: Path = field(
-        default_factory=lambda: Path("artifacts/indexes/obsidian_index/chunks.jsonl")
-    )
-    output_path: Path = field(
-        default_factory=lambda: Path("experiments/curated_queries.jsonl")
-    )
+    # Load settings when state is created (not at import time)
+    settings: Settings = field(default_factory=lambda: load_settings(require_openai=False))
+
+    # Configuration (set in __post_init__)
+    chunks_path: Path = field(init=False)
+    output_path: Path = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.chunks_path = Path(self.settings.paths.index_dir) / "chunks.jsonl"
+        self.output_path = Path(self.settings.paths.queries_file)
 
     # Loaded data
     chunks: list[Chunk] = field(default_factory=list)
@@ -35,8 +38,8 @@ class CurationState:
 
     # Selection state
     selected_doc_id: str | None = None
-    selected_chunk: Chunk | None = None  # Currently browsing chunk
-    selected_chunks: list[Chunk] = field(default_factory=list)  # All chunks for this query
+    selected_chunk: Chunk | None = None
+    selected_chunks: list[Chunk] = field(default_factory=list)
 
     # Generation state
     suggestions: list[QuerySuggestion] = field(default_factory=list)
@@ -51,7 +54,7 @@ class CurationState:
 
     # Edit mode state
     existing_queries: list[EvalQuery] = field(default_factory=list)
-    editing_query: EvalQuery | None = None  # Query currently being edited
+    editing_query: EvalQuery | None = None
 
 
 def init_state() -> None:
@@ -68,7 +71,7 @@ def init_services() -> None:
     if st.session_state.services_initialized:
         return
 
-    settings = load_settings()
+    settings = load_settings(require_openai=False)
 
     st.session_state.chunk_loader = JsonlChunkLoader()
     st.session_state.eval_store = JsonlEvalStore()

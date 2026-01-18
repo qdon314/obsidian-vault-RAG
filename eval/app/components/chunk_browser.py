@@ -137,10 +137,8 @@ def render_chunk_browser() -> Chunk | None:
         st.subheader("Selected Chunk")
 
         chunk = state.selected_chunk
-        st.markdown(f"**Chunk ID:** `{chunk.chunk_id}`")
-        st.markdown(f"**Section:** {chunk.section_heading or 'N/A'}")
-        st.markdown(f"**Path:** {chunk.section_path or 'N/A'}")
 
+        # Content preview
         st.text_area(
             "Content",
             value=chunk.text,
@@ -148,6 +146,37 @@ def render_chunk_browser() -> Chunk | None:
             disabled=True,
             key=f"chunk_preview_{chunk.chunk_id}",
         )
+
+        # Metadata section with all available fields
+        with st.expander("Chunk Metadata", expanded=True):
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("**Core Fields**")
+                st.markdown(f"- `chunk_id`: `{chunk.chunk_id}`")
+                st.markdown(f"- `doc_id`: `{chunk.doc_id}`")
+                st.markdown(f"- `chunk_index`: `{chunk.chunk_index}`")
+                if chunk.start_char is not None:
+                    st.markdown(f"- `start_char`: `{chunk.start_char}`")
+                if chunk.end_char is not None:
+                    st.markdown(f"- `end_char`: `{chunk.end_char}`")
+
+            with col2:
+                st.markdown("**Section Info**")
+                st.markdown(f"- `section_heading`: `{chunk.section_heading or 'N/A'}`")
+                st.markdown(f"- `section_path`: `{chunk.section_path or 'N/A'}`")
+                if chunk.language:
+                    st.markdown(f"- `language`: `{chunk.language}`")
+
+            # Show custom metadata if present
+            if chunk.metadata:
+                st.markdown("**Custom Metadata**")
+                for key, value in sorted(chunk.metadata.items()):
+                    # Truncate long values for display
+                    display_value = str(value)
+                    if len(display_value) > 100:
+                        display_value = display_value[:100] + "..."
+                    st.markdown(f"- `{key}`: `{display_value}`")
 
         return chunk
 

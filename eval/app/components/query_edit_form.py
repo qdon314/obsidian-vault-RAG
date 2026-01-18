@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 
 import streamlit as st
 
+from eval.app.components.filter_builder import render_filter_builder
 from eval.app.state import get_state, set_editing_query, update_query
 from rag.eval.schema import Difficulty, EvalQuery, QueryType
 
@@ -31,6 +32,10 @@ def render_query_edit_form() -> bool:
         set_editing_query(None)
         st.rerun()
         return False
+
+    # Filter builder (outside form for dynamic buttons)
+    existing_filter = query.metadata.get("filter")
+    parsed_filter = render_filter_builder("query_edit", existing_filter=existing_filter)
 
     with st.form("query_edit_form"):
         # Query text
@@ -166,6 +171,12 @@ def render_query_edit_form() -> bool:
         # Create updated query (preserving qid and metadata)
         updated_metadata = dict(query.metadata)
         updated_metadata["last_modified"] = datetime.now(UTC).isoformat()
+
+        # Update or remove filter in metadata
+        if parsed_filter is not None:
+            updated_metadata["filter"] = parsed_filter
+        elif "filter" in updated_metadata:
+            del updated_metadata["filter"]
 
         updated_query = EvalQuery(
             qid=query.qid,

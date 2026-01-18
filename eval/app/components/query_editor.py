@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 
 import streamlit as st
 
+from eval.app.components.filter_builder import render_filter_builder
 from eval.app.state import get_eval_store, get_state, increment_counter, reset_selection
 from rag.domain.models import Chunk
 from rag.eval.schema import Difficulty, EvalQuery, QuerySuggestion, QueryType
@@ -55,6 +56,9 @@ def render_query_editor(
     # Use session state for query text to persist edits
     if state.query_text:
         default_query = state.query_text
+
+    # Filter builder (outside form for dynamic buttons)
+    parsed_filter = render_filter_builder("query_editor", existing_filter=None)
 
     with st.form("query_editor_form"):
         # Query text
@@ -176,6 +180,11 @@ def render_query_editor(
         # Store all source chunk IDs in metadata
         source_chunk_ids = [c.chunk_id for c in chunks]
 
+        # Build metadata dict
+        metadata: dict = {"source_chunk_ids": source_chunk_ids}
+        if parsed_filter is not None:
+            metadata["filter"] = parsed_filter
+
         query = EvalQuery(
             qid=qid,
             query=query_text.strip(),
@@ -190,7 +199,7 @@ def render_query_editor(
             created_by="curated",
             is_unanswerable=is_unanswerable,
             unanswerable_reason=unanswerable_reason,
-            metadata={"source_chunk_ids": source_chunk_ids},
+            metadata=metadata,
         )
 
         # Save
