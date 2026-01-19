@@ -32,8 +32,10 @@ from __future__ import annotations
 
 import argparse
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
+from dotenv import load_dotenv
 from openai import OpenAI
 
 from rag.app.container import ContainerOverrides, build_container
@@ -49,8 +51,8 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run RAG evaluation")
-    parser.add_argument("--queries", type=Path, default=Path("experiments/eval_queries.jsonl"))
-    parser.add_argument("--output", type=Path, default=Path("experiments/results"))
+    parser.add_argument("--queries", type=Path, default=Path("eval/datasets/generated_queries.jsonl"))
+    parser.add_argument("--output", type=Path, default=Path("eval/runs"))
     parser.add_argument("--run-name", type=str, default=None)
 
     parser.add_argument("--top-k", type=int, default=10)
@@ -73,6 +75,11 @@ def main() -> None:
     parser.add_argument("--no-save", action="store_true", help="Do not write artifacts to disk.")
 
     args = parser.parse_args()
+    load_dotenv()
+
+    # Create timestamped run directory
+    timestamp = datetime.now(UTC).strftime("%Y_%m_%dT%H-%M")
+    run_dir = args.output / f"run_{timestamp}"
 
     # Load eval queries
     if not args.queries.exists():
@@ -84,8 +91,11 @@ def main() -> None:
 
     overrides = ContainerOverrides(
         store_backend="jsonl",
-        jsonl_index_dir=Path("artifacts/indexes/obsidian_index")
+        jsonl_index_dir=Path("artifacts/indexes/obsidian"),
+        logs_directory=Path(run_dir),
+        cache_embeddings=False
     )
+    
     # Build container (your app wiring)
     logger.info("Building container")
     container = build_container(overrides=overrides)
@@ -116,7 +126,7 @@ def main() -> None:
 
     # Persist artifacts
     if not args.no_save:
-        run = save_run(run, output_dir=args.output, run_name=args.run_name)
+        run = save_run(run, output_dir=run_dir)
 
     # Print summary
     # overall = run.aggregates.overall.to_dict()  # flat dict, or use fields directly

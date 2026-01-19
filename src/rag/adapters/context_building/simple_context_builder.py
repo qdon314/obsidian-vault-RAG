@@ -39,6 +39,7 @@ class SimpleContextBuilder(ContextBuilder):
         query: str,
         candidates: Sequence[Candidate],
         *,
+        reranked_candidates: Sequence[Candidate] | None = None,
         token_budget: int,
         metadata: Mapping[str, object] | None = None,
     ) -> ContextPack:
@@ -107,6 +108,8 @@ class SimpleContextBuilder(ContextBuilder):
             rendered_context=rendered,
             citations=tuple(citations),
             token_budget=token_budget,
+            reranked = reranked_candidates is not None,
+            reranked_chunks=tuple(c.chunk for c in reranked_candidates) if reranked_candidates else None,
             metadata={**(dict(metadata) if metadata else {}), "tokens_used_est": tokens_used},
         )
 

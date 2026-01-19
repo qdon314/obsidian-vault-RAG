@@ -163,6 +163,8 @@ class ContextPack:
     rendered_context: str
     citations: Sequence[Citation]
     token_budget: int
+    reranked_chunks: Sequence[Chunk] | None = None
+    reranked: bool = False
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -186,6 +188,7 @@ class Answer:
 class QueryRunResult:
     trace_id: str
     answer: Answer
+    context_pack: ContextPack
     retrieved_chunk_ids: tuple[str, ...]
     reranked_chunk_ids: tuple[str, ...]
     packed_chunk_ids: tuple[str, ...]
