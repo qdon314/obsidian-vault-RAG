@@ -39,11 +39,11 @@ class SimpleContextBuilder(ContextBuilder):
         query: str,
         candidates: Sequence[Candidate],
         *,
-        reranked_candidates: Sequence[Candidate] | None = None,
         token_budget: int,
         metadata: Mapping[str, object] | None = None,
     ) -> ContextPack:
-        # Prefer rerank_score when present, else retrieval score.
+        # Use candidates in the order provided (caller handles ordering).
+        # Fall back to sorting by score if needed for backwards compat.
         def candidate_key(c: Candidate) -> float:
             return c.rerank_score if c.rerank_score is not None else c.score
 
@@ -108,8 +108,6 @@ class SimpleContextBuilder(ContextBuilder):
             rendered_context=rendered,
             citations=tuple(citations),
             token_budget=token_budget,
-            reranked = reranked_candidates is not None,
-            reranked_chunks=tuple(c.chunk for c in reranked_candidates) if reranked_candidates else None,
             metadata={**(dict(metadata) if metadata else {}), "tokens_used_est": tokens_used},
         )
 
