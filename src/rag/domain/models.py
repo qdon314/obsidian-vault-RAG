@@ -163,8 +163,6 @@ class ContextPack:
     rendered_context: str
     citations: Sequence[Citation]
     token_budget: int
-    reranked_chunks: Sequence[Chunk] | None = None
-    reranked: bool = False
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
