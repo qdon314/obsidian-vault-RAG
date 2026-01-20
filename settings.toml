@@ -61,6 +61,8 @@ token_budget = 1500
 [embeddings]
 backend = "openai"         # "openai" | "dummy"
 model = "text-embedding-3-large"
+cache_embeddings = true
+cache_db_path = "artifacts/cache/embeddings/embedding_cache.db"
 
 # Used only when backend = "dummy"
 dummy_dim = 128
