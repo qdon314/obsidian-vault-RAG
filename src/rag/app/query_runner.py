@@ -74,11 +74,10 @@ def run_query(
     t_rerank_ms = int((time.perf_counter() - t0) * 1000)
     if keep_k is not None:
         reranked_candidates = reranked_candidates[:keep_k]
-    candidates = reranked_candidates
 
-    # Context build
+    # Context build - pass reranked candidates (already ordered by reranker)
     t1 = time.perf_counter()
-    context = context_builder.build(query, candidates, token_budget=token_budget, metadata=metadata)
+    context = context_builder.build(query, candidates=reranked_candidates, token_budget=token_budget, metadata=metadata)
     t_context_ms = int((time.perf_counter() - t1) * 1000)
 
     # Generation
@@ -124,6 +123,7 @@ def run_query(
     return QueryRunResult(
         trace_id=trace_id,
         answer=answer,
+        context_pack=context,
         retrieved_chunk_ids=retrieved_ids,
         reranked_chunk_ids=reranked_ids,
         packed_chunk_ids=packed_ids,

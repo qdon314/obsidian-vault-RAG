@@ -49,6 +49,7 @@ class Container:
 @dataclass(frozen=True, slots=True)
 class ContainerOverrides:
     embedder_backend: Literal["openai", "dummy"] | None = None
+    cache_embeddings: bool | None = None  # None = use settings, True/False = override
     dummy_embed_dim: int | None = None
 
     store_backend: Literal["memory", "jsonl", "qdrant"] | None = None
@@ -74,6 +75,8 @@ class ContainerOverrides:
     top_k: int | None = None
     rerank_backend: Literal["heuristic", "noop"] | None = None
     rerank_enabled: bool | None = None
+    
+    logs_directory: Path | None = None
 
 
 def build_container(
@@ -131,6 +134,14 @@ def build_container(
         embedder = DummyEmbedder(dim=dim)
     else:
         embedder = OpenAIEmbedder(api_key=api_key, model=str(cfg.embeddings.model))
+        
+    # ----- optional embedding cache (wraps the embedder with SQLite disk cache)
+    cache_enabled = cfg.embeddings.cache_embeddings if ovrds.cache_embeddings is None else ovrds.cache_embeddings
+    if cache_enabled:
+        from rag.adapters.embedding.sqlite_cache import CachedEmbedder
+
+        cache_db_path = cfg.embeddings.cache_db_path or (cfg.paths.artifacts_dir / "embedding_cache.db")
+        embedder = CachedEmbedder(embedder=embedder, db_path=cache_db_path)
 
     # ----- generator (usually always OpenAI for now, but can also be made configurable)
     generator = OpenAIChatGenerator(api_key=api_key, model=str(cfg.llm.model))
@@ -181,7 +192,8 @@ def build_container(
         reranker = HeuristicReranker()
         
     # ----- logger (for query tracing)
-    logger = JsonlQueryLogger(path=cfg.paths.artifacts_dir / "logs" / "queries.jsonl")
+    log_path = ovrds.logs_directory or (cfg.paths.artifacts_dir / "logs")
+    logger = JsonlQueryLogger(path=log_path / "traces.jsonl")
 
     return Container(
         chunker=chunker,
