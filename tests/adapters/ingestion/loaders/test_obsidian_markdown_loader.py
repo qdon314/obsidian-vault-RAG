@@ -4,16 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.conftest import (
-    CODE_BLOCK_NOTE,
-    MOC_NOTE_CONTENT,
-    NOTE_WITH_FRONTMATTER,
-    NOTE_WITH_INLINE_TAGS,
-    NOTE_WITH_WIKILINKS,
-    SIMPLE_NOTE_CONTENT,
-    write_note,
-)
-
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import (
     ObsidianMarkdownLoader,
     _extract_inline_tags,
@@ -22,6 +12,15 @@ from rag.adapters.ingestion.loaders.obsidian_markdown_loader import (
     _strip_wikilinks_outside_code,
     classify_note,
     split_obsidian_frontmatter,
+)
+from tests.conftest import (
+    CODE_BLOCK_NOTE,
+    MOC_NOTE_CONTENT,
+    NOTE_WITH_FRONTMATTER,
+    NOTE_WITH_INLINE_TAGS,
+    NOTE_WITH_WIKILINKS,
+    SIMPLE_NOTE_CONTENT,
+    write_note,
 )
 
 
