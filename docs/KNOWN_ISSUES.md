@@ -1,9 +1,18 @@
 ### Known issues / suspicions:
-- Pylance complaining about literal assignment
+- IMPORTANT!: answer eval metrics producing unreasonable reports
+  - high correctness AND high hallucination scores
+  - high citation coverage AND high hallucination
+  - 0% correct abstentions
 - Move cache embedding into container building logic
-- Missing trace id from eval run
-- Improve eval output naming for easier tracking
-- Address answer quality in eval output
-- Chunks don't include section heading info
-- Chunks don't include path info
-- Query creator doesn't indicate chunks are loaded until a chunk is selected
+- ~~Missing trace id from eval run~~
+- ~~Improve eval output naming for easier tracking~~
+- ~~Address answer quality in eval output~~
+- ~~Chunks don't include section heading info~~
+- ~~Chunks don't include path info~~
+- ~~Query creator doesn't indicate chunks are loaded until a chunk is selected~~
+- Move cache embedding into container building logic
+    - It's been added, but there are still issues using it for eval runs
+- Query curator is buggy
+ - filters don't save with queries
+ - query editor is clunky
+ - Investigate potential bi
