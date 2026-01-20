@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from rag.domain.models import Answer
+from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.schema import Difficulty, QueryType
 
 
@@ -89,29 +90,7 @@ class RetrievalSummary:
             mrr=mrr,
             map=map_score,
         )
-
-
-@dataclass(frozen=True, slots=True)
-class AnswerQualityMetrics:
-    """Metrics for answer quality evaluation."""
-    # Semantic similarity
-    semantic_similarity: float | None = None
-
-    # LLM-as-judge scores
-    correctness: float | None = None  # 0-5 scale
-    completeness: float | None = None  # 0-5 scale
-    relevance: float | None = None  # 0-5 scale
-    hallucination_score: float | None = None  # 0-5, lower is better
-
-    # Binary metrics
-    is_correct: bool | None = None
-    has_hallucination: bool | None = None
-    is_abstained: bool | None = None
-
-    # Additional
-    answer_length: int | None = None
-    num_citations: int | None = None
-    
+   
 @dataclass
 class EvalResult:
     """Complete evaluation result for a single query."""
@@ -151,6 +130,8 @@ class EvalRunMeta:
     embedder_model: str | None
     reranker_name: str | None
     notes: str | None = None
+    gold_judge_version: str | None = None
+    groundedness_judge_version: str | None = None
     extra: dict[str, Any] | None = None  # commit hash, dataset hash, etc.
 
 
