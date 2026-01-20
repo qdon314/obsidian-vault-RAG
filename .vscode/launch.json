@@ -31,6 +31,8 @@
         "obsidian_index",
         "--extensions",
         ".md",
+        "--use-dummy-embeddings",
+        "--cache-embeddings",
       ],
         "envFile": "${workspaceFolder}/.env"
     },
@@ -38,12 +40,12 @@
       "name": "Python: eval script (with args)",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}/experiments/run_eval.py",
+      "program": "${workspaceFolder}/eval/scripts/run_eval.py",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "args": [
         "--queries",
-        "experiments/generated_queries.jsonl",
+        "eval/datasets/generated_queries.jsonl",
       ],
         "envFile": "${workspaceFolder}/.env"
     },
@@ -57,6 +59,17 @@
       "args": [
       ],
       "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Python:Streamlit",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": [
+        "run",
+        "${file}"
+      ],
+      "cwd": "${workspaceFolder}"
     }
   ]
 }
