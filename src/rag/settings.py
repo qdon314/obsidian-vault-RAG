@@ -31,6 +31,7 @@ class Paths:
     vault_dir: Path
     artifacts_dir: Path
     index_dir: Path  # default index dir (may be overridden by CLI)
+    queries_file: Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +70,8 @@ class Embeddings:
     backend: Literal["openai", "dummy"] = "openai"
     model: str = "text-embedding-3-large"
     dummy_dim: int = 128
+    cache_embeddings: bool = False
+    cache_db_path: Path | None = None  # path to SQLite cache DB
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +123,7 @@ class Settings:
 # Loader
 # ----------------------------
 
-def load_settings(path: str | Path = "settings.toml") -> Settings:
+def load_settings(path: str | Path = "settings.toml", require_openai: bool = True) -> Settings:
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Missing config file: {path}")
@@ -140,10 +143,10 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
     # Determine whether OpenAI secrets are required
     emb_tbl = get_tbl("embeddings")
     llm_tbl = get_tbl("llm")
-    require_openai = (
+    require_openai = require_openai and ((
         emb_tbl.get("backend", emb_tbl.get("provider", "openai")) == "openai") or (
         llm_tbl.get("backend", llm_tbl.get("provider", "openai")) == "openai"
-    )
+    ))
 
     paths_tbl = get_tbl("paths")
     ingestion_tbl = get_tbl("ingestion")
@@ -157,6 +160,7 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
     vault_dir = expand(paths_tbl["vault_dir"])
     artifacts_dir = expand(paths_tbl.get("artifacts_dir", "artifacts"))
     index_dir = expand(paths_tbl.get("index_dir", str(artifacts_dir / "indexes" / "default")))
+    queries_file = expand(paths_tbl.get("queries_file", "eval/datasets/curated_queries.jsonl"))
 
     # Ingestion
     allowed_exts_raw = ingestion_tbl.get("allowed_extensions", [".md", ".txt"])
@@ -195,10 +199,13 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
     )
 
     # Embeddings
+    cache_db_path_raw = emb_tbl.get("cache_db_path", None)
     embeddings = Embeddings(
         backend=str(emb_tbl.get("backend", emb_tbl.get("provider", "openai"))), # type: ignore
         model=str(emb_tbl.get("model", "text-embedding-3-large")),
         dummy_dim=int(emb_tbl.get("dummy_dim", 128)),
+        cache_embeddings=bool(emb_tbl.get("cache_embeddings", True)),
+        cache_db_path=expand(cache_db_path_raw) if isinstance(cache_db_path_raw, str) else None,
     )
 
     # Vectorstore
@@ -233,7 +240,7 @@ def load_settings(path: str | Path = "settings.toml") -> Settings:
     )
 
     return Settings(
-        paths=Paths(vault_dir=vault_dir, artifacts_dir=artifacts_dir, index_dir=index_dir),
+        paths=Paths(vault_dir=vault_dir, artifacts_dir=artifacts_dir, index_dir=index_dir, queries_file=queries_file),
         ingestion=ingestion,
         chunking=chunking,
         context=context,
