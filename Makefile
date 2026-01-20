@@ -1,8 +1,8 @@
-.PHONY: help index ask ask-dummy tail-logs clean-index
+.PHONY: help index ask ask-dummy tail-logs clean-index eval
 
 ARTIFACTS_DIR ?= artifacts
 INDEX ?= obsidian
-CORPUS ?= ~/obsidian-vault
+CORPUS ?= "/Users/quentindonnelly/Documents/Personal & Professional"
 QUERY ?= "What is this project about?"
 NUM_LOGS ?= 20
 
@@ -45,6 +45,13 @@ ask-dummy:  ## Ask using DummyEmbedder
 		--artifacts-dir $(ARTIFACTS_DIR) \
 		--q $(QUERY) \
 		--use-dummy-embeddings
+
+# -------------------------------------------------------------------
+# Evaluation
+# -------------------------------------------------------------------
+
+results:  ## Launch results analyzer app
+	python -m streamlit run eval/app/results_analyzer.py
 
 # -------------------------------------------------------------------
 # Logs
