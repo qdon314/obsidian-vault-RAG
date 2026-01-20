@@ -1,8 +1,44 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable, Sequence
 
+import numpy as np
+
 from rag.eval.models import RetrievalResult, RetrievalSummary
+from rag.ports.embedder import Embedder
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+def semantic_similarity(
+    text1: str,
+    text2: str,
+    embedder: Embedder,
+) -> float:
+    """
+    Compute semantic similarity between two text strings using embeddings.
+    
+    Args:
+        text1: First text string.
+        text2: Second text string.
+        embedder: An Embedder instance to generate embeddings.
+    Returns:
+        Cosine similarity score between the two texts (0.0 to 1.0).
+    """
+    try:
+        v1 = np.asarray(embedder.embed_texts([text1])[0], dtype=np.float32)
+        v2 = np.asarray(embedder.embed_texts([text2])[0], dtype=np.float32)
+
+        denom = np.linalg.norm(v1) * np.linalg.norm(v2)
+        if denom == 0.0:
+            return 0.0
+
+        return float(np.dot(v1, v2) / denom)
+
+    except Exception as e:
+        logger.error("Error computing similarity: %s", e)
+        return 0.0
 
 
 def recall_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
