@@ -2,7 +2,7 @@
 - IMPORTANT!: answer eval metrics producing unreasonable reports
   - high correctness AND high hallucination scores
   - high citation coverage AND high hallucination
-  - 0% correct abstentions
+  - REGRESSION: 0% correct abstentions
 - Move cache embedding into container building logic
 - ~~Missing trace id from eval run~~
 - ~~Improve eval output naming for easier tracking~~
