@@ -12,7 +12,10 @@
 - ~~Query creator doesn't indicate chunks are loaded until a chunk is selected~~
 - Move cache embedding into container building logic
     - It's been added, but there are still issues using it for eval runs
-- Query curator is buggy
- - filters don't save with queries
- - query editor is clunky
- - Investigate potential bi
+- ~~Query curator is buggy~~ DELETED
+ - ~~filters don't save with queries~~
+ - ~~query editor is clunky~~
+ - ~~Investigate potential bi~~
+ - results_analyzer 
+  - API is somewhat misaligned for multi-run use cases (some funcs don't handle multiple run id's)
+  - theming is broken
