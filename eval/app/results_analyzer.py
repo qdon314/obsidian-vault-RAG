@@ -42,7 +42,6 @@ from eval.app.results.ui.delta_table import (
 from eval.app.results.ui.metrics_table import render_metrics_table
 from eval.app.results.ui.query_explorer import render_query_explorer
 from eval.app.results.ui.run_selector import render_run_info_card, render_run_selector
-from eval.app.results.ui.theme import get_chart_colors, get_plotly_layout
 from eval.app.results.ui.trend_chart import render_multi_metric_trend, render_trend_chart
 
 logging.basicConfig(level=logging.INFO)
@@ -75,70 +74,19 @@ def get_services() -> dict:
     }
 
 
-def get_theme_css(theme: str) -> str:
-    """Generate CSS for the selected theme."""
-    if theme == "dark":
-        return """
-        <style>
-            /* Dark theme overrides */
-            .stApp {
-                background-color: #0e1117;
-                color: #fafafa;
-            }
-            .stSidebar {
-                background-color: #1a1c23;
-            }
-            .stMetric {
-                background-color: #262730;
-                padding: 10px;
-                border-radius: 5px;
-            }
-            .stExpander {
-                background-color: #262730;
-                border-color: #3d4049;
-            }
-            div[data-testid="stDataFrame"] {
-                background-color: #262730;
-            }
-            .stTabs [data-baseweb="tab-list"] {
-                background-color: #1a1c23;
-            }
-            .stTabs [data-baseweb="tab"] {
-                color: #fafafa;
-            }
-        </style>
-        """
-    else:
-        return """
-        <style>
-            /* Light theme overrides */
-            .stApp {
-                background-color: #ffffff;
-                color: #1a1c23;
-            }
-            .stSidebar {
-                background-color: #f8f9fa;
-            }
-            .stMetric {
-                background-color: #f0f2f6;
-                padding: 10px;
-                border-radius: 5px;
-            }
-            .stExpander {
-                background-color: #f0f2f6;
-                border-color: #d1d5db;
-            }
-            div[data-testid="stDataFrame"] {
-                background-color: #f0f2f6;
-            }
-            .stTabs [data-baseweb="tab-list"] {
-                background-color: #f8f9fa;
-            }
-            .stTabs [data-baseweb="tab"] {
-                color: #1a1c23;
-            }
-        </style>
-        """
+def get_theme_css() -> str:
+    """Generate minimal CSS enhancements that work with any theme.
+
+    We rely on Streamlit's native theming and only add subtle enhancements.
+    """
+    return """
+    <style>
+        .stMetric {
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+    """
 
 
 def main() -> None:
@@ -154,8 +102,8 @@ def main() -> None:
     if "theme" not in st.session_state:
         st.session_state.theme = "dark"
 
-    # Apply theme CSS
-    st.markdown(get_theme_css(st.session_state.theme), unsafe_allow_html=True)
+    # Apply minimal theme-agnostic CSS
+    st.markdown(get_theme_css(), unsafe_allow_html=True)
 
     repo = get_repository()
     services = get_services()
@@ -163,22 +111,7 @@ def main() -> None:
     # Sidebar navigation
     with st.sidebar:
         st.title("Results Analyzer")
-
-        # Theme toggle
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.caption("Theme")
-        with col2:
-            if st.button(
-                "Light" if st.session_state.theme == "dark" else "Dark",
-                key="theme_toggle",
-                help="Toggle between light and dark theme",
-            ):
-                st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
-                st.rerun()
-
-        st.divider()
-
+        
         view = st.radio(
             "View Mode",
             options=["single", "comparison", "trending"],
@@ -334,10 +267,6 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
 
     st.subheader("Retrieval Metrics")
 
-    # Get theme-aware layout
-    theme_layout = get_plotly_layout()
-    colors = get_chart_colors()
-
     # Bar chart of metrics at different k values
     agg = loaded_run.aggregates.overall
     k_values = sorted(agg.recall_at_k.keys())
@@ -348,21 +277,18 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
         x=[f"@{k}" for k in k_values],
         y=[agg.recall_at_k.get(k, 0) for k in k_values],
         name="Recall",
-        marker_color=colors["primary"],
     ))
 
     fig.add_trace(go.Bar(
         x=[f"@{k}" for k in k_values],
         y=[agg.precision_at_k.get(k, 0) for k in k_values],
         name="Precision",
-        marker_color=colors["secondary"],
     ))
 
     fig.add_trace(go.Bar(
         x=[f"@{k}" for k in k_values],
         y=[agg.ndcg_at_k.get(k, 0) for k in k_values],
         name="NDCG",
-        marker_color=colors["tertiary"],
     ))
 
     fig.update_layout(
@@ -371,8 +297,7 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
         yaxis_title="Score",
         barmode="group",
         height=400,
-        yaxis=dict(range=[0, 1.05]),
-        **theme_layout,
+        yaxis={"range": [0, 1.05]},
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -391,7 +316,6 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
         fig2.add_trace(go.Bar(
             x=types,
             y=recalls,
-            marker_color=colors["primary"],
             text=[f"{r:.2f}" for r in recalls],
             textposition="auto",
         ))
@@ -401,8 +325,7 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
             xaxis_title="Query Type",
             yaxis_title="Recall@10",
             height=350,
-            yaxis=dict(range=[0, 1.05]),
-            **theme_layout,
+            yaxis={"range": [0, 1.05]},
         )
 
         st.plotly_chart(fig2, use_container_width=True)

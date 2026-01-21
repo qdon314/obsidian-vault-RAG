@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from eval.app.results.ui.theme import get_metric_color, get_plotly_layout
-
 if TYPE_CHECKING:
     from eval.app.results.domain.models import TrendAnalysis
 
@@ -34,8 +32,6 @@ def render_trend_chart(
     except ImportError:
         st.error("Plotly is required for charts. Install with: pip install plotly")
         return
-
-    theme_layout = get_plotly_layout()
 
     # Format timestamps for x-axis
     x_labels = [ts.strftime("%m/%d %H:%M") for ts in trend.timestamps]
@@ -79,7 +75,7 @@ def render_trend_chart(
 
     # Filter out None values for quality/latency
     valid_points = [
-        (x, y) for x, y in zip(x_labels, y_values)
+        (x, y) for x, y in zip(x_labels, y_values, strict=False)
         if y is not None
     ]
 
@@ -97,26 +93,21 @@ def render_trend_chart(
         y=y_valid,
         mode="lines+markers",
         name=metric.title(),
-        line=dict(width=2, color=get_metric_color(metric)),
-        marker=dict(size=8),
+        line={"width": 2},
+        marker={"size": 8},
         text=[f"{v:.3f}" if metric != "latency" else f"{v:.0f}" for v in y_valid],
         hovertemplate="%{x}<br>%{text}<extra></extra>",
     ))
-
-    # Set y-axis range based on metric type
-    if metric == "latency":
-        y_range = None  # Auto-scale for latency
-    else:
-        y_range = [0, 1.05]  # 0-1 for normalized metrics
+    
+    y_range = None if metric == "latency" else [0, 1.05]
 
     fig.update_layout(
         title=title,
         xaxis_title="Run Timestamp",
         yaxis_title=y_label,
         height=400,
-        yaxis=dict(range=y_range) if y_range else {},
-        xaxis=dict(tickangle=-45),
-        **theme_layout,
+        yaxis={"range": y_range} if y_range else {},
+        xaxis={"tickangle": -45},
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -143,7 +134,6 @@ def render_multi_metric_trend(
     if metrics is None:
         metrics = ["recall", "precision", "ndcg"]
 
-    theme_layout = get_plotly_layout()
     x_labels = [ts.strftime("%m/%d %H:%M") for ts in trend.timestamps]
 
     fig = go.Figure()
@@ -175,8 +165,8 @@ def render_multi_metric_trend(
             y=y_values,
             mode="lines+markers",
             name=name,
-            line=dict(width=2, color=get_metric_color(metric)),
-            marker=dict(size=6),
+            line={"width": 2},
+            marker={"size": 6},
         ))
 
     fig.update_layout(
@@ -184,16 +174,15 @@ def render_multi_metric_trend(
         xaxis_title="Run Timestamp",
         yaxis_title="Score",
         height=450,
-        yaxis=dict(range=[0, 1.05]),
-        xaxis=dict(tickangle=-45),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-        ),
-        **theme_layout,
+        yaxis={"range": [0, 1.05]},
+        xaxis={"tickangle": -45},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+        },
     )
 
     st.plotly_chart(fig, use_container_width=True)

@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from eval.app.results.ui.theme import get_chart_colors, get_plotly_layout
-
 if TYPE_CHECKING:
     from eval.app.results.domain.models import RunComparison
 
@@ -31,10 +29,7 @@ def render_comparison_chart(
     except ImportError:
         st.error("Plotly is required for charts. Install with: pip install plotly")
         return
-
-    colors = get_chart_colors()
-    theme_layout = get_plotly_layout()
-
+    
     agg_a = comparison.run_a.aggregates.overall
     agg_b = comparison.run_b.aggregates.overall
 
@@ -72,7 +67,6 @@ def render_comparison_chart(
         x=[f"@{k}" for k in k_values],
         y=[a_data.get(k, 0) for k in k_values],
         name=comparison.run_a.summary.display_name,
-        marker_color=colors["primary"],
         text=[f"{a_data.get(k, 0):.3f}" for k in k_values],
         textposition="auto",
     ))
@@ -82,7 +76,6 @@ def render_comparison_chart(
         x=[f"@{k}" for k in k_values],
         y=[b_data.get(k, 0) for k in k_values],
         name=comparison.run_b.summary.display_name,
-        marker_color=colors["secondary"],
         text=[f"{b_data.get(k, 0):.3f}" for k in k_values],
         textposition="auto",
     ))
@@ -93,15 +86,14 @@ def render_comparison_chart(
         yaxis_title=y_label,
         barmode="group",
         height=400,
-        yaxis=dict(range=[0, 1.05]),  # Metrics are 0-1
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-        ),
-        **theme_layout,
+        yaxis={"range": [0, 1.05]},  # Metrics are 0-1
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+        },
     )
 
     st.plotly_chart(fig, use_container_width=True)
@@ -114,10 +106,7 @@ def render_global_metrics_comparison(comparison: RunComparison) -> None:
     except ImportError:
         st.error("Plotly is required for charts. Install with: pip install plotly")
         return
-
-    colors = get_chart_colors()
-    theme_layout = get_plotly_layout()
-
+    
     agg_a = comparison.run_a.aggregates.overall
     agg_b = comparison.run_b.aggregates.overall
 
@@ -131,7 +120,6 @@ def render_global_metrics_comparison(comparison: RunComparison) -> None:
         x=metrics,
         y=a_values,
         name=comparison.run_a.summary.display_name,
-        marker_color=colors["primary"],
         text=[f"{v:.3f}" for v in a_values],
         textposition="auto",
     ))
@@ -140,7 +128,6 @@ def render_global_metrics_comparison(comparison: RunComparison) -> None:
         x=metrics,
         y=b_values,
         name=comparison.run_b.summary.display_name,
-        marker_color=colors["secondary"],
         text=[f"{v:.3f}" for v in b_values],
         textposition="auto",
     ))
@@ -150,15 +137,14 @@ def render_global_metrics_comparison(comparison: RunComparison) -> None:
         yaxis_title="Score",
         barmode="group",
         height=350,
-        yaxis=dict(range=[0, 1.05]),
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-        ),
-        **theme_layout,
+        yaxis={"range": [0, 1.05]},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+        },
     )
 
     st.plotly_chart(fig, use_container_width=True)

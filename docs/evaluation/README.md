@@ -15,7 +15,7 @@ The evaluation system provides tools for:
 
 | Document | Description |
 |----------|-------------|
-| [Query Generation](query_generation.md) | Creating evaluation queries with the Streamlit UI |
+| [Query Generation] | ~~Creating evaluation queries with the Streamlit UI~~ **Unconsumed right now**|
 | [Running Evaluations](running_evaluations.md) | Using the evaluation harness |
 | [Metrics Reference](metrics.md) | Retrieval and answer quality metrics |
 | [Traces and Logging](traces_and_logging.md) | Observability and debugging |
@@ -66,21 +66,21 @@ print(f"Overall Recall@10: {run.aggregates.overall['recall@10']:.2%}")
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Evaluation System                         │
+│                    Evaluation System                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │   Query      │    │  Eval        │    │   Metrics    │  │
-│  │   Curation   │───▶│  Harness     │───▶│   & Reports  │  │
-│  │   (UI)       │    │              │    │              │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
+│  │   Query      │    │  Eval        │    │   Metrics    │   │
+│  │   Dataset    │───▶│  Harness     │───▶│   & Reports  │   │
+│  │              │    │              │    │              │   │
+│  └──────────────┘    └──────────────┘    └──────────────┘   │
 │         │                   │                   │           │
 │         ▼                   ▼                   ▼           │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │  EvalQuery   │    │  Container   │    │  EvalRun     │  │
-│  │  Dataset     │    │  (Pipeline)  │    │  Artifacts   │  │
-│  │  (.jsonl)    │    │              │    │  (.json)     │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
+│  │  EvalQuery   │    │  Container   │    │  EvalRun     │   │
+│  │  Dataset     │    │  (Pipeline)  │    │  Artifacts   │   │
+│  │  (.jsonl)    │    │              │    │  (.json)     │   │
+│  └──────────────┘    └──────────────┘    └──────────────┘   │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -120,7 +120,6 @@ Complete evaluation run output including:
 ```
 src/rag/eval/
 ├── schema.py      # EvalQuery, EvalDataset, QueryType, Difficulty
-├── models.py      # EvalResult, EvalRun, metrics dataclasses
 ├── metrics.py     # Retrieval metric calculations
 └── harness.py     # Evaluation orchestration
 
