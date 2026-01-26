@@ -144,13 +144,27 @@ class Citation:
     """
     chunk_id: str
     doc_id: str
-    uri: str
+    uri: str | None = None
     quote: str | None = None  # small excerpt used/displayed
     section_heading: str | None = None
     section_path: str | None = None
     start_char: int | None = None
     end_char: int | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Citation:
+        return cls(
+            chunk_id=data.get("chunk_id", ""),
+            doc_id=data.get("doc_id", ""),
+            uri=data.get("uri"),
+            quote=data.get("quote"),
+            section_heading=data.get("section_heading"),
+            section_path=data.get("section_path"),
+            start_char=data.get("start_char"),
+            end_char=data.get("end_char"),
+            metadata=data.get("metadata", {}),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,6 +195,20 @@ class Answer:
     abstained: bool = False
     confidence: float | None = None  # optional; only if you compute one
     metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, query: str, data: dict[str, Any]) -> Answer:
+        citations = [
+            Citation.from_dict(cit) for cit in data.get("citations", [])
+        ]
+        return cls(
+            query=query,
+            text=data.get("text", ""),
+            citations=tuple(citations),
+            abstained=data.get("abstained", False),
+            confidence=data.get("confidence"),
+            metadata=data.get("metadata", {}),
+        )
     
 @dataclass(frozen=True, slots=True)
 class QueryRunResult:

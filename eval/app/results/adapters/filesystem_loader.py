@@ -21,16 +21,11 @@ from pathlib import Path
 from typing import Any
 
 from eval.app.results.domain.models import LoadedRun, QueryTrace, RunSummary
-from rag.domain.models import Answer, Citation
-from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.models import (
     EvalAggregates,
     EvalResult,
     EvalRunMeta,
-    RetrievalResult,
-    RetrievalSummary,
 )
-from rag.eval.schema import Difficulty, QueryType
 
 logger = logging.getLogger(__name__)
 
@@ -201,53 +196,11 @@ class FilesystemRunLoader:
 
     def _parse_meta(self, data: dict[str, Any]) -> EvalRunMeta:
         """Parse EvalRunMeta from metrics.json meta section."""
-        started_at = datetime.now(UTC)
-        if "started_at" in data:
-            with contextlib.suppress(ValueError):
-                started_at = datetime.fromisoformat(data["started_at"])
-
-        return EvalRunMeta(
-            run_id=data.get("run_id", "unknown"),
-            started_at=started_at,
-            queries_path=data.get("queries_path"),
-            top_k=data.get("top_k", 10),
-            keep_k=data.get("keep_k"),
-            token_budget=data.get("token_budget", 1500),
-            run_generation=data.get("run_generation", False),
-            use_llm_judge=data.get("use_llm_judge", False),
-            judge_model=data.get("judge_model"),
-            generator_model=data.get("generator_model"),
-            embedder_model=data.get("embedder_model"),
-            reranker_name=data.get("reranker_name"),
-            notes=data.get("notes"),
-            gold_judge_version=data.get("gold_judge_version"),
-            groundedness_judge_version=data.get("groundedness_judge_version"),
-            extra=data.get("extra"),
-        )
+        return EvalRunMeta.from_dict(data)
 
     def _parse_aggregates(self, data: dict[str, Any]) -> EvalAggregates:
         """Parse EvalAggregates from metrics.json."""
-        overall = self._parse_retrieval_summary(data.get("overall", {}))
-
-        by_type: dict[str, RetrievalSummary] = {}
-        for type_name, type_data in data.get("by_type", {}).items():
-            by_type[type_name] = self._parse_retrieval_summary(type_data)
-
-        by_difficulty: dict[str, RetrievalSummary] = {}
-        for diff_name, diff_data in data.get("by_difficulty", {}).items():
-            by_difficulty[diff_name] = self._parse_retrieval_summary(diff_data)
-
-        return EvalAggregates(
-            overall=overall,
-            by_type=by_type,
-            by_difficulty=by_difficulty,
-            answer_quality=data.get("answer_quality"),
-            latency_ms=data.get("latency_ms"),
-        )
-
-    def _parse_retrieval_summary(self, data: dict[str, Any]) -> RetrievalSummary:
-        """Parse RetrievalSummary from flat dict format."""
-        return RetrievalSummary.from_dict(data)
+        return EvalAggregates.from_dict(data)
 
     def _load_results(self, run_dir: Path) -> list[EvalResult]:
         """Load results from results.jsonl."""
@@ -276,88 +229,7 @@ class FilesystemRunLoader:
 
     def _parse_eval_result(self, data: dict[str, Any]) -> EvalResult:
         """Parse EvalResult from JSONL row."""
-        # Parse retrieval result
-        retrieval_data = data.get("retrieval", {})
-        retrieval = RetrievalResult(
-            qid=data["qid"],
-            retrieved_chunk_ids=tuple(retrieval_data.get("retrieved_chunk_ids", [])),
-            relevant_chunk_ids=set(retrieval_data.get("relevant_chunk_ids", [])),
-        )
-
-        # Parse answer if present
-        answer = None
-        answer_data = data.get("answer")
-        if answer_data:
-            citations = []
-            for cit_data in answer_data.get("citations", []):
-                citations.append(
-                    Citation(
-                        chunk_id=cit_data.get("chunk_id", ""),
-                        doc_id=cit_data.get("doc_id", ""),
-                        uri=cit_data.get("uri"),
-                        quote=cit_data.get("quote"),
-                        section_heading=cit_data.get("section_heading"),
-                        section_path=cit_data.get("section_path"),
-                        start_char=cit_data.get("start_char"),
-                        end_char=cit_data.get("end_char"),
-                        metadata=cit_data.get("metadata", {}),
-                    )
-                )
-            answer = Answer(
-                query=data.get("query", ""),
-                text=answer_data.get("text", ""),
-                abstained=answer_data.get("abstained", False),
-                citations=tuple(citations),
-                confidence=answer_data.get("confidence"),
-                metadata=answer_data.get("metadata", {}),
-            )
-
-        # Parse answer metrics if present
-        answer_metrics = None
-        metrics_data = data.get("answer_metrics")
-        if metrics_data:
-            answer_metrics = AnswerQualityMetrics(
-                semantic_similarity=metrics_data.get("semantic_similarity"),
-                correctness=metrics_data.get("correctness"),
-                completeness=metrics_data.get("completeness"),
-                relevance=metrics_data.get("relevance"),
-                hallucination_severity=metrics_data.get("hallucination_severity"),
-                is_correct=metrics_data.get("is_correct"),
-                is_abstained=metrics_data.get("is_abstained"),
-                answerable_from_context=metrics_data.get("answerable_from_context"),
-                evidence_bounded=metrics_data.get("evidence_bounded"),
-                has_hallucination=metrics_data.get("has_hallucination"),
-                supported_claims=metrics_data.get("supported_claims"),
-                unsupported_claims=metrics_data.get("unsupported_claims"),
-                citation_coverage=metrics_data.get("citation_coverage"),
-                answer_length=metrics_data.get("answer_length"),
-                num_citations=metrics_data.get("num_citations"),
-                quality_score=metrics_data.get("quality_score"),
-            )
-
-        # Parse query type and difficulty
-        query_type = None
-        if data.get("query_type"):
-            with contextlib.suppress(ValueError):
-                query_type = QueryType(data["query_type"])
-
-        difficulty = None
-        if data.get("difficulty"):
-            with contextlib.suppress(ValueError):
-                difficulty = Difficulty(data["difficulty"])
-
-        return EvalResult(
-            qid=data["qid"],
-            query=data.get("query", ""),
-            retrieval_result=retrieval,
-            answer=answer,
-            answer_metrics=answer_metrics,
-            query_type=query_type,
-            difficulty=difficulty,
-            is_unanswerable=data.get("is_unanswerable", False),
-            latency_ms=data.get("latency_ms"),
-            trace_id=data.get("trace_id"),
-        )
+        return EvalResult.from_dict(data)
 
     def _load_traces(self, run_dir: Path) -> dict[str, QueryTrace]:
         """Load traces from traces.jsonl."""

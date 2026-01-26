@@ -45,6 +45,28 @@ class AnswerQualityMetrics:
 
     quality_score: float | None = None  # 0..1
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> AnswerQualityMetrics:
+        """Deserialize from JSON dict (e.g., from results.jsonl)."""
+        return cls(
+            semantic_similarity=data.get("semantic_similarity"),
+            correctness=data.get("correctness"),
+            completeness=data.get("completeness"),
+            relevance=data.get("relevance"),
+            hallucination_severity=data.get("hallucination_severity"),
+            is_correct=data.get("is_correct"),
+            is_abstained=data.get("is_abstained"),
+            answerable_from_context=data.get("answerable_from_context"),
+            evidence_bounded=data.get("evidence_bounded"),
+            has_hallucination=data.get("has_hallucination"),
+            supported_claims=data.get("supported_claims"),
+            unsupported_claims=data.get("unsupported_claims"),
+            citation_coverage=data.get("citation_coverage"),
+            answer_length=data.get("answer_length"),
+            num_citations=data.get("num_citations"),
+            quality_score=data.get("quality_score"),
+        )
+
     @staticmethod
     def compute(
         *,

@@ -94,21 +94,21 @@ GENERATED ANSWER:
 {generated_answer}
 
 Respond with ONLY a JSON object:
-{
+{{
   "answerable_from_context": <true|false>,
   "evidence_bounded": <true|false>,
   "supported_claims": <int>,
   "unsupported_claims": <int>,
   "claims": [
-    {
+    {{
       "claim": "<string>",
       "supported": <true|false>,
       "chunk_id": "<chunk_id or null>",
       "quote": "<short quote or null>",
       "note": "<brief explanation>"
-    }
+    }}
   ]
-}"""
+}}"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +119,37 @@ class GoldJudgeResult:
     hallucination_severity: float | None = None
     reasoning: str | None = None
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> GoldJudgeResult:
+        return cls(
+            correctness=_to_float(data.get("correctness")),
+            completeness=_to_float(data.get("completeness")),
+            relevance=_to_float(data.get("relevance")),
+            hallucination_severity=_to_float(
+                data.get("hallucination_severity") or data.get("hallucination")
+            ),
+            reasoning=_to_str(data.get("reasoning")),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerClaim:
+    claim: str
+    supported: bool
+    chunk_id: str | None
+    quote: str | None
+    note: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> AnswerClaim:
+        return cls(
+            claim=data.get("claim", ""),
+            supported=bool(data.get("supported", False)),
+            chunk_id=data.get("chunk_id"),
+            quote=data.get("quote"),
+            note=data.get("note"),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class GroundednessJudgeResult:
@@ -127,14 +158,23 @@ class GroundednessJudgeResult:
     supported_claims: int | None = None
     unsupported_claims: int | None = None
     claims: list[AnswerClaim] | None = None
-    
-@dataclass(frozen=True, slots=True)
-class AnswerClaim:
-    claim: str
-    supported: bool
-    chunk_id: str | None
-    quote: str | None
-    note: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> GroundednessJudgeResult:
+        raw_claims = data.get("claims")
+        parsed_claims: list[AnswerClaim] | None = None
+        if isinstance(raw_claims, list):
+            parsed_claims = [
+                AnswerClaim.from_dict(c) for c in raw_claims if isinstance(c, dict)
+            ]
+
+        return cls(
+            answerable_from_context=_to_bool(data.get("answerable_from_context")),
+            evidence_bounded=_to_bool(data.get("evidence_bounded")),
+            supported_claims=_to_int(data.get("supported_claims")),
+            unsupported_claims=_to_int(data.get("unsupported_claims")),
+            claims=parsed_claims,
+        )
 
 def make_gold_prompt(*, query: str, expected_answer: str, generated_answer: str) -> str:
     return GOLD_JUDGE_PROMPT.format(
@@ -184,13 +224,7 @@ def evaluate_vs_expected_answer(
         )
         content = resp.choices[0].message.content or ""
         data = _safe_json_loads(content) or {}
-        return GoldJudgeResult(
-            correctness=_to_float(data.get("correctness")),
-            completeness=_to_float(data.get("completeness")),
-            relevance=_to_float(data.get("relevance")),
-            hallucination_severity=_to_float(data.get("hallucination_severity") or data.get("hallucination")),
-            reasoning=_to_str(data.get("reasoning")),
-        )
+        return GoldJudgeResult.from_dict(data)
     except Exception as e:
         logger.error("Gold-judge error: %s", e)
         return GoldJudgeResult()
@@ -213,29 +247,7 @@ def evaluate_groundedness(
         )
         content = resp.choices[0].message.content or ""
         data = _safe_json_loads(content) or {}
-        # Parse claims into AnswerClaim dataclass instances
-        raw_claims = data.get("claims")
-        parsed_claims: list[AnswerClaim] | None = None
-        if isinstance(raw_claims, list):
-            parsed_claims = [
-                AnswerClaim(
-                    claim=c.get("claim", ""),
-                    supported=c.get("supported", False),
-                    chunk_id=c.get("chunk_id"),
-                    quote=c.get("quote"),
-                    note=c.get("note"),
-                )
-                for c in raw_claims
-                if isinstance(c, dict)
-            ]
-
-        return GroundednessJudgeResult(
-            answerable_from_context=_to_bool(data.get("answerable_from_context")),
-            evidence_bounded=_to_bool(data.get("evidence_bounded")),
-            supported_claims=_to_int(data.get("supported_claims")),
-            unsupported_claims=_to_int(data.get("unsupported_claims")),
-            claims=parsed_claims,
-        )
+        return GroundednessJudgeResult.from_dict(data)
     except Exception as e:
         logger.error("Groundedness-judge error: %s", e)
         return GroundednessJudgeResult()

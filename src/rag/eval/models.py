@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
-from rag.domain.models import Answer
 from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.schema import Difficulty, QueryType
+
+if TYPE_CHECKING:
+    from rag.domain.models import Answer
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,6 +17,14 @@ class RetrievalResult:
     qid: str
     retrieved_chunk_ids: tuple[str, ...]
     relevant_chunk_ids: set[str]
+
+    @classmethod
+    def from_dict(cls, qid: str, data: dict[str, Any]) -> RetrievalResult:
+        return cls(
+            qid=qid,
+            retrieved_chunk_ids=tuple(data.get("retrieved_chunk_ids", [])),
+            relevant_chunk_ids=set(data.get("relevant_chunk_ids", [])),
+        )
 
 @dataclass(frozen=True, slots=True)
 class RetrievalSummary:
@@ -111,8 +122,56 @@ class EvalResult:
 
     # Timing
     latency_ms: int | None = None
-    
+
     trace_id: str | None = None  # link to QueryTrace if available
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EvalResult:
+        # Import here to avoid circular dependency
+        from rag.domain.models import Answer as AnswerCls
+
+        qid = data["qid"]
+        query = data.get("query", "")
+
+        # Parse retrieval result
+        retrieval_data = data.get("retrieval", {})
+        retrieval = RetrievalResult.from_dict(qid, retrieval_data)
+
+        # Parse answer if present
+        answer = None
+        answer_data = data.get("answer")
+        if answer_data:
+            answer = AnswerCls.from_dict(query, answer_data)
+
+        # Parse answer metrics if present
+        answer_metrics = None
+        metrics_data = data.get("answer_metrics")
+        if metrics_data:
+            answer_metrics = AnswerQualityMetrics.from_dict(metrics_data)
+
+        # Parse query type and difficulty
+        query_type = None
+        if data.get("query_type"):
+            with contextlib.suppress(ValueError):
+                query_type = QueryType(data["query_type"])
+
+        difficulty = None
+        if data.get("difficulty"):
+            with contextlib.suppress(ValueError):
+                difficulty = Difficulty(data["difficulty"])
+
+        return cls(
+            qid=qid,
+            query=query,
+            retrieval_result=retrieval,
+            answer=answer,
+            answer_metrics=answer_metrics,
+            query_type=query_type,
+            difficulty=difficulty,
+            is_unanswerable=data.get("is_unanswerable", False),
+            latency_ms=data.get("latency_ms"),
+            trace_id=data.get("trace_id"),
+        )
     
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +193,32 @@ class EvalRunMeta:
     groundedness_judge_version: str | None = None
     extra: dict[str, Any] | None = None  # commit hash, dataset hash, etc.
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EvalRunMeta:
+        started_at = datetime.now(UTC)
+        if "started_at" in data:
+            with contextlib.suppress(ValueError):
+                started_at = datetime.fromisoformat(data["started_at"])
+
+        return cls(
+            run_id=data.get("run_id", "unknown"),
+            started_at=started_at,
+            queries_path=data.get("queries_path"),
+            top_k=data.get("top_k", 10),
+            keep_k=data.get("keep_k"),
+            token_budget=data.get("token_budget", 1500),
+            run_generation=data.get("run_generation", False),
+            use_llm_judge=data.get("use_llm_judge", False),
+            judge_model=data.get("judge_model"),
+            generator_model=data.get("generator_model"),
+            embedder_model=data.get("embedder_model"),
+            reranker_name=data.get("reranker_name"),
+            notes=data.get("notes"),
+            gold_judge_version=data.get("gold_judge_version"),
+            groundedness_judge_version=data.get("groundedness_judge_version"),
+            extra=data.get("extra"),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class EvalAggregates:
@@ -144,6 +229,26 @@ class EvalAggregates:
     # Optional: add later
     answer_quality: dict[str, float] | None = None
     latency_ms: dict[str, float] | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> EvalAggregates:
+        overall = RetrievalSummary.from_dict(data.get("overall", {}))
+
+        by_type: dict[str, RetrievalSummary] = {}
+        for type_name, type_data in data.get("by_type", {}).items():
+            by_type[type_name] = RetrievalSummary.from_dict(type_data)
+
+        by_difficulty: dict[str, RetrievalSummary] = {}
+        for diff_name, diff_data in data.get("by_difficulty", {}).items():
+            by_difficulty[diff_name] = RetrievalSummary.from_dict(diff_data)
+
+        return cls(
+            overall=overall,
+            by_type=by_type,
+            by_difficulty=by_difficulty,
+            answer_quality=data.get("answer_quality"),
+            latency_ms=data.get("latency_ms"),
+        )
 
 @dataclass(frozen=True, slots=True)
 class EvalRun:
