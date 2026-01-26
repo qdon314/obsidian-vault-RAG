@@ -24,6 +24,7 @@ dependencies = [
   "sentence-transformers",
   "python-dotenv",
   "rich",
+  "dataclasses-json>=0.6.0",
 
   # LlamaIndex integrations
   "llama-index-vector-stores-chroma",

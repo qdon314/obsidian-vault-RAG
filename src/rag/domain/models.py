@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from dataclasses_json import DataClassJsonMixin
+
 # -------------------------
 # Core content objects
 # -------------------------
@@ -25,7 +27,7 @@ class Document:
 
 
 @dataclass(frozen=True, slots=True)
-class Chunk:
+class Chunk(DataClassJsonMixin):
     """
     A piece of a Document used for embedding/retrieval.
 
@@ -45,39 +47,8 @@ class Chunk:
     section_path: str | None = None  # e.g. "H1 > H2 > H3"
     language: str | None = None      # e.g. "python", "markdown"
 
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Chunk:
-        """Create a Chunk from a dictionary, ignoring unknown keys."""
-        return cls(
-            chunk_id=data["chunk_id"],
-            doc_id=data["doc_id"],
-            text=data["text"],
-            chunk_index=data["chunk_index"],
-            start_char=data.get("start_char"),
-            end_char=data.get("end_char"),
-            section_heading=data.get("section_heading"),
-            section_path=data.get("section_path"),
-            language=data.get("language"),
-            metadata=data.get("metadata", {}),
-        )
-        
-    def to_dict(self) -> dict[str, Any]:
-        """Convert Chunk to a dictionary."""
-        return {
-            "chunk_id": self.chunk_id,
-            "doc_id": self.doc_id,
-            "text": self.text,
-            "chunk_index": self.chunk_index,
-            "start_char": self.start_char,
-            "end_char": self.end_char,
-            "section_heading": self.section_heading,
-            "section_path": self.section_path,
-            "language": self.language,
-            "metadata": self.metadata,
-        }
-    
     @classmethod
     def to_record(cls, ch: Chunk) -> dict[str, object]:
         """Convert Chunk to a flat record for filtering."""
@@ -138,7 +109,7 @@ class Candidate:
 
 
 @dataclass(frozen=True, slots=True)
-class Citation:
+class Citation(DataClassJsonMixin):
     """
     A pointer to a source used in the final answer.
     """
@@ -150,21 +121,7 @@ class Citation:
     section_path: str | None = None
     start_char: int | None = None
     end_char: int | None = None
-    metadata: Mapping[str, Any] = field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Citation:
-        return cls(
-            chunk_id=data.get("chunk_id", ""),
-            doc_id=data.get("doc_id", ""),
-            uri=data.get("uri"),
-            quote=data.get("quote"),
-            section_heading=data.get("section_heading"),
-            section_path=data.get("section_path"),
-            start_char=data.get("start_char"),
-            end_char=data.get("end_char"),
-            metadata=data.get("metadata", {}),
-        )
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -185,30 +142,20 @@ class ContextPack:
 # -------------------------
 
 @dataclass(frozen=True, slots=True)
-class Answer:
+class Answer(DataClassJsonMixin):
     """
     Final model output (or abstention).
     """
     query: str
-    text: str
-    citations: Sequence[Citation] = field(default_factory=tuple)
+    text: str = ""
+    citations: list[Citation] = field(default_factory=list)
     abstained: bool = False
     confidence: float | None = None  # optional; only if you compute one
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, query: str, data: dict[str, Any]) -> Answer:
-        citations = [
-            Citation.from_dict(cit) for cit in data.get("citations", [])
-        ]
-        return cls(
-            query=query,
-            text=data.get("text", ""),
-            citations=tuple(citations),
-            abstained=data.get("abstained", False),
-            confidence=data.get("confidence"),
-            metadata=data.get("metadata", {}),
-        )
+    def from_query_dict(cls, query: str, data: dict[str, Any]) -> Answer:
+        return cls.from_dict({**data, "query": query})
     
 @dataclass(frozen=True, slots=True)
 class QueryRunResult:
