@@ -144,12 +144,11 @@ class ContextPack:
 @dataclass(frozen=True, slots=True)
 class Answer(DataClassJsonMixin):
     """
-    Final model output (or abstention).
+    Final model output.
     """
     query: str
     text: str = ""
     citations: list[Citation] = field(default_factory=list)
-    abstained: bool = False
     confidence: float | None = None  # optional; only if you compute one
     metadata: dict[str, Any] = field(default_factory=dict)
 

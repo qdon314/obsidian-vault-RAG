@@ -49,18 +49,10 @@ class OpenAIChatGenerator(Generator):
 
         text = (resp.choices[0].message.content or "").strip()
 
-        # Simple abstention heuristic: if model admits lack of evidence
-        lowered = text.lower()
-        abstained = any(
-            phrase in lowered
-            for phrase in ["i don't know", "i do not know", "not enough information", "cannot determine", "no information"]
-        )
-
         return Answer(
             query=query,
             text=text,
-            citations=context.citations,
-            abstained=abstained,
+            citations=list(context.citations),
             metadata={
                 **(dict(metadata) if metadata else {}),
                 "model": self.model,

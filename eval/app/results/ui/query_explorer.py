@@ -221,9 +221,6 @@ def _render_query_detail(
         st.divider()
         st.markdown("### Generated Answer")
 
-        if result.answer.abstained:
-            st.warning("Model abstained from answering")
-
         st.text_area(
             "Answer text",
             value=result.answer.text,

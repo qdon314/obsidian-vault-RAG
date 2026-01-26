@@ -128,7 +128,6 @@ class TestJsonlQueryLoggerSerialization:
         answer = Answer(
             query="test",
             text="This is the answer.",
-            abstained=False,
         )
         trace = make_query_trace(answer=answer)
 
@@ -138,7 +137,6 @@ class TestJsonlQueryLoggerSerialization:
         obj = json.loads(line)
 
         assert obj["answer"]["text"] == "This is the answer."
-        assert obj["answer"]["abstained"] is False
 
 
 class TestJsonlQueryLoggerRedaction:

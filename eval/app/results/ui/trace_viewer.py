@@ -34,10 +34,7 @@ def render_trace_viewer(
     # Trace selector
     trace_ids = list(loaded_run.traces.keys())
 
-    if trace_id and trace_id in loaded_run.traces:
-        default_index = trace_ids.index(trace_id)
-    else:
-        default_index = 0
+    default_index = trace_ids.index(trace_id) if trace_id and trace_id in loaded_run.traces else 0
 
     selected_trace_id = st.selectbox(
         "Select trace",
@@ -169,9 +166,6 @@ def _render_generation_stage(trace: QueryTrace) -> None:
         st.metric("Model", trace.model or "N/A")
     with col2:
         st.metric("Latency", f"{trace.latency_ms} ms" if trace.latency_ms else "N/A")
-
-    if trace.answer_abstained:
-        st.warning("Model abstained from answering")
 
     if trace.answer_text:
         st.markdown("**Generated Answer:**")

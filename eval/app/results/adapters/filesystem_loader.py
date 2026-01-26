@@ -281,12 +281,10 @@ class FilesystemRunLoader:
 
         # Parse answer data
         answer_text = None
-        answer_abstained = None
         citations = None
         answer_data = data.get("answer")
         if answer_data:
             answer_text = answer_data.get("text")
-            answer_abstained = answer_data.get("abstained")
             if answer_data.get("citations"):
                 citations = tuple(answer_data["citations"])
 
@@ -303,7 +301,6 @@ class FilesystemRunLoader:
             packed_chunk_ids=packed_chunk_ids,
             model=data.get("model"),
             answer_text=answer_text,
-            answer_abstained=answer_abstained,
             citations=citations,
             latency_ms=data.get("latency_ms"),
             raw_data=data,

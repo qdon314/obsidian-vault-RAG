@@ -68,7 +68,6 @@ class QueryTrace:
     # Generation stage
     model: str | None
     answer_text: str | None
-    answer_abstained: bool | None
     citations: tuple[dict[str, Any], ...] | None
 
     # Performance

@@ -99,25 +99,8 @@ def evaluate_answer_quality(
     answerable_from_context = evidence_bounded = supported_claims = unsupported_claims = None
 
     if use_llm_judge and client and judge_model:
-        # Gold-answer judging (only if expected answer exists and system did not abstain)
-        if query.expected_answer and not answer.abstained:
-            gold_prompt = make_gold_prompt(
-                query=query.query,
-                expected_answer=query.expected_answer,
-                generated_answer=answer.text,
-            )
-            gold = evaluate_vs_expected_answer(
-                client=client,
-                model=judge_model,
-                prompt=gold_prompt,
-            )
-            correctness = gold.correctness
-            completeness = gold.completeness
-            relevance = gold.relevance
-            hallucination_severity = gold.hallucination_severity
-
-        # Groundedness judging (can run even without expected answer)
-        if retrieved_chunks and not answer.abstained:
+        # Groundedness judging first (determines if answer is evidence-bounded)
+        if retrieved_chunks:
             ctx = format_context_chunks(retrieved_chunks)
             grounded_prompt = make_groundedness_prompt(
                 query=query.query,
@@ -134,10 +117,26 @@ def evaluate_answer_quality(
             supported_claims = gr.supported_claims
             unsupported_claims = gr.unsupported_claims
 
+        # Gold-answer judging (only if expected answer exists)
+        if query.expected_answer:
+            gold_prompt = make_gold_prompt(
+                query=query.query,
+                expected_answer=query.expected_answer,
+                generated_answer=answer.text,
+            )
+            gold = evaluate_vs_expected_answer(
+                client=client,
+                model=judge_model,
+                prompt=gold_prompt,
+            )
+            correctness = gold.correctness
+            completeness = gold.completeness
+            relevance = gold.relevance
+            hallucination_severity = gold.hallucination_severity
+
     return AnswerQualityMetrics.compute(
         answer_text=answer.text,
         citations=answer.citations,
-        is_abstained=answer.abstained,
         semantic_similarity=sem_sim,
         correctness=correctness,
         completeness=completeness,
@@ -315,7 +314,7 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
     aq: dict[str, float] | None = None
     judged = [
         r for r in results
-        if r.answer is not None and r.answer_metrics is not None and not r.answer.abstained
+        if r.answer is not None and r.answer_metrics is not None
     ]
     if judged:
         def vals(attr: str) -> list[float]:
@@ -331,7 +330,7 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
         correctness = vals("correctness")
         halluc = vals("hallucination_severity")
 
-        # Groundedness rates based on new answerable_from_context / evidence_bounded fields
+        # Groundedness rates based on answerable_from_context / evidence_bounded fields
         total_judged_groundedness = 0
         evidence_bounded_count = 0
         not_evidence_bounded_when_unanswerable = 0
@@ -344,7 +343,7 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
                     evidence_bounded_count += 1
                 if m.answerable_from_context is False:
                     unanswerable_count += 1
-                    if m.evidence_bounded is False and r.answer and not r.answer.abstained:
+                    if m.evidence_bounded is False:
                         not_evidence_bounded_when_unanswerable += 1
 
         aq = {
@@ -397,7 +396,6 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
             if r.answer is not None:
                 row["answer"] = {
                     "text": r.answer.text,
-                    "abstained": r.answer.abstained,
                     "citations": [
                         asdict(c) if hasattr(c, "__dataclass_fields__") else c
                         for c in r.answer.citations

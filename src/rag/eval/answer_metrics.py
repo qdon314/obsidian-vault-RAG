@@ -33,7 +33,6 @@ class AnswerQualityMetrics(DataClassJsonMixin):
     hallucination_severity: float | None = None  # 0..5 higher worse
 
     is_correct: bool | None = None
-    is_abstained: bool | None = None
     answerable_from_context: bool | None = None
     evidence_bounded: bool | None = None
     has_hallucination: bool | None = None
@@ -52,7 +51,6 @@ class AnswerQualityMetrics(DataClassJsonMixin):
         *,
         answer_text: str,
         citations: Sequence[Any],
-        is_abstained: bool,
         semantic_similarity: float | None = None,
         # gold judge (optional)
         correctness: float | None = None,
@@ -92,7 +90,6 @@ class AnswerQualityMetrics(DataClassJsonMixin):
             citation_coverage=citation_coverage,
             is_correct=is_correct,
             has_hallucination=has_hallucination,
-            is_abstained=is_abstained,
             answerable_from_context=answerable_from_context,
             evidence_bounded=evidence_bounded,
         )
@@ -104,7 +101,6 @@ class AnswerQualityMetrics(DataClassJsonMixin):
             relevance=relevance,
             hallucination_severity=hallucination_severity,
             is_correct=is_correct,
-            is_abstained=is_abstained,
             answerable_from_context=answerable_from_context,
             evidence_bounded=evidence_bounded,
             has_hallucination=has_hallucination,
@@ -126,7 +122,6 @@ def _compute_quality_score(
     citation_coverage: float | None,
     is_correct: bool | None,
     has_hallucination: bool | None,
-    is_abstained: bool,
     answerable_from_context: bool | None,
     evidence_bounded: bool | None,
 ) -> float | None:
@@ -153,12 +148,12 @@ def _compute_quality_score(
 
     # Guardrails
     # If context was answerable but answer is not evidence-bounded, cap hard
-    if answerable_from_context is True and evidence_bounded is False and not is_abstained:
+    if answerable_from_context is True and evidence_bounded is False:
         score = min(score, 0.35)
 
-    # If context was not answerable but model answered confidently (not abstained
-    # and not evidence-bounded), also cap
-    if answerable_from_context is False and evidence_bounded is False and not is_abstained:
+    # If context was not answerable and answer is not evidence-bounded
+    # (model hallucinated instead of expressing uncertainty), cap hard
+    if answerable_from_context is False and evidence_bounded is False:
         score = min(score, 0.35)
 
     # Incorrect caps
