@@ -18,4 +18,5 @@
  - ~~Investigate potential bi~~
  - results_analyzer 
   - API is somewhat misaligned for multi-run use cases (some funcs don't handle multiple run id's)
-  - theming is broken
+  - ~~theming is broken~~
+  - cli run-name arg not honored

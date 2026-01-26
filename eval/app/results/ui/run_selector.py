@@ -69,7 +69,7 @@ def render_run_selector(
         # Add None option for single select
         selected = st.selectbox(
             label or default_label,
-            options=[None] + list(options.keys()),
+            options=[None, *options.keys()],
             format_func=lambda rid: "-- Select a run --" if rid is None else options[rid],
             key=key,
         )
