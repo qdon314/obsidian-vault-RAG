@@ -32,7 +32,8 @@ class AnswerQualityMetrics:
 
     is_correct: bool | None = None
     is_abstained: bool | None = None
-    should_abstain: bool | None = None
+    answerable_from_context: bool | None = None
+    evidence_bounded: bool | None = None
     has_hallucination: bool | None = None
 
     supported_claims: int | None = None
@@ -57,7 +58,8 @@ class AnswerQualityMetrics:
         relevance: float | None = None,
         hallucination_severity: float | None = None,
         # groundedness judge (optional)
-        should_abstain: bool | None = None,
+        answerable_from_context: bool | None = None,
+        evidence_bounded: bool | None = None,
         supported_claims: int | None = None,
         unsupported_claims: int | None = None,
     ) -> AnswerQualityMetrics:
@@ -89,7 +91,8 @@ class AnswerQualityMetrics:
             is_correct=is_correct,
             has_hallucination=has_hallucination,
             is_abstained=is_abstained,
-            should_abstain=should_abstain,
+            answerable_from_context=answerable_from_context,
+            evidence_bounded=evidence_bounded,
         )
 
         return AnswerQualityMetrics(
@@ -100,7 +103,8 @@ class AnswerQualityMetrics:
             hallucination_severity=hallucination_severity,
             is_correct=is_correct,
             is_abstained=is_abstained,
-            should_abstain=should_abstain,
+            answerable_from_context=answerable_from_context,
+            evidence_bounded=evidence_bounded,
             has_hallucination=has_hallucination,
             supported_claims=supported_claims,
             unsupported_claims=unsupported_claims,
@@ -121,7 +125,8 @@ def _compute_quality_score(
     is_correct: bool | None,
     has_hallucination: bool | None,
     is_abstained: bool,
-    should_abstain: bool | None,
+    answerable_from_context: bool | None,
+    evidence_bounded: bool | None,
 ) -> float | None:
     comps: list[tuple[float, float]] = []  # (value0_1, weight)
 
@@ -145,8 +150,13 @@ def _compute_quality_score(
     score = sum(v * (w / total_w) for v, w in comps)
 
     # Guardrails
-    # If judge thinks it should abstain but model answered, cap hard
-    if should_abstain is True and not is_abstained:
+    # If context was answerable but answer is not evidence-bounded, cap hard
+    if answerable_from_context is True and evidence_bounded is False and not is_abstained:
+        score = min(score, 0.35)
+
+    # If context was not answerable but model answered confidently (not abstained
+    # and not evidence-bounded), also cap
+    if answerable_from_context is False and evidence_bounded is False and not is_abstained:
         score = min(score, 0.35)
 
     # Incorrect caps
@@ -160,5 +170,9 @@ def _compute_quality_score(
     # Strong floors for correct+grounded
     if is_correct is True and has_hallucination is False:
         score = max(score, 0.75)
+
+    # Bonus: evidence-bounded answers get a floor
+    if evidence_bounded is True and has_hallucination is False:
+        score = max(score, 0.60)
 
     return _clamp01(float(score))

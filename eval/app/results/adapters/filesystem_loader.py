@@ -11,6 +11,7 @@ Loads runs from the standard eval/runs/ directory structure:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import re
@@ -202,10 +203,8 @@ class FilesystemRunLoader:
         """Parse EvalRunMeta from metrics.json meta section."""
         started_at = datetime.now(UTC)
         if "started_at" in data:
-            try:
+            with contextlib.suppress(ValueError):
                 started_at = datetime.fromisoformat(data["started_at"])
-            except ValueError:
-                pass
 
         return EvalRunMeta(
             run_id=data.get("run_id", "unknown"),
@@ -325,7 +324,8 @@ class FilesystemRunLoader:
                 hallucination_severity=metrics_data.get("hallucination_severity"),
                 is_correct=metrics_data.get("is_correct"),
                 is_abstained=metrics_data.get("is_abstained"),
-                should_abstain=metrics_data.get("should_abstain"),
+                answerable_from_context=metrics_data.get("answerable_from_context"),
+                evidence_bounded=metrics_data.get("evidence_bounded"),
                 has_hallucination=metrics_data.get("has_hallucination"),
                 supported_claims=metrics_data.get("supported_claims"),
                 unsupported_claims=metrics_data.get("unsupported_claims"),
@@ -338,17 +338,13 @@ class FilesystemRunLoader:
         # Parse query type and difficulty
         query_type = None
         if data.get("query_type"):
-            try:
+            with contextlib.suppress(ValueError):
                 query_type = QueryType(data["query_type"])
-            except ValueError:
-                pass
 
         difficulty = None
         if data.get("difficulty"):
-            try:
+            with contextlib.suppress(ValueError):
                 difficulty = Difficulty(data["difficulty"])
-            except ValueError:
-                pass
 
         return EvalResult(
             qid=data["qid"],
@@ -393,10 +389,8 @@ class FilesystemRunLoader:
         # Parse created_at timestamp
         created_at = None
         if data.get("created_at"):
-            try:
+            with contextlib.suppress(ValueError):
                 created_at = datetime.fromisoformat(str(data["created_at"]))
-            except ValueError:
-                pass
 
         # Parse retrieved candidates
         retrieved_candidates = []

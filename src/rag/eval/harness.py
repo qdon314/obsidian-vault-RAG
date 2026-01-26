@@ -96,7 +96,7 @@ def evaluate_answer_quality(
 
     # Judge outputs (optional)
     correctness = completeness = relevance = hallucination_severity = None
-    should_abstain = supported_claims = unsupported_claims = None
+    answerable_from_context = evidence_bounded = supported_claims = unsupported_claims = None
 
     if use_llm_judge and client and judge_model:
         # Gold-answer judging (only if expected answer exists and system did not abstain)
@@ -129,7 +129,8 @@ def evaluate_answer_quality(
                 model=judge_model,
                 prompt=grounded_prompt,
             )
-            should_abstain = gr.should_abstain
+            answerable_from_context = gr.answerable_from_context
+            evidence_bounded = gr.evidence_bounded
             supported_claims = gr.supported_claims
             unsupported_claims = gr.unsupported_claims
 
@@ -142,7 +143,8 @@ def evaluate_answer_quality(
         completeness=completeness,
         relevance=relevance,
         hallucination_severity=hallucination_severity,
-        should_abstain=should_abstain,
+        answerable_from_context=answerable_from_context,
+        evidence_bounded=evidence_bounded,
         supported_claims=supported_claims,
         unsupported_claims=unsupported_claims,
     )
@@ -329,15 +331,21 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
         correctness = vals("correctness")
         halluc = vals("hallucination_severity")
 
-        # “answered when should abstain” rate
-        judged_abstain = 0
-        answered_when_should_abstain = 0
+        # Groundedness rates based on new answerable_from_context / evidence_bounded fields
+        total_judged_groundedness = 0
+        evidence_bounded_count = 0
+        not_evidence_bounded_when_unanswerable = 0
+        unanswerable_count = 0
         for r in judged:
             m = r.answer_metrics
-            if m and m.should_abstain is True:
-                judged_abstain += 1
-                if r.answer and not r.answer.abstained:
-                    answered_when_should_abstain += 1
+            if m and m.answerable_from_context is not None:
+                total_judged_groundedness += 1
+                if m.evidence_bounded is True:
+                    evidence_bounded_count += 1
+                if m.answerable_from_context is False:
+                    unanswerable_count += 1
+                    if m.evidence_bounded is False and r.answer and not r.answer.abstained:
+                        not_evidence_bounded_when_unanswerable += 1
 
         aq = {
             "avg_quality_score": float(np.mean(quality)) if quality else 0.0,
@@ -345,7 +353,8 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
             "avg_citation_coverage": float(np.mean(coverage)) if coverage else 0.0,
             "avg_correctness_0_5": float(np.mean(correctness)) if correctness else 0.0,
             "avg_hallucination_severity_0_5": float(np.mean(halluc)) if halluc else 0.0,
-            "answered_when_should_abstain_rate": (answered_when_should_abstain / judged_abstain) if judged_abstain else 0.0,
+            "evidence_bounded_rate": (evidence_bounded_count / total_judged_groundedness) if total_judged_groundedness else 0.0,
+            "hallucinated_on_unanswerable_rate": (not_evidence_bounded_when_unanswerable / unanswerable_count) if unanswerable_count else 0.0,
         }
 
     lat: dict[str, float] | None = None
