@@ -1,50 +1,95 @@
 from __future__ import annotations
 
-import contextlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
+from dataclasses_json import DataClassJsonMixin, config
+
 from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.schema import Difficulty, QueryType
+from rag.utils.enum_parse import parse_enum
 
 if TYPE_CHECKING:
     from rag.domain.models import Answer
 
 
+def _tuple_encoder(val: tuple[str, ...]) -> list[str]:
+    return list(val)
+
+
+def _tuple_decoder(val: list[str] | None) -> tuple[str, ...]:
+    return tuple(val) if val else ()
+
+
+def _set_encoder(val: set[str]) -> list[str]:
+    return sorted(val)
+
+
+def _set_decoder(val: list[str] | None) -> set[str]:
+    return set(val) if val else set()
+
+def _dt_from_iso_or_now(v: Any) -> datetime:
+    if isinstance(v, datetime):
+        return v
+    if isinstance(v, str):
+        try:
+            return datetime.fromisoformat(v)
+        except ValueError:
+            pass
+    return datetime.now(UTC)
+
+
 @dataclass(frozen=True, slots=True)
-class RetrievalResult:
+class RetrievalResult(DataClassJsonMixin):
     qid: str
-    retrieved_chunk_ids: tuple[str, ...]
-    relevant_chunk_ids: set[str]
+    retrieved_chunk_ids: tuple[str, ...] = field(
+        default_factory=tuple,
+        metadata=config(encoder=_tuple_encoder, decoder=_tuple_decoder),
+    )
+    relevant_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=_set_encoder, decoder=_set_decoder),
+    )
 
     @classmethod
-    def from_dict(cls, qid: str, data: dict[str, Any]) -> RetrievalResult:
+    def from_qid_dict(cls, qid: str, data: dict[str, Any]) -> RetrievalResult:
+        """Create from dict + qid (for deserialization where qid comes from context)."""
         return cls(
             qid=qid,
             retrieved_chunk_ids=tuple(data.get("retrieved_chunk_ids", [])),
             relevant_chunk_ids=set(data.get("relevant_chunk_ids", [])),
         )
 
+def _parse_flattened_metrics(data: dict[str, Any], prefix: str) -> dict[int, float]:
+    """Extract metrics like 'recall@10' -> {10: 0.42}."""
+    result = {}
+    for key, value in data.items():
+        if key.startswith(f"{prefix}@"):
+            k = int(key.split("@")[1])
+            result[k] = float(value)
+    return result
+
+
 @dataclass(frozen=True, slots=True)
-class RetrievalSummary:
+class RetrievalSummary(DataClassJsonMixin):
     """Aggregate retrieval metrics over a set of queries."""
     num_queries: int
     avg_retrieved: float
 
     # Per-K metrics
-    recall_at_k: dict[int, float]
-    precision_at_k: dict[int, float]
-    hit_rate_at_k: dict[int, float]
-    ndcg_at_k: dict[int, float]
+    recall_at_k: dict[int, float] = field(default_factory=dict)
+    precision_at_k: dict[int, float] = field(default_factory=dict)
+    hit_rate_at_k: dict[int, float] = field(default_factory=dict)
+    ndcg_at_k: dict[int, float] = field(default_factory=dict)
 
     # Global ranking metrics
-    mrr: float
-    map: float
+    mrr: float = 0.0
+    map: float = 0.0
 
-    def to_dict(self) -> dict[str, float]:
+    def to_flat_dict(self) -> dict[str, float]:
         """
-        Flatten to raw dict style (e.g., 'recall@10': 0.42) for compatibility.
+        Flatten to raw dict style (e.g., 'recall@10': 0.42) for human-readable JSON.
         """
         out: dict[str, float] = {
             "num_queries": float(self.num_queries),
@@ -61,45 +106,21 @@ class RetrievalSummary:
         for k, v in self.ndcg_at_k.items():
             out[f"ndcg@{k}"] = float(v)
         return out
-    
+
     @classmethod
-    def from_dict(cls, data: dict[str, float]) -> RetrievalSummary:
+    def from_flat_dict(cls, data: dict[str, float]) -> RetrievalSummary:
         """
-        Create from flattened dict style.
+        Create from flattened dict style (e.g., 'recall@10': 0.42).
         """
-        num_queries = int(data["num_queries"])
-        avg_retrieved = float(data["avg_retrieved"])
-        mrr = float(data["mrr"])
-        map_score = float(data["map"])
-
-        recall_at_k = {}
-        precision_at_k = {}
-        hit_rate_at_k = {}
-        ndcg_at_k = {}
-
-        for key, value in data.items():
-            if key.startswith("recall@"):
-                k = int(key.split("@")[1])
-                recall_at_k[k] = float(value)
-            elif key.startswith("precision@"):
-                k = int(key.split("@")[1])
-                precision_at_k[k] = float(value)
-            elif key.startswith("hit_rate@"):
-                k = int(key.split("@")[1])
-                hit_rate_at_k[k] = float(value)
-            elif key.startswith("ndcg@"):
-                k = int(key.split("@")[1])
-                ndcg_at_k[k] = float(value)
-
         return cls(
-            num_queries=num_queries,
-            avg_retrieved=avg_retrieved,
-            recall_at_k=recall_at_k,
-            precision_at_k=precision_at_k,
-            hit_rate_at_k=hit_rate_at_k,
-            ndcg_at_k=ndcg_at_k,
-            mrr=mrr,
-            map=map_score,
+            num_queries=int(data.get("num_queries", 0)),
+            avg_retrieved=float(data.get("avg_retrieved", 0.0)),
+            recall_at_k=_parse_flattened_metrics(data, "recall"),
+            precision_at_k=_parse_flattened_metrics(data, "precision"),
+            hit_rate_at_k=_parse_flattened_metrics(data, "hit_rate"),
+            ndcg_at_k=_parse_flattened_metrics(data, "ndcg"),
+            mrr=float(data.get("mrr", 0.0)),
+            map=float(data.get("map", 0.0)),
         )
    
 @dataclass
@@ -135,13 +156,13 @@ class EvalResult:
 
         # Parse retrieval result
         retrieval_data = data.get("retrieval", {})
-        retrieval = RetrievalResult.from_dict(qid, retrieval_data)
+        retrieval = RetrievalResult.from_dict(qid, **retrieval_data)
 
         # Parse answer if present
         answer = None
         answer_data = data.get("answer")
         if answer_data:
-            answer = AnswerCls.from_dict(query, answer_data)
+            answer = AnswerCls.from_query_dict(query, answer_data)
 
         # Parse answer metrics if present
         answer_metrics = None
@@ -152,13 +173,11 @@ class EvalResult:
         # Parse query type and difficulty
         query_type = None
         if data.get("query_type"):
-            with contextlib.suppress(ValueError):
-                query_type = QueryType(data["query_type"])
+            query_type = parse_enum(QueryType, data["query_type"])
 
         difficulty = None
         if data.get("difficulty"):
-            with contextlib.suppress(ValueError):
-                difficulty = Difficulty(data["difficulty"])
+            difficulty = parse_enum(Difficulty, data["difficulty"])
 
         return cls(
             qid=qid,
@@ -175,49 +194,26 @@ class EvalResult:
     
 
 @dataclass(frozen=True, slots=True)
-class EvalRunMeta:
-    run_id: str
-    started_at: datetime
-    queries_path: str | None
-    top_k: int
-    keep_k: int | None
-    token_budget: int
-    run_generation: bool
-    use_llm_judge: bool
-    judge_model: str | None
-    generator_model: str | None
-    embedder_model: str | None
-    reranker_name: str | None
+class EvalRunMeta(DataClassJsonMixin):
+    run_id: str = "unknown"
+    started_at: datetime = field(
+        default_factory=lambda: datetime.now(UTC),
+        metadata=config(decoder=_dt_from_iso_or_now, encoder=lambda dt: dt.isoformat()),
+    )
+    queries_path: str | None = None
+    top_k: int = 10
+    keep_k: int | None = None
+    token_budget: int = 1500
+    run_generation: bool = False
+    use_llm_judge: bool = False
+    judge_model: str | None = None
+    generator_model: str | None = None
+    embedder_model: str | None = None
+    reranker_name: str | None = None
     notes: str | None = None
     gold_judge_version: str | None = None
     groundedness_judge_version: str | None = None
-    extra: dict[str, Any] | None = None  # commit hash, dataset hash, etc.
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> EvalRunMeta:
-        started_at = datetime.now(UTC)
-        if "started_at" in data:
-            with contextlib.suppress(ValueError):
-                started_at = datetime.fromisoformat(data["started_at"])
-
-        return cls(
-            run_id=data.get("run_id", "unknown"),
-            started_at=started_at,
-            queries_path=data.get("queries_path"),
-            top_k=data.get("top_k", 10),
-            keep_k=data.get("keep_k"),
-            token_budget=data.get("token_budget", 1500),
-            run_generation=data.get("run_generation", False),
-            use_llm_judge=data.get("use_llm_judge", False),
-            judge_model=data.get("judge_model"),
-            generator_model=data.get("generator_model"),
-            embedder_model=data.get("embedder_model"),
-            reranker_name=data.get("reranker_name"),
-            notes=data.get("notes"),
-            gold_judge_version=data.get("gold_judge_version"),
-            groundedness_judge_version=data.get("groundedness_judge_version"),
-            extra=data.get("extra"),
-        )
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

@@ -5,6 +5,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+from dataclasses_json import DataClassJsonMixin
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
@@ -112,7 +113,7 @@ Respond with ONLY a JSON object:
 
 
 @dataclass(frozen=True, slots=True)
-class GoldJudgeResult:
+class GoldJudgeResult(DataClassJsonMixin):
     correctness: float | None = None
     completeness: float | None = None
     relevance: float | None = None
@@ -120,7 +121,8 @@ class GoldJudgeResult:
     reasoning: str | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> GoldJudgeResult:
+    def from_llm_dict(cls, data: dict[str, Any]) -> GoldJudgeResult:
+        """Parse from LLM output dict which may use alternate keys."""
         return cls(
             correctness=_to_float(data.get("correctness")),
             completeness=_to_float(data.get("completeness")),
@@ -133,26 +135,16 @@ class GoldJudgeResult:
 
 
 @dataclass(frozen=True, slots=True)
-class AnswerClaim:
-    claim: str
-    supported: bool
-    chunk_id: str | None
-    quote: str | None
-    note: str | None
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> AnswerClaim:
-        return cls(
-            claim=data.get("claim", ""),
-            supported=bool(data.get("supported", False)),
-            chunk_id=data.get("chunk_id"),
-            quote=data.get("quote"),
-            note=data.get("note"),
-        )
+class AnswerClaim(DataClassJsonMixin):
+    claim: str = ""
+    supported: bool = False
+    chunk_id: str | None = None
+    quote: str | None = None
+    note: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
-class GroundednessJudgeResult:
+class GroundednessJudgeResult(DataClassJsonMixin):
     answerable_from_context: bool | None = None
     evidence_bounded: bool | None = None
     supported_claims: int | None = None
@@ -160,7 +152,8 @@ class GroundednessJudgeResult:
     claims: list[AnswerClaim] | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> GroundednessJudgeResult:
+    def from_llm_dict(cls, data: dict[str, Any]) -> GroundednessJudgeResult:
+        """Parse from LLM output dict with lenient type coercion."""
         raw_claims = data.get("claims")
         parsed_claims: list[AnswerClaim] | None = None
         if isinstance(raw_claims, list):
@@ -224,7 +217,7 @@ def evaluate_vs_expected_answer(
         )
         content = resp.choices[0].message.content or ""
         data = _safe_json_loads(content) or {}
-        return GoldJudgeResult.from_dict(data)
+        return GoldJudgeResult.from_llm_dict(data)
     except Exception as e:
         logger.error("Gold-judge error: %s", e)
         return GoldJudgeResult()
@@ -247,7 +240,7 @@ def evaluate_groundedness(
         )
         content = resp.choices[0].message.content or ""
         data = _safe_json_loads(content) or {}
-        return GroundednessJudgeResult.from_dict(data)
+        return GroundednessJudgeResult.from_llm_dict(data)
     except Exception as e:
         logger.error("Groundedness-judge error: %s", e)
         return GroundednessJudgeResult()

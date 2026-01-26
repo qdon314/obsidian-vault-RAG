@@ -20,3 +20,4 @@
   - API is somewhat misaligned for multi-run use cases (some funcs don't handle multiple run id's)
   - ~~theming is broken~~
   - cli run-name arg not honored
+  - revisit heavy dataclasses like EvalResults - make records
