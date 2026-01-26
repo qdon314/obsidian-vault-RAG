@@ -374,10 +374,14 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
     )
 
 
-def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
+def save_run(run: EvalRun, output_dir: Path, run_name: str | None = None) -> EvalRun:
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    results_file = output_dir / "results.jsonl"
+    # Build filenames with optional run_name as middle extension
+    if run_name:
+        results_file = output_dir / f"results.{run_name}.jsonl"
+    else:
+        results_file = output_dir / "results.jsonl"
     with results_file.open("w", encoding="utf-8") as f:
         for r in run.results:
             row: dict[str, Any] = {
@@ -405,7 +409,10 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
                 row["answer_metrics"] = asdict(r.answer_metrics)
             f.write(json.dumps(row) + "\n")
 
-    metrics_file = output_dir / "metrics.json"
+    if run_name:
+        metrics_file = output_dir / f"metrics.{run_name}.json"
+    else:
+        metrics_file = output_dir / "metrics.json"
     meta_dict = asdict(run.meta)
     if meta_dict.get("started_at") and hasattr(meta_dict["started_at"], "isoformat"):
         meta_dict["started_at"] = meta_dict["started_at"].isoformat()

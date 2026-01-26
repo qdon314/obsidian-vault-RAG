@@ -126,7 +126,7 @@ def main() -> None:
 
     # Persist artifacts
     if not args.no_save:
-        run = save_run(run, output_dir=run_dir)
+        run = save_run(run, output_dir=run_dir, run_name=args.run_name)
 
     # Print summary
     # overall = run.aggregates.overall.to_dict()  # flat dict, or use fields directly
