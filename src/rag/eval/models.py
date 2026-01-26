@@ -8,36 +8,25 @@ from dataclasses_json import DataClassJsonMixin, config
 
 from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.schema import Difficulty, QueryType
+from rag.utils.dataclass_json_utils import (
+    datetime_decoder,
+    datetime_encoder,
+    enum_encoder,
+    make_enum_decoder,
+    set_decoder,
+    set_encoder,
+    tuple_decoder,
+    tuple_encoder,
+)
 from rag.utils.enum_parse import parse_enum
 
 if TYPE_CHECKING:
     from rag.domain.models import Answer
 
 
-def _tuple_encoder(val: tuple[str, ...]) -> list[str]:
-    return list(val)
-
-
-def _tuple_decoder(val: list[str] | None) -> tuple[str, ...]:
-    return tuple(val) if val else ()
-
-
-def _set_encoder(val: set[str]) -> list[str]:
-    return sorted(val)
-
-
-def _set_decoder(val: list[str] | None) -> set[str]:
-    return set(val) if val else set()
-
-def _dt_from_iso_or_now(v: Any) -> datetime:
-    if isinstance(v, datetime):
-        return v
-    if isinstance(v, str):
-        try:
-            return datetime.fromisoformat(v)
-        except ValueError:
-            pass
-    return datetime.now(UTC)
+# Pre-create decoders for optional enum fields
+_query_type_decoder = make_enum_decoder(QueryType)
+_difficulty_decoder = make_enum_decoder(Difficulty)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,11 +34,11 @@ class RetrievalResult(DataClassJsonMixin):
     qid: str
     retrieved_chunk_ids: tuple[str, ...] = field(
         default_factory=tuple,
-        metadata=config(encoder=_tuple_encoder, decoder=_tuple_decoder),
+        metadata=config(encoder=tuple_encoder, decoder=tuple_decoder),
     )
     relevant_chunk_ids: set[str] = field(
         default_factory=set,
-        metadata=config(encoder=_set_encoder, decoder=_set_decoder),
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
     )
 
     @classmethod
@@ -124,7 +113,7 @@ class RetrievalSummary(DataClassJsonMixin):
         )
    
 @dataclass
-class EvalResult:
+class EvalResult(DataClassJsonMixin):
     """Complete evaluation result for a single query."""
     qid: str
     query: str
@@ -137,8 +126,14 @@ class EvalResult:
     answer_metrics: AnswerQualityMetrics | None = None
 
     # Query metadata
-    query_type: QueryType | None = None
-    difficulty: Difficulty | None = None
+    query_type: QueryType | None = field(
+        default=None,
+        metadata=config(encoder=enum_encoder, decoder=_query_type_decoder),
+    )
+    difficulty: Difficulty | None = field(
+        default=None,
+        metadata=config(encoder=enum_encoder, decoder=_difficulty_decoder),
+    )
     is_unanswerable: bool = False
 
     # Timing
@@ -147,16 +142,22 @@ class EvalResult:
     trace_id: str | None = None  # link to QueryTrace if available
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> EvalResult:
+    def from_results_dict(cls, data: dict[str, Any]) -> EvalResult:
+        """
+        Create from results.jsonl format which has nested 'retrieval' and 'answer' keys.
+
+        This handles the legacy format where retrieval data is nested under 'retrieval'
+        and answer requires the query string for construction.
+        """
         # Import here to avoid circular dependency
         from rag.domain.models import Answer as AnswerCls
 
         qid = data["qid"]
         query = data.get("query", "")
 
-        # Parse retrieval result
+        # Parse retrieval result from nested format
         retrieval_data = data.get("retrieval", {})
-        retrieval = RetrievalResult.from_dict(qid, **retrieval_data)
+        retrieval = RetrievalResult.from_qid_dict(qid, retrieval_data)
 
         # Parse answer if present
         answer = None
@@ -171,13 +172,8 @@ class EvalResult:
             answer_metrics = AnswerQualityMetrics.from_dict(metrics_data)
 
         # Parse query type and difficulty
-        query_type = None
-        if data.get("query_type"):
-            query_type = parse_enum(QueryType, data["query_type"])
-
-        difficulty = None
-        if data.get("difficulty"):
-            difficulty = parse_enum(Difficulty, data["difficulty"])
+        query_type = parse_enum(QueryType, data.get("query_type"))
+        difficulty = parse_enum(Difficulty, data.get("difficulty"))
 
         return cls(
             qid=qid,
@@ -198,7 +194,7 @@ class EvalRunMeta(DataClassJsonMixin):
     run_id: str = "unknown"
     started_at: datetime = field(
         default_factory=lambda: datetime.now(UTC),
-        metadata=config(decoder=_dt_from_iso_or_now, encoder=lambda dt: dt.isoformat()),
+        metadata=config(decoder=datetime_decoder, encoder=datetime_encoder),
     )
     queries_path: str | None = None
     top_k: int = 10
@@ -217,26 +213,31 @@ class EvalRunMeta(DataClassJsonMixin):
 
 
 @dataclass(frozen=True, slots=True)
-class EvalAggregates:
+class EvalAggregates(DataClassJsonMixin):
     overall: RetrievalSummary
-    by_type: dict[str, RetrievalSummary]
-    by_difficulty: dict[str, RetrievalSummary]
+    by_type: dict[str, RetrievalSummary] = field(default_factory=dict)
+    by_difficulty: dict[str, RetrievalSummary] = field(default_factory=dict)
 
     # Optional: add later
     answer_quality: dict[str, float] | None = None
     latency_ms: dict[str, float] | None = None
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> EvalAggregates:
-        overall = RetrievalSummary.from_dict(data.get("overall", {}))
+    def from_flat_dict(cls, data: dict[str, Any]) -> EvalAggregates:
+        """
+        Create from flattened dict format (used in metrics.json files).
+
+        Uses RetrievalSummary.from_flat_dict for nested summaries.
+        """
+        overall = RetrievalSummary.from_flat_dict(data.get("overall", {}))
 
         by_type: dict[str, RetrievalSummary] = {}
         for type_name, type_data in data.get("by_type", {}).items():
-            by_type[type_name] = RetrievalSummary.from_dict(type_data)
+            by_type[type_name] = RetrievalSummary.from_flat_dict(type_data)
 
         by_difficulty: dict[str, RetrievalSummary] = {}
         for diff_name, diff_data in data.get("by_difficulty", {}).items():
-            by_difficulty[diff_name] = RetrievalSummary.from_dict(diff_data)
+            by_difficulty[diff_name] = RetrievalSummary.from_flat_dict(diff_data)
 
         return cls(
             overall=overall,

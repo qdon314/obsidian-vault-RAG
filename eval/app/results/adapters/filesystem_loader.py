@@ -199,8 +199,8 @@ class FilesystemRunLoader:
         return EvalRunMeta.from_dict(data)
 
     def _parse_aggregates(self, data: dict[str, Any]) -> EvalAggregates:
-        """Parse EvalAggregates from metrics.json."""
-        return EvalAggregates.from_dict(data)
+        """Parse EvalAggregates from metrics.json (flattened format)."""
+        return EvalAggregates.from_flat_dict(data)
 
     def _load_results(self, run_dir: Path) -> list[EvalResult]:
         """Load results from results.jsonl."""
@@ -228,8 +228,8 @@ class FilesystemRunLoader:
         return results
 
     def _parse_eval_result(self, data: dict[str, Any]) -> EvalResult:
-        """Parse EvalResult from JSONL row."""
-        return EvalResult.from_dict(data)
+        """Parse EvalResult from JSONL row (results.jsonl format)."""
+        return EvalResult.from_results_dict(data)
 
     def _load_traces(self, run_dir: Path) -> dict[str, QueryTrace]:
         """Load traces from traces.jsonl."""

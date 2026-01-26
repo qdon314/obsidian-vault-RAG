@@ -5,8 +5,16 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from dataclasses_json import DataClassJsonMixin, config
+
 from rag.domain.filter_serde import deserialize_filter
 from rag.domain.filters import Where
+from rag.utils.dataclass_json_utils import (
+    enum_encoder,
+    make_enum_decoder,
+    set_decoder,
+    set_encoder,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +39,11 @@ class Difficulty(str, Enum):
     HARD = "hard"  # Multi-hop reasoning, synthesis across many chunks
 
 
+# Pre-create decoders with defaults for this module
+_query_type_decoder = make_enum_decoder(QueryType, default=QueryType.FACTUAL)
+_difficulty_decoder = make_enum_decoder(Difficulty, default=Difficulty.EASY)
+
+
 @dataclass(frozen=True, slots=True)
 class QuerySuggestion:
     """A suggested query generated from a chunk by an LLM."""
@@ -43,7 +56,7 @@ class QuerySuggestion:
 
 
 @dataclass(frozen=True, slots=True)
-class EvalQuery:
+class EvalQuery(DataClassJsonMixin):
     """
     A single evaluation query with ground truth annotations.
 
@@ -55,15 +68,24 @@ class EvalQuery:
     """
     qid: str
     query: str
-    relevant_chunk_ids: set[str]
+    relevant_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
 
     # Optional: expected answer for answer quality evaluation
     expected_answer: str | None = None
     expected_answer_alternatives: list[str] = field(default_factory=list)
 
     # Query characteristics
-    query_type: QueryType = QueryType.FACTUAL
-    difficulty: Difficulty = Difficulty.EASY
+    query_type: QueryType = field(
+        default=QueryType.FACTUAL,
+        metadata=config(encoder=enum_encoder, decoder=_query_type_decoder),
+    )
+    difficulty: Difficulty = field(
+        default=Difficulty.EASY,
+        metadata=config(encoder=enum_encoder, decoder=_difficulty_decoder),
+    )
     requires_synthesis: bool = False  # Does answer require combining multiple chunks?
 
     # Additional context
@@ -109,82 +131,18 @@ class EvalQuery:
             logger.warning(f"Failed to deserialize filter for query {self.qid}: {e}")
             return None
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "qid": self.qid,
-            "query": self.query,
-            "relevant_chunk_ids": sorted(self.relevant_chunk_ids),
-            "expected_answer": self.expected_answer,
-            "expected_answer_alternatives": self.expected_answer_alternatives,
-            "query_type": self.query_type.value,
-            "difficulty": self.difficulty.value,
-            "requires_synthesis": self.requires_synthesis,
-            "notes": self.notes,
-            "tags": self.tags,
-            "created_at": self.created_at,
-            "created_by": self.created_by,
-            "is_unanswerable": self.is_unanswerable,
-            "unanswerable_reason": self.unanswerable_reason,
-            "metadata": self.metadata,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> EvalQuery:
-        """Create from dictionary."""
-        return cls(
-            qid=str(data["qid"]),
-            query=str(data["query"]),
-            relevant_chunk_ids=set(data.get("relevant_chunk_ids", [])),
-            expected_answer=data.get("expected_answer"),
-            expected_answer_alternatives=data.get("expected_answer_alternatives", []),
-            query_type=QueryType(data.get("query_type", "factual")),
-            difficulty=Difficulty(data.get("difficulty", "easy")),
-            requires_synthesis=data.get("requires_synthesis", False),
-            notes=data.get("notes"),
-            tags=data.get("tags", []),
-            created_at=data.get("created_at"),
-            created_by=data.get("created_by"),
-            is_unanswerable=data.get("is_unanswerable", False),
-            unanswerable_reason=data.get("unanswerable_reason"),
-            metadata=data.get("metadata", {}),
-        )
-
 
 @dataclass(frozen=True, slots=True)
-class EvalDataset:
+class EvalDataset(DataClassJsonMixin):
     """
     A collection of evaluation queries with metadata.
     """
     name: str
     version: str
     description: str
-    queries: list[EvalQuery]
+    queries: list[EvalQuery] = field(default_factory=list)
     created_at: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "name": self.name,
-            "version": self.version,
-            "description": self.description,
-            "created_at": self.created_at,
-            "metadata": self.metadata,
-            "queries": [q.to_dict() for q in self.queries],
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> EvalDataset:
-        """Create from dictionary."""
-        return cls(
-            name=data["name"],
-            version=data["version"],
-            description=data["description"],
-            created_at=data.get("created_at"),
-            metadata=data.get("metadata", {}),
-            queries=[EvalQuery.from_dict(q) for q in data.get("queries", [])],
-        )
 
     def filter_by_type(self, query_type: QueryType) -> list[EvalQuery]:
         """Filter queries by type."""

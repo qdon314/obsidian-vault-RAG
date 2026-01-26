@@ -414,9 +414,9 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
 
     metrics_payload = {
         "meta": meta_dict,
-        "overall": run.aggregates.overall.to_dict(),
-        "by_type": {k: v.to_dict() for k, v in run.aggregates.by_type.items()},
-        "by_difficulty": {k: v.to_dict() for k, v in run.aggregates.by_difficulty.items()},
+        "overall": run.aggregates.overall.to_flat_dict(),
+        "by_type": {k: v.to_flat_dict() for k, v in run.aggregates.by_type.items()},
+        "by_difficulty": {k: v.to_flat_dict() for k, v in run.aggregates.by_difficulty.items()},
         "answer_quality": run.aggregates.answer_quality,
         "latency_ms": run.aggregates.latency_ms,
     }
