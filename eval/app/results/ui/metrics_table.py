@@ -138,10 +138,17 @@ def _render_answer_quality_table(answer_quality: dict[str, float]) -> None:
                 "Avg Hallucination Severity (0-5)",
                 f"{answer_quality['avg_hallucination_severity_0_5']:.2f}",
             )
-        if "answered_when_should_abstain_rate" in answer_quality:
+        if "evidence_bounded_rate" in answer_quality:
             st.metric(
-                "Answered When Should Abstain",
-                f"{answer_quality['answered_when_should_abstain_rate']:.1%}",
+                "Evidence Bounded Rate",
+                f"{answer_quality['evidence_bounded_rate']:.1%}",
+                help="Percentage of answers where all claims are supported by context",
+            )
+        if "hallucinated_on_unanswerable_rate" in answer_quality:
+            st.metric(
+                "Hallucinated on Unanswerable",
+                f"{answer_quality['hallucinated_on_unanswerable_rate']:.1%}",
+                help="Of queries where context was insufficient, how often did the model hallucinate instead of abstaining",
             )
 
 
