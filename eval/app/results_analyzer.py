@@ -443,9 +443,6 @@ def _render_full_trace(trace) -> None:
     with st.expander("Generation Stage", expanded=False):
         st.markdown(f"**Model:** {trace.model or 'N/A'}")
 
-        if trace.answer_abstained:
-            st.warning("Model abstained from answering")
-
         if trace.answer_text:
             st.text_area(
                 "Generated Answer",
