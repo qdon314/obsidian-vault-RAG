@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from dataclasses_json import DataClassJsonMixin, config
 
 from rag.eval.answer_metrics import AnswerQualityMetrics
+from rag.eval.judges import GroundednessJudgeResult
 from rag.eval.schema import Difficulty, QueryType
 from rag.utils.dataclass_json_utils import (
     datetime_decoder,
@@ -124,6 +125,7 @@ class EvalResult(DataClassJsonMixin):
     # Answer (if generated)
     answer: Answer | None = None
     answer_metrics: AnswerQualityMetrics | None = None
+    groundedness_result: GroundednessJudgeResult | None = None
 
     # Query metadata
     query_type: QueryType | None = field(
@@ -171,6 +173,12 @@ class EvalResult(DataClassJsonMixin):
         if metrics_data:
             answer_metrics = AnswerQualityMetrics.from_dict(metrics_data)
 
+        # Parse groundedness result if present
+        groundedness_result = None
+        groundedness_data = data.get("groundedness_result")
+        if groundedness_data:
+            groundedness_result = GroundednessJudgeResult.from_dict(groundedness_data)
+
         # Parse query type and difficulty
         query_type = parse_enum(QueryType, data.get("query_type"))
         difficulty = parse_enum(Difficulty, data.get("difficulty"))
@@ -181,6 +189,7 @@ class EvalResult(DataClassJsonMixin):
             retrieval_result=retrieval,
             answer=answer,
             answer_metrics=answer_metrics,
+            groundedness_result=groundedness_result,
             query_type=query_type,
             difficulty=difficulty,
             is_unanswerable=data.get("is_unanswerable", False),

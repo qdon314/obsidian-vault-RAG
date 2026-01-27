@@ -31,6 +31,7 @@ from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.judges import (
     GOLD_JUDGE_VERSION,
     GROUNDEDNESS_JUDGE_VERSION,
+    GroundednessJudgeResult,
     evaluate_groundedness,
     evaluate_vs_expected_answer,
     make_gold_prompt,
@@ -89,7 +90,7 @@ def evaluate_answer_quality(
     judge_model: str,
     embedder: Any | None,
     use_llm_judge: bool,
-) -> AnswerQualityMetrics:
+) -> tuple[AnswerQualityMetrics, GroundednessJudgeResult | None]:
     sem_sim: float | None = None
     if embedder and query.expected_answer:
         sem_sim = semantic_similarity(query.expected_answer, answer.text, embedder)
@@ -97,6 +98,7 @@ def evaluate_answer_quality(
     # Judge outputs (optional)
     correctness = completeness = relevance = hallucination_severity = None
     answerable_from_context = evidence_bounded = supported_claims = unsupported_claims = None
+    gr: GroundednessJudgeResult | None = None
 
     if use_llm_judge and client and judge_model:
         # Groundedness judging first (determines if answer is evidence-bounded)
@@ -134,7 +136,7 @@ def evaluate_answer_quality(
             relevance = gold.relevance
             hallucination_severity = gold.hallucination_severity
 
-    return AnswerQualityMetrics.compute(
+    metrics = AnswerQualityMetrics.compute(
         answer_text=answer.text,
         citations=answer.citations,
         semantic_similarity=sem_sim,
@@ -147,6 +149,7 @@ def evaluate_answer_quality(
         supported_claims=supported_claims,
         unsupported_claims=unsupported_claims,
     )
+    return metrics, gr
 
 
 # ----------------------------
@@ -233,7 +236,7 @@ def run_full_eval(
             relevant_chunk_ids=q.relevant_chunk_ids,
         )
 
-        answer_metrics = evaluate_answer_quality(
+        answer_metrics, groundedness_result = evaluate_answer_quality(
             query=q,
             answer=answer,
             retrieved_chunks=run.context_pack.chunks,
@@ -250,6 +253,7 @@ def run_full_eval(
                 retrieval_result=retrieval_result,
                 answer=answer,
                 answer_metrics=answer_metrics,
+                groundedness_result=groundedness_result,
                 query_type=q.query_type,
                 difficulty=q.difficulty,
                 is_unanswerable=q.is_unanswerable,
@@ -407,6 +411,8 @@ def save_run(run: EvalRun, output_dir: Path, run_name: str | None = None) -> Eva
                 }
             if r.answer_metrics is not None:
                 row["answer_metrics"] = asdict(r.answer_metrics)
+            if r.groundedness_result is not None:
+                row["groundedness_result"] = asdict(r.groundedness_result)
             f.write(json.dumps(row) + "\n")
 
     if run_name:

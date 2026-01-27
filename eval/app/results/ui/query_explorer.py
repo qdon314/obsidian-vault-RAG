@@ -261,6 +261,38 @@ def _render_query_detail(
             if result.answer_metrics.semantic_similarity is not None:
                 st.metric("Semantic Similarity", f"{result.answer_metrics.semantic_similarity:.2f}")
 
+    # Claims (if available)
+    if result.groundedness_result and result.groundedness_result.claims:
+        st.divider()
+        st.markdown("### Groundedness Claims")
+
+        # Summary stats
+        supported = sum(1 for c in result.groundedness_result.claims if c.supported)
+        unsupported = len(result.groundedness_result.claims) - supported
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Claims", len(result.groundedness_result.claims))
+        with col2:
+            st.metric("Supported", supported)
+        with col3:
+            st.metric("Unsupported", unsupported)
+
+        # Individual claims
+        for claim in result.groundedness_result.claims:
+            icon = "✓" if claim.supported else "✗"
+            status_color = "green" if claim.supported else "red"
+            header = f"{icon} {claim.claim[:80]}{'...' if len(claim.claim) > 80 else ''}"
+
+            with st.expander(header, expanded=not claim.supported):
+                st.markdown(f"**Supported:** :{status_color}[{claim.supported}]")
+                if claim.chunk_id:
+                    st.markdown(f"**Chunk ID:** `{claim.chunk_id}`")
+                if claim.quote:
+                    st.markdown(f"**Quote:** _{claim.quote}_")
+                if claim.note:
+                    st.markdown(f"**Note:** {claim.note}")
+
     # Trace details
     if trace:
         st.divider()
