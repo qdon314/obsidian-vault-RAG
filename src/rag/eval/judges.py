@@ -107,12 +107,12 @@ QUERY METADATA (for interpretation only):
 
 Respond with ONLY a JSON object:
 
-{
+{{
   "correctness": <0-5>,
   "completeness": <0-5>,
   "relevance": <0-5>,
   "reasoning": "<brief justification referencing expected answer alignment>"
-}
+}}
 """
 
 
@@ -259,11 +259,22 @@ class GroundednessJudgeResult(DataClassJsonMixin):
             claims=parsed_claims,
         )
 
-def make_gold_prompt(*, query: str, expected_answer: str, generated_answer: str) -> str:
+def make_gold_prompt(
+    *,
+    query: str,
+    expected_answer: str,
+    generated_answer: str,
+    query_type: str = "unknown",
+    difficulty: str = "unknown",
+    requires_synthesis: bool = False,
+) -> str:
     return GOLD_JUDGE_PROMPT.format(
         query=query,
         expected_answer=expected_answer,
         generated_answer=generated_answer,
+        query_type=query_type,
+        difficulty=difficulty,
+        requires_synthesis=requires_synthesis,
     )
 
 def make_groundedness_prompt(*, query: str, context_chunks: str, generated_answer: str) -> str:
