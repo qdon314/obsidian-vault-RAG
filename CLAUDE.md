@@ -17,6 +17,16 @@ All Python commands **must be run via the pinned interpreter**, using one of:
 This ensures commands always run in the correct environment, including in
 non-interactive shells used by Claude Code.
 
+## Git Commits
+
+- Do NOT add "Co-authored-by" or similar attribution lines to commits.
+- Commits should have a single author.
+- Claude is a tool, not a collaborator.
+- Do NOT plan to commit when drafting plans.
+- Do NOT to commit after making changes.
+- DO produce a set of suggested commits indicating files and message for each commit at the end of implementation / in the summary of changes.
+- I am the final reviewer of changes.
+
 ## Build & Test Commands
 
 ```bash
