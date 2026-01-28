@@ -3,12 +3,22 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from dataclasses_json import DataClassJsonMixin
 from openai import OpenAI
 
+from rag.utils.enum_parse import parse_enum
+
 logger = logging.getLogger(__name__)
+
+
+class ClaimRole(StrEnum):
+    """Classification of a claim's importance to the answer."""
+
+    CORE = "core"
+    PERIPHERAL = "peripheral"
 
 # !--------  Update version when prompt changes! -----------!
 GOLD_JUDGE_VERSION = "gold_v1"
@@ -55,35 +65,60 @@ Respond with ONLY a JSON object:
 
 
 # !--------  Update version when prompt changes! -----------!
-GROUNDEDNESS_JUDGE_VERSION = "groundedness_v2"
-GROUNDEDNESS_JUDGE_PROMPT = """You are an expert evaluator for a Retrieval-Augmented Generation (RAG) system.
+GROUNDEDNESS_JUDGE_VERSION = "groundedness_v3"
+GROUNDEDNESS_JUDGE_PROMPT = """You are an expert groundedness evaluator for a Retrieval-Augmented Generation (RAG) system.
 
 You will be given:
 - a QUERY
 - RETRIEVED CONTEXT CHUNKS (each has a chunk_id)
 - a GENERATED ANSWER
 
+Your task is to analyze whether the GENERATED ANSWER is supported by the RETRIEVED CONTEXT.
+
 Definitions:
-- answerable_from_context = true only if the retrieved context contains enough information to directly answer the query as asked (not merely to say "it's not in the context").
-- evidence_bounded = true only if EVERY substantive claim in the answer is either:
-  (a) explicitly supported by the retrieved context, OR
-  (b) an explicit statement of uncertainty / insufficiency such as "the context does not say", "cannot be determined from the provided context", etc.
-- If answerable_from_context is false, an evidence-bounded answer is allowed and should NOT be considered a failure.
 
-Your job:
-1) Determine ANSWERABLE_FROM_CONTEXT.
-2) Determine EVIDENCE_BOUNDED.
-3) Extract the key factual claims from the generated answer (concise; substantive only).
-   - Treat statements about insufficiency ("cannot confirm from context") as NON-HALLUCINATORY if they accurately reflect missing info.
-4) For each claim, mark it as SUPPORTED or UNSUPPORTED by the provided context.
-   - For "insufficiency" claims, mark SUPPORTED if the context indeed lacks the requested info.
-5) For each SUPPORTED claim, provide exactly one chunk_id as evidence and a short quote (<= 20 words).
-6) For each UNSUPPORTED claim, explain briefly why it is unsupported.
+1) answerable_from_context:
+   True only if the retrieved context contains enough information to directly answer the query as asked.
 
-Important:
-- Judge support ONLY using retrieved context below.
-- Do not use outside knowledge.
-- Extra facts not in context are hallucinations (UNSUPPORTED).
+2) evidence_bounded:
+   True only if EVERY substantive claim in the answer is either:
+     (a) explicitly supported by the retrieved context, OR
+     (b) an explicit and accurate statement of uncertainty or insufficiency
+         (e.g., "the context does not say", "cannot be determined from the provided context").
+
+3) Claim:
+   A concise factual assertion made by the answer.
+   Ignore stylistic, hedging, or conversational language.
+
+4) Claim role:
+   - CORE:
+     A claim that directly answers the query or is essential for the answer to be correct.
+     If false or unsupported, the answer would be materially wrong or misleading.
+   - PERIPHERAL:
+     A claim that provides additional detail, explanation, or framing.
+     If false or unsupported, the core answer would still be intact.
+
+Role assignment rules:
+- Every claim MUST be assigned exactly one role.
+- Prefer CORE if unsure.
+- Claims that enumerate items, dates, quantities, or statuses requested by the query
+  are almost always CORE.
+
+Evaluation steps:
+
+1) Determine answerable_from_context.
+2) Extract all substantive claims from the generated answer.
+3) Assign each claim a role (CORE or PERIPHERAL).
+4) For each claim, determine whether it is SUPPORTED by the retrieved context.
+   - Statements of insufficiency are SUPPORTED if the context indeed lacks the information.
+5) If any CORE claim is UNSUPPORTED, evidence_bounded MUST be false.
+6) Count supported and unsupported claims.
+
+Important constraints:
+- Judge support ONLY using the retrieved context.
+- Do NOT use outside knowledge.
+- Do NOT infer or assume missing facts.
+- Be conservative: if support is ambiguous, mark UNSUPPORTED.
 
 QUERY:
 {query}
@@ -95,6 +130,7 @@ GENERATED ANSWER:
 {generated_answer}
 
 Respond with ONLY a JSON object:
+
 {{
   "answerable_from_context": <true|false>,
   "evidence_bounded": <true|false>,
@@ -103,9 +139,10 @@ Respond with ONLY a JSON object:
   "claims": [
     {{
       "claim": "<string>",
+      "role": "<core|peripheral>",
       "supported": <true|false>,
       "chunk_id": "<chunk_id or null>",
-      "quote": "<short quote or null>",
+      "quote": "<short quote (≤20 words) or null>",
       "note": "<brief explanation>"
     }}
   ]
@@ -137,6 +174,7 @@ class GoldJudgeResult(DataClassJsonMixin):
 @dataclass(frozen=True, slots=True)
 class AnswerClaim(DataClassJsonMixin):
     claim: str = ""
+    role: ClaimRole = ClaimRole.CORE
     supported: bool = False
     chunk_id: str | None = None
     quote: str | None = None
@@ -158,7 +196,7 @@ class GroundednessJudgeResult(DataClassJsonMixin):
         parsed_claims: list[AnswerClaim] | None = None
         if isinstance(raw_claims, list):
             parsed_claims = [
-                AnswerClaim.from_dict(c) for c in raw_claims if isinstance(c, dict)
+                _parse_answer_claim(c) for c in raw_claims if isinstance(c, dict)
             ]
 
         return cls(
@@ -278,3 +316,15 @@ def _to_bool(x: Any) -> bool | None:
 
 def _to_str(x: Any) -> str | None:
     return x if isinstance(x, str) else None
+
+
+def _parse_answer_claim(data: dict[str, Any]) -> AnswerClaim:
+    """Parse an AnswerClaim from LLM output dict with role enum conversion."""
+    return AnswerClaim(
+        claim=data.get("claim", ""),
+        role=parse_enum(ClaimRole, data.get("role")) or ClaimRole.CORE,
+        supported=_to_bool(data.get("supported")) or False,
+        chunk_id=data.get("chunk_id"),
+        quote=data.get("quote"),
+        note=data.get("note"),
+    )
