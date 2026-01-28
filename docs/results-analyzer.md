@@ -790,6 +790,7 @@ Each `AnswerClaim` contains:
 | Field | Description |
 |-------|-------------|
 | `claim` | The extracted claim text |
+| `role` | `ClaimRole` enum: `CORE` (essential to answer) or `PERIPHERAL` (supporting detail) |
 | `supported` | Boolean indicating if claim is supported by context |
 | `chunk_id` | ID of the chunk supporting the claim (if supported) |
 | `quote` | Relevant quote from the chunk (if available) |
