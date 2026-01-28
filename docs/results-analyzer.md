@@ -22,7 +22,7 @@ make results
 
 The application expects evaluation runs in `eval/runs/` by default, with each run directory containing:
 - `metrics.json` - Aggregated metrics and run configuration
-- `results.jsonl` - Per-query evaluation results
+- `results.jsonl` - Per-query evaluation results (includes `groundedness_result` with per-claim details when LLM judge is enabled)
 - `traces.jsonl` (optional) - Detailed pipeline execution traces
 
 ## Architecture
@@ -217,6 +217,7 @@ Select a query to see:
 - Extra retrieved chunks (retrieved but not relevant) - shown in yellow
 - Generated answer text and citations (if available)
 - Answer quality metrics (if available)
+- Groundedness claims with per-claim support status (if available)
 - Full pipeline trace (if available)
 
 <!-- SCREENSHOT: Query detail view showing retrieval breakdown -->
@@ -224,6 +225,22 @@ Select a query to see:
 
 <!-- SCREENSHOT: Query detail showing matched/missed/extra chunks -->
 ![Query Chunks Analysis](screenshots/query-explorer-chunks.png)
+
+**Groundedness Claims** (if LLM judge was enabled):
+
+When the groundedness judge runs, it extracts individual claims from the generated answer and evaluates whether each claim is supported by the retrieved context. This section displays:
+
+- **Summary metrics**: Total claims, supported count, unsupported count
+- **Per-claim expanders**: Each claim shown with:
+  - Support status (✓ supported / ✗ unsupported)
+  - Chunk ID that supports the claim (if supported)
+  - Quote from the chunk (if available)
+  - Judge's note explaining the evaluation
+
+Unsupported claims are auto-expanded for easier debugging of hallucinations.
+
+<!-- SCREENSHOT: Groundedness claims section showing supported and unsupported claims -->
+![Groundedness Claims](screenshots/query-explorer-claims.png)
 
 #### Traces Tab
 
@@ -755,6 +772,28 @@ pip install -e ".[ui]"
 | **Relevance** | Answer relevance rating | 0-5 |
 | **Hallucination Severity** | Degree of hallucination | 0-5 |
 | **Citation Coverage** | Fraction of claims with citations | 0-1 |
+| **Supported Claims** | Number of claims backed by context | integer |
+| **Unsupported Claims** | Number of claims not backed by context | integer |
+
+### Groundedness Claims
+
+When the groundedness judge evaluates an answer, it extracts individual claims and checks each against the retrieved context. The full `GroundednessJudgeResult` is persisted on each `EvalResult` and includes:
+
+| Field | Description |
+|-------|-------------|
+| `answerable_from_context` | Whether the query can be answered from retrieved chunks |
+| `evidence_bounded` | Whether the answer stays within evidence bounds |
+| `claims` | List of `AnswerClaim` objects with per-claim details |
+
+Each `AnswerClaim` contains:
+
+| Field | Description |
+|-------|-------------|
+| `claim` | The extracted claim text |
+| `supported` | Boolean indicating if claim is supported by context |
+| `chunk_id` | ID of the chunk supporting the claim (if supported) |
+| `quote` | Relevant quote from the chunk (if available) |
+| `note` | Judge's explanation of the evaluation |
 
 ---
 

@@ -18,14 +18,14 @@ Outputs:
 
 Examples:
     # Retrieval-only evaluation
-    python -m eval.scripts.run_eval --queries experiments/eval_queries.jsonl
+    python -m eval.scripts.run_eval --queries eval/datasets/generated_queries.jsonl
 
     # Full pipeline with LLM judge
-    python -m eval.scripts.run_eval --queries experiments/eval_queries.jsonl \\
+    python -m eval.scripts.run_eval --queries eval/datasets/generated_queries.jsonl \\
         --run-generation --use-llm-judge --judge-model gpt-4o-mini
 
     # Custom retrieval settings
-    python -m eval.scripts.run_eval --queries experiments/eval_queries.jsonl \\
+    python -m eval.scripts.run_eval --queries eval/datasets/generated_queries.jsonl \\
         --top-k 20 --keep-k 5 --token-budget 2000
 """
 from __future__ import annotations
