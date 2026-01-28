@@ -23,7 +23,7 @@ non-interactive shells used by Claude Code.
 - Commits should have a single author.
 - Claude is a tool, not a collaborator.
 - Do NOT plan to commit when drafting plans.
-- Do NOT to commit after making changes.
+- Do NOT commit after making changes.
 - DO produce a set of suggested commits indicating files and message for each commit at the end of implementation / in the summary of changes.
 - I am the final reviewer of changes.
 
