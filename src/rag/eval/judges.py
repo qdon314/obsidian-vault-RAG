@@ -21,32 +21,76 @@ class ClaimRole(StrEnum):
     PERIPHERAL = "peripheral"
 
 # !--------  Update version when prompt changes! -----------!
-GOLD_JUDGE_VERSION = "gold_v1"
+GOLD_JUDGE_VERSION = "gold_v2"
 GOLD_JUDGE_PROMPT = """You are an expert evaluator for a Retrieval-Augmented Generation (RAG) system.
 
-Given a query, the expected answer (ground truth), and the system's generated answer, evaluate the quality on these dimensions:
+You will be given:
+- a QUERY
+- an EXPECTED ANSWER (ground truth)
+- a GENERATED ANSWER
+- optional QUERY METADATA (for interpretation only)
 
-1. CORRECTNESS (0-5): Is the generated answer factually correct compared to the expected answer?
-   - 5: Completely correct, all key facts match
-   - 3: Mostly correct, minor errors or omissions
-   - 0: Completely incorrect or unrelated
+Your task is to evaluate the GENERATED ANSWER relative to the EXPECTED ANSWER
+using the scoring rubric below.
 
-2. COMPLETENESS (0-5): Does the generated answer cover all important points from the expected answer?
-   - 5: Covers all key points comprehensively
-   - 3: Covers main points but misses some details
-   - 0: Misses most or all key points
+IMPORTANT:
+- Judge ONLY against the EXPECTED ANSWER and the QUERY.
+- Do NOT consider retrieved context or evidence.
+- Do NOT score hallucination here.
+- Use QUERY METADATA only to interpret what constitutes a “key point,”
+  not to change scoring standards.
 
-3. RELEVANCE (0-5): Is the answer relevant to the query?
-   - 5: Directly answers the query
-   - 3: Partially answers the query
-   - 0: Completely off-topic
+---
 
-4. HALLUCINATION (0-5): Does the answer contain information not supported by the expected answer?
-   - 0: No hallucinations, all info is grounded
-   - 3: Some unsupported claims
-   - 5: Significant fabricated information
+### Scoring Dimensions
 
-QUERY: {query}
+#### 1) CORRECTNESS (0-5)
+How factually correct is the GENERATED ANSWER compared to the EXPECTED ANSWER?
+
+- 5: Fully correct; all key facts match the expected answer.
+- 4: Correct core answer; minor factual imprecision or very small omission.
+- 3: Mostly correct; one material error or omission.
+- 2: Partially correct; some correct facts, but missing or incorrect key elements.
+- 1: Weakly correct; superficial overlap with the expected answer.
+- 0: Incorrect, contradictory, or unrelated.
+
+---
+
+#### 2) COMPLETENESS (0-5)
+How completely does the GENERATED ANSWER cover the key points in the EXPECTED ANSWER?
+
+- 5: Covers all key points.
+- 4: Misses one small but identifiable key point.
+- 3: Covers main points but misses multiple important details.
+- 2: Covers some points but misses most key points.
+- 1: Mentions the topic but provides little substantive coverage.
+- 0: Fails to cover the expected answer meaningfully.
+
+---
+
+#### 3) RELEVANCE (0-5)
+How directly does the GENERATED ANSWER address the QUERY?
+
+- 5: Directly and clearly answers the query.
+- 4: Answers the query with minor digression or excess framing.
+- 3: Partially answers the query or answers ambiguously.
+- 2: Mostly tangential to the query.
+- 1: Barely related to the query.
+- 0: Completely off-topic.
+
+---
+
+### Guidance on Key Points
+- “Key points” are the distinct factual elements present in the EXPECTED ANSWER
+  (e.g., items, dates, quantities, statuses, relationships).
+- Do not invent additional key points beyond what is present in the EXPECTED ANSWER.
+- Missing a date, enumerated item, or condition counts as a missing key point
+  when it is explicitly stated in the EXPECTED ANSWER.
+
+---
+
+QUERY:
+{query}
 
 EXPECTED ANSWER:
 {expected_answer}
@@ -54,14 +98,22 @@ EXPECTED ANSWER:
 GENERATED ANSWER:
 {generated_answer}
 
+QUERY METADATA (for interpretation only):
+- query_type: {query_type}
+- difficulty: {difficulty}
+- requires_synthesis: {requires_synthesis}
+
+---
+
 Respond with ONLY a JSON object:
-{{
+
+{
   "correctness": <0-5>,
   "completeness": <0-5>,
   "relevance": <0-5>,
-  "hallucination_severity": <0-5>,
-  "reasoning": "<brief explanation>"
-}}"""
+  "reasoning": "<brief justification referencing expected answer alignment>"
+}
+"""
 
 
 # !--------  Update version when prompt changes! -----------!
