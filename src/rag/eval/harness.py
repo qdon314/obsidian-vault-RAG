@@ -125,6 +125,9 @@ def evaluate_answer_quality(
                 query=query.query,
                 expected_answer=query.expected_answer,
                 generated_answer=answer.text,
+                query_type=query.query_type.value if query.query_type else "unknown",
+                difficulty=query.difficulty.value if query.difficulty else "unknown",
+                requires_synthesis=query.requires_synthesis,
             )
             gold = evaluate_vs_expected_answer(
                 client=client,
