@@ -2,30 +2,57 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Python Environment (IMPORTANT)
+
+This repository **does not rely on environment activation**.
+
+All Python commands **must be run via the pinned interpreter**, using one of:
+
+- `make <target>` (preferred for common workflows)
+- `./scripts/py ...` (for ad-hoc Python commands)
+- `./scripts/pip ...` (for dependency management)
+
+**Never run** `python`, `pip`, `pytest`, `ruff`, or `streamlit` directly.
+
+This ensures commands always run in the correct environment, including in
+non-interactive shells used by Claude Code.
+
 ## Build & Test Commands
 
 ```bash
-# Install with specific extras
-pip install -e ".[dev]"          # Development (pytest, ruff)
-pip install -e ".[openai]"       # OpenAI embeddings/generation
-pip install -e ".[qdrant]"       # Qdrant vector store
-pip install -e ".[ui]"           # Streamlit evaluation UI
+# Install project with extras (always use scripts/pip)
+./scripts/pip install -e ".[dev]"      # pytest, ruff, mypy
+./scripts/pip install -e ".[openai]"   # OpenAI embeddings / generation
+./scripts/pip install -e ".[qdrant]"   # Qdrant vector store
+./scripts/pip install -e ".[ui]"       # Streamlit evaluation UI
 
 # Run tests
-pytest                           # All tests
-pytest tests/path/to/test.py    # Single file
-pytest -k "test_name"           # Single test by name
+make test                              # Full test suite
+./scripts/py -m pytest                 # Equivalent (ad-hoc)
+./scripts/py -m pytest tests/foo.py    # Single test file
+./scripts/py -m pytest -k test_name    # Filter by test name
 
 # Linting & formatting
-ruff check .                    # Check for issues
-ruff format .                   # Auto-format
-ruff check --fix .              # Auto-fix lint issues
+make lint
+make fmt
+
+# Ad-hoc
+./scripts/py -m ruff check .
+./scripts/py -m ruff format .
+./scripts/py -m ruff check --fix .
+
+make typecheck
+./scripts/py -m mypy rag
 
 # Build index and query
-make index                      # Build with OpenAI embeddings
-make index-dummy                # Build with dummy embeddings (no API cost)
-make ask QUERY="your question"  # Query the index
-make eval                       # Launch Streamlit evaluation app
+make index                             # Build with OpenAI embeddings
+make index-dummy                       # Build with dummy embeddings
+make ask QUERY="your question"         # Query the index
+make results                           # Launch Streamlit evaluation UI
+
+# Environment Sanity Check
+make env-check
+./scripts/py -c "import sys; print(sys.executable)"
 ```
 
 ## Architecture Overview

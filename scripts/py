@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec /Users/quentindonnelly/micromamba/envs/rag-obsidian/bin/python "$@"
