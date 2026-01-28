@@ -228,32 +228,36 @@ def render_single_run_view(
             if loaded_run.meta.notes:
                 st.markdown(f"- **Notes:** {loaded_run.meta.notes}")
 
-    # Tabs for different views
-    tab_metrics, tab_charts, tab_explorer, tab_traces, tab_raw = st.tabs([
-        "Metrics",
-        "Charts",
-        "Query Explorer",
-        "Traces",
-        "Raw Data",
-    ])
+    # Initialize tab selection in session state if not present
+    if "single_run_tab" not in st.session_state:
+        st.session_state.single_run_tab = "Metrics"
 
-    with tab_metrics:
+    # Tab selection using radio for persistence
+    tab_names = ["Metrics", "Charts", "Query Explorer", "Traces", "Raw Data"]
+    selected_tab = st.radio(
+        "View",
+        tab_names,
+        index=tab_names.index(st.session_state.single_run_tab),
+        horizontal=True,
+        key="single_run_tab_radio",
+        label_visibility="collapsed",
+    )
+    st.session_state.single_run_tab = selected_tab
+
+    # Render content based on selected tab
+    if selected_tab == "Metrics":
         render_metrics_table(
             loaded_run,
             show_by_type=True,
             show_by_difficulty=True,
         )
-
-    with tab_charts:
+    elif selected_tab == "Charts":
         _render_single_run_charts(loaded_run)
-
-    with tab_explorer:
+    elif selected_tab == "Query Explorer":
         render_query_explorer(loaded_run, services["filter"])
-
-    with tab_traces:
+    elif selected_tab == "Traces":
         _render_traces_tab(loaded_run)
-
-    with tab_raw:
+    elif selected_tab == "Raw Data":
         _render_raw_data_tab(loaded_run)
 
 
@@ -390,7 +394,7 @@ def _render_full_trace(trace) -> None:
     st.divider()
 
     # Retrieval stage
-    with st.expander("Retrieval Stage", expanded=True):
+    with st.expander("Retrieval Stage", expanded=False):
         if trace.retrieved_candidates:
             for i, cand in enumerate(trace.retrieved_candidates, 1):
                 chunk = cand.get("chunk", {})
