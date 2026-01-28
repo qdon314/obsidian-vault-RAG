@@ -282,10 +282,16 @@ def _render_query_detail(
         for claim in result.groundedness_result.claims:
             icon = "✓" if claim.supported else "✗"
             status_color = "green" if claim.supported else "red"
-            header = f"{icon} {claim.claim[:80]}{'...' if len(claim.claim) > 80 else ''}"
+            role_badge = "🔑" if claim.role == "core" else "📎"
+            header = f"{icon} {role_badge} {claim.claim[:80]}{'...' if len(claim.claim) > 80 else ''}"
 
             with st.expander(header, expanded=not claim.supported):
-                st.markdown(f"**Supported:** :{status_color}[{claim.supported}]")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(f"**Supported:** :{status_color}[{claim.supported}]")
+                with col2:
+                    role_color = "blue" if claim.role == "core" else "gray"
+                    st.markdown(f"**Role:** :{role_color}[{claim.role.upper()}]")
                 if claim.chunk_id:
                     st.markdown(f"**Chunk ID:** `{claim.chunk_id}`")
                 if claim.quote:
