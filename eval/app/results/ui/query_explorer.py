@@ -241,7 +241,7 @@ def _render_query_detail(
         st.divider()
         st.markdown("### Answer Quality Metrics")
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4, col5 = st.columns(5)
 
         with col1:
             if result.answer_metrics.quality_score is not None:
@@ -260,6 +260,12 @@ def _render_query_detail(
                 st.metric("Hallucination Severity (0-5)", f"{result.answer_metrics.hallucination_severity:.1f}")
             if result.answer_metrics.semantic_similarity is not None:
                 st.metric("Semantic Similarity", f"{result.answer_metrics.semantic_similarity:.2f}")
+        with col4:
+            if result.answer_metrics.relevance is not None:
+                st.metric("Relevance (0-5)", f"{result.answer_metrics.relevance:.1f}")
+        with col5:
+            if result.outcome_label is not None:
+                st.metric("Outcome Label", result.outcome_label.name)
 
     # Claims (if available)
     if result.groundedness_result and result.groundedness_result.claims:
