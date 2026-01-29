@@ -70,9 +70,9 @@ class FilesystemRunLoader:
             if not run_dir.name.startswith("run_"):
                 continue
 
-            metrics_files = sorted(run_dir.glob("metrics*.json"))
-            if not metrics_files:
-                logger.debug(f"Skipping {run_dir.name}: no metrics file")
+            metrics_file = run_dir / "metrics.json"
+            if not metrics_file.exists():
+                logger.debug(f"Skipping {run_dir.name}: no metrics.json")
                 continue
 
             try:
@@ -126,10 +126,10 @@ class FilesystemRunLoader:
 
     def _load_summary_from_dir(self, run_dir: Path) -> RunSummary:
         """Load RunSummary from a run directory."""
-        metrics_files = sorted(run_dir.glob("metrics*.json"))
-        if not metrics_files:
-            raise FileNotFoundError(f"No metrics file in {run_dir}")
-        with metrics_files[0].open() as f:
+        metrics_file = run_dir / "metrics.json"
+        if not metrics_file.exists():
+            raise FileNotFoundError(f"No metrics.json in {run_dir}")
+        with metrics_file.open() as f:
             data = json.load(f)
 
         meta = data.get("meta", {})
@@ -210,12 +210,11 @@ class FilesystemRunLoader:
         return EvalAggregates.from_flat_dict(data)
 
     def _load_results(self, run_dir: Path) -> list[EvalResult]:
-        """Load results from results.jsonl or results.{name}.jsonl."""
-        results_files = sorted(run_dir.glob("results*.jsonl"))
-        if not results_files:
-            logger.warning(f"No results file in {run_dir}")
+        """Load results from results.jsonl."""
+        results_file = run_dir / "results.jsonl"
+        if not results_file.exists():
+            logger.warning(f"No results.jsonl in {run_dir}")
             return []
-        results_file = results_files[0]
 
         results = []
         with results_file.open() as f:
