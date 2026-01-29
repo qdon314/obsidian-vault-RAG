@@ -6,7 +6,7 @@ from collections.abc import Iterable, Sequence
 import numpy as np
 
 from rag.eval.models import RetrievalResult, RetrievalSummary
-from rag.ports.embedder import Embedder
+from rag.ports import Embedder
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)

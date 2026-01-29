@@ -14,7 +14,7 @@ from qdrant_client.models import (
 )
 
 from rag.domain.filters import And, Contains, Eq, Filter, In, Not, Or, Prefix, Range, Where
-from rag.ports.filter_compiler import FilterCompiler
+from rag.ports import FilterCompiler
 
 
 class QdrantFilterCompiler(FilterCompiler[QdrantFilter]):

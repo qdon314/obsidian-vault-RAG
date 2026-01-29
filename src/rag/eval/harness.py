@@ -42,7 +42,7 @@ from rag.eval.judges import (
 from rag.eval.metrics import semantic_similarity, summarize
 from rag.eval.models import EvalAggregates, EvalResult, EvalRun, EvalRunMeta, RetrievalResult
 from rag.eval.schema import EvalQuery
-from rag.ports.retriever import Retriever
+from rag.ports import Retriever
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
