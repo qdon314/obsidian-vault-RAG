@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run RAG evaluation")
     parser.add_argument("--queries", type=Path, default=Path("eval/datasets/generated_queries.jsonl"))
+    parser.add_argument("--index", type=Path, default=Path("artifacts/indexes/obsidian"))
     parser.add_argument("--output", type=Path, default=Path("eval/runs"))
     parser.add_argument("--run-name", type=str, default=None)
 
