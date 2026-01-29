@@ -94,7 +94,6 @@ def main() -> None:
         store_backend="jsonl",
         jsonl_index_dir=Path("artifacts/indexes/obsidian"),
         logs_directory=Path(run_dir),
-        cache_embeddings=False
     )
     
     # Build container (your app wiring)
