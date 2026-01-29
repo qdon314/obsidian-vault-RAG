@@ -3,21 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+from rag.adapters.context_building._shared import _estimate_tokens, _normalize_for_dedupe
 from rag.domain.models import Candidate, Chunk, Citation, ContextPack
 from rag.ports import ContextBuilder
-
-
-def _estimate_tokens(text: str) -> int:
-    """
-    Rough heuristic: ~4 chars/token for English-ish text.
-    This is not exact; it's good enough to enforce a budget.
-    If you later add tiktoken, swap this function.
-    """
-    return max(1, len(text) // 4)
-
-
-def _normalize_for_dedupe(text: str) -> str:
-    return " ".join(text.lower().split())
 
 
 @dataclass(frozen=True, slots=True)
