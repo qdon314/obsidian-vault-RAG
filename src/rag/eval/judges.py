@@ -206,7 +206,6 @@ class GoldJudgeResult(DataClassJsonMixin):
     correctness: float | None = None
     completeness: float | None = None
     relevance: float | None = None
-    hallucination_severity: float | None = None
     reasoning: str | None = None
 
     @classmethod
@@ -216,9 +215,6 @@ class GoldJudgeResult(DataClassJsonMixin):
             correctness=_to_float(data.get("correctness")),
             completeness=_to_float(data.get("completeness")),
             relevance=_to_float(data.get("relevance")),
-            hallucination_severity=_to_float(
-                data.get("hallucination_severity") or data.get("hallucination")
-            ),
             reasoning=_to_str(data.get("reasoning")),
         )
 
