@@ -216,3 +216,7 @@ artifacts/
 config.py
 .vscode/settings.json
 config.py
+
+# Experimental Project State Script
+scripts/project_state/*
+eval/runs/*
