@@ -177,6 +177,7 @@ def run_full_eval(
     judge_client: OpenAI | None = None,
     judge_model: str | None = None,
     score_ids: str = "reranked",  # "retrieved" or "reranked"
+    run_name: str | None = None,
 ) -> EvalRun:
     container.store.load()
     run_id = uuid.uuid4().hex
@@ -291,7 +292,7 @@ def run_full_eval(
         embedder_model=getattr(getattr(container, "embedder", None), "model_name", None),
         reranker_name=getattr(container.reranker, "name", None),
         judge_model=judge_model,
-        # add these fields to EvalRunMeta (or put into extra)
+        run_name=run_name,
         gold_judge_version=GOLD_JUDGE_VERSION if use_llm_judge else None,
         groundedness_judge_version=GROUNDEDNESS_JUDGE_VERSION if use_llm_judge else None,
     )
@@ -392,14 +393,10 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
     )
 
 
-def save_run(run: EvalRun, output_dir: Path, run_name: str | None = None) -> EvalRun:
+def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build filenames with optional run_name as middle extension
-    if run_name:
-        results_file = output_dir / f"results.{run_name}.jsonl"
-    else:
-        results_file = output_dir / "results.jsonl"
+    results_file = output_dir / "results.jsonl"
     with results_file.open("w", encoding="utf-8") as f:
         for r in run.results:
             row: dict[str, Any] = {
@@ -435,13 +432,8 @@ def save_run(run: EvalRun, output_dir: Path, run_name: str | None = None) -> Eva
                 
             f.write(json.dumps(row) + "\n")
 
-    if run_name:
-        metrics_file = output_dir / f"metrics.{run_name}.json"
-    else:
-        metrics_file = output_dir / "metrics.json"
+    metrics_file = output_dir / "metrics.json"
     meta_dict = asdict(run.meta)
-    if run_name:
-        meta_dict["run_name"] = run_name
     if meta_dict.get("started_at") and hasattr(meta_dict["started_at"], "isoformat"):
         meta_dict["started_at"] = meta_dict["started_at"].isoformat()
 

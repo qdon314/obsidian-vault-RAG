@@ -221,6 +221,7 @@ class EvalRunMeta(DataClassJsonMixin):
     generator_model: str | None = None
     embedder_model: str | None = None
     reranker_name: str | None = None
+    run_name: str | None = None
     notes: str | None = None
     gold_judge_version: str | None = None
     groundedness_judge_version: str | None = None

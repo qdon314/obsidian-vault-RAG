@@ -122,11 +122,12 @@ def main() -> None:
         judge_client=judge_client,
         judge_model=args.judge_model if args.use_llm_judge else None,
         score_ids=args.score_ids,
+        run_name=args.run_name,
     )
 
     # Persist artifacts
     if not args.no_save:
-        run = save_run(run, output_dir=run_dir, run_name=args.run_name)
+        run = save_run(run, output_dir=run_dir)
 
     # Print summary
     # overall = run.aggregates.overall.to_dict()  # flat dict, or use fields directly
