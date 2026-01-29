@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from rag.domain.filters import And, Contains, Eq, Filter, In, Not, Or, Prefix, Range, Where
-from rag.ports.filter_evaluator import FilterEvaluator
+from rag.ports import FilterEvaluator
 
 
 class InMemoryFilterEvaluator(FilterEvaluator):
