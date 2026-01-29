@@ -8,6 +8,7 @@ from dataclasses_json import DataClassJsonMixin, config
 
 from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.judges import GroundednessJudgeResult
+from rag.eval.reducers import OutcomeLabel
 from rag.eval.schema import Difficulty, QueryType
 from rag.utils.dataclass_json_utils import (
     datetime_decoder,
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 # Pre-create decoders for optional enum fields
 _query_type_decoder = make_enum_decoder(QueryType)
 _difficulty_decoder = make_enum_decoder(Difficulty)
+_outcome_label_decoder = make_enum_decoder(OutcomeLabel)  # for future use
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +128,10 @@ class EvalResult(DataClassJsonMixin):
     answer: Answer | None = None
     answer_metrics: AnswerQualityMetrics | None = None
     groundedness_result: GroundednessJudgeResult | None = None
+    outcome_label: OutcomeLabel | None = field(
+        default=None,
+        metadata=config(encoder=enum_encoder, decoder=_outcome_label_decoder),
+    )
 
     # Query metadata
     query_type: QueryType | None = field(
