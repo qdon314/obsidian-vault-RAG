@@ -1,264 +1,253 @@
+#!/usr/bin/env python3
 """
-Generate an automatic "Project State Header" markdown capsule.
-This can be prepended to documents for context in RAG systems.
+Generate project state snapshots for LLM context or documentation.
+
+This script produces a markdown document capturing the current state of the
+project, including git status, recent work, architecture, configuration, and
+documentation. Output is optimized for providing context to LLMs.
 
 Usage:
-  python scripts/project_state.py
-  python scripts/project_state.py --root .
-  python scripts/project_state.py --validate-jsonl artifacts/indexes/obsidian_index/chunks.jsonl
+    python scripts/project_state.py                              # writes to state_outputs/<profile>_<date>.md
+    python scripts/project_state.py --profile llm-context        # specific profile
+    python scripts/project_state.py --stdout                     # print to stdout instead
+    python scripts/project_state.py -o ./outputs                 # custom output directory
+    python scripts/project_state.py -p ui-focus -p domain-deep   # compose profiles
+
+Profiles:
+    quick-status   Minimal: git state + focus only (brief depth)
+    standard       Typical: git, config, docs (standard depth)
+    llm-context    Optimized for LLM: git, docs, architecture (standard depth)
+    ui-focus       UI development: eval/app structure, recent changes (detailed)
+    domain-deep    Deep analysis: full architecture, validation (detailed depth)
+
+Collectors:
+    git            Branch, commits, dirty state, recent work analysis
+    docs           docs/FOCUS.md, docs/KNOWN_ISSUES.md
+    files          Config file discovery, index location, parameter hints
+    architecture   Project structure, ports, adapters, domain models
+    validation     JSONL file validation
+
+Depth levels:
+    brief          Critical info only (~200 lines)
+    standard       Typical usage (~500 lines)
+    detailed       Everything including full diffs and architecture docs
+
+Configuration:
+    Settings are loaded from [project_state] section in settings.toml.
+    CLI flags override profile defaults. Profiles can be composed.
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
-import pathlib
-import subprocess
-from collections.abc import Iterable
+import sys
+from pathlib import Path
 
-# ----------------------------
-# Repo-specific hints (tweak)
-# ----------------------------
-
-CONFIG_HINTS = [
-    "rag/settings.py",
-    "config.py",
-    "settings.yaml",
-    "settings.yml",
-    "settings.toml",
-    "pyproject.toml",
-    ".env",
-]
-
-INDEX_HINTS = [
-    "artifacts/indexes",
-    "artifacts/index",
-    "data/indexes",
-    "indexes",
-]
-
-# If you keep your index config in a known file, add it here
-# e.g. "rag/settings.py" or "rag/config.py" and parse it more deeply later.
-LIGHTWEIGHT_PARAM_GUESSES = [
-    "chunk_size",
-    "chunk_overlap",
-    "overlap",
-    "embedding",
-    "embed",
-    "vector",
-    "faiss",
-    "chroma",
-    "llm",
-    "model",
-]
+from project_state.collectors import (
+    collect_architecture,
+    collect_docs,
+    collect_file_discovery,
+    collect_git_state,
+    collect_recent_work_summary,
+    validate_jsonl_files,
+)
+from project_state.config import (
+    apply_cli_overrides,
+    get_profile,
+    load_config,
+)
+from project_state.renderers import render_project_state
 
 
-def run(cmd: list[str], cwd: pathlib.Path) -> tuple[int, str]:
-    """Run a command and return (returncode, stdout_str)."""
-    try:
-        p = subprocess.run(
-            cmd,
-            cwd=str(cwd),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            check=False,
-        )
-        return p.returncode, (p.stdout or "").strip()
-    except Exception as e:
-        return 1, f"<error running {' '.join(cmd)}: {e}>"
+def build_argparser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(
+        description="Generate project state snapshot for LLM context or documentation.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+
+    ap.add_argument(
+        "--root",
+        type=Path,
+        default=Path("."),
+        help="Project root directory (default: current directory)",
+    )
+
+    ap.add_argument(
+        "--profile",
+        "-p",
+        action="append",
+        dest="profiles",
+        metavar="NAME",
+        help="Profile(s) to use. Can specify multiple to compose. "
+        "Options: quick-status, standard, llm-context, ui-focus, domain-deep",
+    )
+
+    ap.add_argument(
+        "--depth",
+        choices=["brief", "standard", "detailed"],
+        help="Override depth level (default: from profile)",
+    )
+
+    ap.add_argument(
+        "--days",
+        type=int,
+        help="Days of recent git history to analyze (overrides profile)",
+    )
+
+    ap.add_argument(
+        "--commits",
+        type=int,
+        help="Number of recent commits to show (overrides profile)",
+    )
+
+    ap.add_argument(
+        "--validate-jsonl",
+        nargs="*",
+        default=[],
+        metavar="PATH",
+        help="JSONL file(s) to validate (paths relative to root)",
+    )
+
+    ap.add_argument(
+        "--output-dir",
+        "-o",
+        type=Path,
+        default=Path("scripts/project_state/state_outputs"),
+        help="Output directory for state files (default: scripts/project_state/state_outputs)",
+    )
+
+    ap.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Print to stdout instead of writing to file",
+    )
+
+    ap.add_argument(
+        "--list-profiles",
+        action="store_true",
+        help="List available profiles and exit",
+    )
+
+    ap.add_argument(
+        "--config",
+        type=Path,
+        default=Path("settings.toml"),
+        help="Path to settings.toml (default: settings.toml)",
+    )
+
+    return ap
 
 
-def read_text_if_exists(path: pathlib.Path, max_chars: int = 4000) -> str:
-    if not path.exists() or not path.is_file():
-        return ""
-    try:
-        txt = path.read_text(encoding="utf-8", errors="replace").strip()
-        if len(txt) > max_chars:
-            return txt[:max_chars] + "\n…(truncated)…"
-        return txt
-    except Exception as e:
-        return f"<error reading {path}: {e}>"
+def list_profiles() -> None:
+    """Print available profiles and exit."""
+    from project_state.config import BUILTIN_PROFILES
 
+    print("Available profiles:\n")
+    for name, profile in BUILTIN_PROFILES.items():
+        git_info = f"commits={profile.git.commits}"
+        if profile.git.days:
+            git_info += f", days={profile.git.days}"
 
-def find_first_existing(root: pathlib.Path, rel_paths: Iterable[str]) -> pathlib.Path | None:
-    for rp in rel_paths:
-        p = root / rp
-        if p.exists():
-            return p
-    return None
-
-
-def list_existing(root: pathlib.Path, rel_paths: Iterable[str]) -> list[pathlib.Path]:
-    out: list[pathlib.Path] = []
-    for rp in rel_paths:
-        p = root / rp
-        if p.exists():
-            out.append(p)
-    return out
-
-
-def guess_index_location(root: pathlib.Path) -> pathlib.Path | None:
-    for rp in INDEX_HINTS:
-        p = root / rp
-        if p.exists():
-            return p
-    return None
-
-
-def validate_jsonl(path: pathlib.Path, max_errors: int = 5) -> tuple[int, list[str]]:
-    """
-    Validate JSONL file line-by-line.
-    Returns (error_count, error_messages up to max_errors).
-    """
-    errors: list[str] = []
-    if not path.exists():
-        return 1, [f"{path} does not exist"]
-    if not path.is_file():
-        return 1, [f"{path} is not a file"]
-
-    err_count = 0
-    with path.open("r", encoding="utf-8", errors="replace") as f:
-        for i, line in enumerate(f, start=1):
-            line = line.rstrip("\n")
-            if not line.strip():
-                continue
-            try:
-                json.loads(line)
-            except Exception as e:
-                err_count += 1
-                if len(errors) < max_errors:
-                    snippet = line[:240] + ("…" if len(line) > 240 else "")
-                    errors.append(f"Line {i}: {e} | {snippet}")
-                if err_count >= max_errors:
-                    # keep counting? we stop early for speed
-                    break
-    return err_count, errors
-
-
-def extract_lightweight_params_from_text(text: str) -> list[str]:
-    """
-    Naive parameter hints from config files.
-    This is intentionally simple/deterministic—just surface likely knobs.
-    """
-    hits = []
-    lower = text.lower()
-    for key in LIGHTWEIGHT_PARAM_GUESSES:
-        if key in lower:
-            hits.append(key)
-    return sorted(set(hits))
+        print(f"  {name:15s}  depth={profile.depth:10s}  {git_info}")
+        print(f"  {'':<15s}  git={profile.git.enabled}, "
+              f"files={profile.files.enabled}, "
+              f"docs={profile.docs.enabled}, "
+              f"arch={profile.architecture.enabled}, "
+              f"validation={profile.validation.enabled}")
+        print()
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default=".", help="Repo root (default: .)")
-    ap.add_argument("--project-name", default="Obsidian RAG / Personal Knowledge System")
-    ap.add_argument("--validate-jsonl", nargs="*", default=[], help="JSONL file(s) to validate")
-    ap.add_argument("--commits", type=int, default=10, help="How many recent commits to include")
-    args = ap.parse_args()
+    args = build_argparser().parse_args()
 
-    root = pathlib.Path(args.root).resolve()
+    # Handle --list-profiles
+    if args.list_profiles:
+        list_profiles()
+        return 0
 
-    now = dt.datetime.now().astimezone()
-    timestamp = now.strftime("%Y-%m-%d %H:%M %Z")
+    # Resolve paths
+    root = args.root.resolve()
+    config_path = args.config if args.config.is_absolute() else root / args.config
 
-    # --- Git state ---
-    branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root)[1]
-    commit = run(["git", "rev-parse", "HEAD"], cwd=root)[1]
-    dirty = run(["git", "status", "--porcelain"], cwd=root)[1]
-    dirty_flag = "yes" if dirty else "no"
+    # Load configuration
+    config = load_config(config_path)
 
-    log_cmd = ["git", "log", f"-n{args.commits}", "--oneline", "--decorate=no"]
-    recent_commits = run(log_cmd, cwd=root)[1]
+    # Get and configure profile
+    profile = get_profile(config, args.profiles)
+    profile = apply_cli_overrides(
+        profile,
+        depth=args.depth,
+        days=args.days,
+        commits=args.commits,
+    )
 
-    diff_stat = run(["git", "diff", "--stat"], cwd=root)[1]
+    # Collect state
+    git_state = collect_git_state(root, profile.git)
+    file_discovery = collect_file_discovery(root, profile.files)
+    docs_state = collect_docs(root, profile.docs)
+    architecture_state = collect_architecture(root, profile.architecture)
 
-    # --- Config discovery ---
-    config_paths = list_existing(root, CONFIG_HINTS)
-    config_summaries = []
-    param_hints = set()
-    for p in config_paths:
-        txt = read_text_if_exists(p, max_chars=4000)
-        param_hints |= set(extract_lightweight_params_from_text(txt))
-        config_summaries.append(f"- {p.relative_to(root)}")
+    # Warn if no data was collected
+    if git_state is None and file_discovery is None and docs_state is None:
+        print(
+            "Warning: No data collected. Is this a git repository?",
+            file=sys.stderr,
+        )
 
-    # --- Human-maintained focus/issues ---
-    focus_txt = read_text_if_exists(root / "docs/FOCUS.md", max_chars=2000)
-    issues_txt = read_text_if_exists(root / "docs/KNOWN_ISSUES.md", max_chars=4000)
+    # Recent work analysis (if days is set)
+    recent_work = None
+    if profile.git.days and profile.git.enabled:
+        recent_work = collect_recent_work_summary(root, profile.git.days)
 
-    # --- Index location guess ---
-    index_loc = guess_index_location(root)
-    index_loc_str = str(index_loc.relative_to(root)) if index_loc else "<not found>"
+    # JSONL validation (if requested or enabled in profile)
+    validation_results = None
+    jsonl_paths = args.validate_jsonl
+    if jsonl_paths or profile.validation.enabled:
+        # If no explicit paths but validation enabled, try to find index files
+        if not jsonl_paths and file_discovery and file_discovery.index_location:
+            # Look for chunks.jsonl in the index directory
+            chunks_file = file_discovery.index_location / "chunks.jsonl"
+            if chunks_file.exists():
+                jsonl_paths = [str(chunks_file.relative_to(root))]
 
-    # --- JSONL validation (optional) ---
-    jsonl_blocks = []
-    for p_str in args.validate_jsonl:
-        p = (root / p_str).resolve()
-        err_count, errs = validate_jsonl(p)
-        status = "OK" if err_count == 0 else f"FAILED ({err_count}+ error(s))"
-        rel = str(p.relative_to(root)) if root in p.parents else str(p)
-        block = [f"- {rel}: {status}"]
-        for e in errs:
-            block.append(f"  - {e}")
-        jsonl_blocks.append("\n".join(block))
+        if jsonl_paths:
+            validation_results = validate_jsonl_files(root, jsonl_paths, profile.validation)
 
-    # --- Emit markdown capsule ---
-    lines = []
-    lines.append("# PROJECT STATE HEADER (AUTO)")
-    lines.append("")
-    lines.append("## Project Name")
-    lines.append(args.project_name)
-    lines.append("")
-    lines.append("## Timestamp")
-    lines.append(timestamp)
-    lines.append("")
-    lines.append("## Repo State")
-    lines.append(f"- Root: {root}")
-    lines.append(f"- Branch: {branch}")
-    lines.append(f"- Commit: {commit}")
-    lines.append(f"- Dirty: {dirty_flag}")
-    if dirty:
-        # show a short status summary without dumping everything
-        dirty_lines = dirty.splitlines()
-        lines.append(f"- Dirty summary: {len(dirty_lines)} change(s)")
-    lines.append("")
-    lines.append("## Recent Commits")
-    lines.append("```")
-    lines.append(recent_commits or "<no git log available>")
-    lines.append("```")
-    lines.append("")
-    lines.append("## Uncommitted Diff (stat)")
-    lines.append("```")
-    lines.append(diff_stat or "<clean or unavailable>")
-    lines.append("```")
-    lines.append("")
-    lines.append("## Current Focus (docs/FOCUS.md)")
-    lines.append(focus_txt or "<missing docs/FOCUS.md>")
-    lines.append("")
-    lines.append("## Known Issues (docs/KNOWN_ISSUES.md)")
-    lines.append(issues_txt or "<missing docs/KNOWN_ISSUES.md>")
-    lines.append("")
-    lines.append("## System Clues")
-    lines.append(f"- Index location (guess): {index_loc_str}")
-    if config_summaries:
-        lines.append("- Config files found:")
-        lines.extend(config_summaries)
+    # Render output
+    output = render_project_state(
+        root=root,
+        profile=profile,
+        project_name=config.project_name,
+        git_state=git_state,
+        file_discovery=file_discovery,
+        docs_state=docs_state,
+        validation_results=validation_results,
+        recent_work=recent_work,
+        architecture_state=architecture_state,
+    )
+
+    # Write or print
+    if args.stdout:
+        print(output)
     else:
-        lines.append("- Config files found: <none of the hints matched>")
-    if param_hints:
-        lines.append(f"- Parameter hints spotted: {', '.join(sorted(param_hints))}")
-    else:
-        lines.append("- Parameter hints spotted: <none>")
-    lines.append("")
-    if jsonl_blocks:
-        lines.append("## JSONL Validation")
-        lines.append("\n".join(jsonl_blocks))
-        lines.append("")
+        # Create output directory if needed
+        output_dir = args.output_dir
+        if not output_dir.is_absolute():
+            output_dir = root / output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-    print("\n".join(lines))
+        # Generate filename: <profile>_<date>.md
+        date_str = dt.datetime.now().strftime("%Y-%m-%d")
+        filename = f"{profile.name}_{date_str}.md"
+        output_path = output_dir / filename
+
+        output_path.write_text(output, encoding="utf-8")
+        print(f"Written to {output_path}", file=sys.stderr)
+
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())
