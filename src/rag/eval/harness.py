@@ -423,6 +423,8 @@ def save_run(run: EvalRun, output_dir: Path, run_name: str | None = None) -> Eva
     else:
         metrics_file = output_dir / "metrics.json"
     meta_dict = asdict(run.meta)
+    if run_name:
+        meta_dict["run_name"] = run_name
     if meta_dict.get("started_at") and hasattr(meta_dict["started_at"], "isoformat"):
         meta_dict["started_at"] = meta_dict["started_at"].isoformat()
 
