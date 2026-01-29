@@ -27,10 +27,12 @@ from openai import OpenAI
 from rag.app.container import Container
 from rag.app.query_runner import run_query
 from rag.domain.models import Answer, Chunk
+from rag.eval import reducers
 from rag.eval.answer_metrics import AnswerQualityMetrics
 from rag.eval.judges import (
     GOLD_JUDGE_VERSION,
     GROUNDEDNESS_JUDGE_VERSION,
+    GoldJudgeResult,
     GroundednessJudgeResult,
     evaluate_groundedness,
     evaluate_vs_expected_answer,
@@ -90,7 +92,7 @@ def evaluate_answer_quality(
     judge_model: str,
     embedder: Any | None,
     use_llm_judge: bool,
-) -> tuple[AnswerQualityMetrics, GroundednessJudgeResult | None]:
+) -> tuple[AnswerQualityMetrics, GroundednessJudgeResult | None, GoldJudgeResult | None]:
     sem_sim: float | None = None
     if embedder and query.expected_answer:
         sem_sim = semantic_similarity(query.expected_answer, answer.text, embedder)
@@ -99,6 +101,7 @@ def evaluate_answer_quality(
     correctness = completeness = relevance = hallucination_severity = None
     answerable_from_context = evidence_bounded = supported_claims = unsupported_claims = None
     gr: GroundednessJudgeResult | None = None
+    gold: GoldJudgeResult | None = None
 
     if use_llm_judge and client and judge_model:
         # Groundedness judging first (determines if answer is evidence-bounded)
@@ -134,10 +137,12 @@ def evaluate_answer_quality(
                 model=judge_model,
                 prompt=gold_prompt,
             )
+            hallucination_severity = reducers.hallucination_severity(
+                groundedness=gr,
+            ) if gr else None
             correctness = gold.correctness
             completeness = gold.completeness
             relevance = gold.relevance
-            hallucination_severity = gold.hallucination_severity
 
     metrics = AnswerQualityMetrics.compute(
         answer_text=answer.text,
@@ -152,7 +157,7 @@ def evaluate_answer_quality(
         supported_claims=supported_claims,
         unsupported_claims=unsupported_claims,
     )
-    return metrics, gr
+    return metrics, gr, gold
 
 
 # ----------------------------
@@ -239,7 +244,7 @@ def run_full_eval(
             relevant_chunk_ids=q.relevant_chunk_ids,
         )
 
-        answer_metrics, groundedness_result = evaluate_answer_quality(
+        answer_metrics, groundedness_result, gold_result = evaluate_answer_quality(
             query=q,
             answer=answer,
             retrieved_chunks=run.context_pack.chunks,
@@ -247,6 +252,11 @@ def run_full_eval(
             judge_model=judge_model or "",
             embedder=getattr(container, "embedder", None),
             use_llm_judge=use_llm_judge,
+        )
+        
+        outcome_label = reducers.outcome_label(
+            gold=gold_result,
+            groundedness=groundedness_result,
         )
 
         results.append(
@@ -257,6 +267,7 @@ def run_full_eval(
                 answer=answer,
                 answer_metrics=answer_metrics,
                 groundedness_result=groundedness_result,
+                outcome_label=outcome_label,
                 query_type=q.query_type,
                 difficulty=q.difficulty,
                 is_unanswerable=q.is_unanswerable,
@@ -414,8 +425,14 @@ def save_run(run: EvalRun, output_dir: Path, run_name: str | None = None) -> Eva
                 }
             if r.answer_metrics is not None:
                 row["answer_metrics"] = asdict(r.answer_metrics)
+                row["answer_metrics"]["reducer_version"] = reducers.REDUCER_VERSION
+
             if r.groundedness_result is not None:
                 row["groundedness_result"] = asdict(r.groundedness_result)
+            
+            if r.outcome_label is not None:
+                row["outcome_label"] = r.outcome_label.value
+                
             f.write(json.dumps(row) + "\n")
 
     if run_name:
