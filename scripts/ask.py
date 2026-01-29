@@ -1,14 +1,11 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import replace
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from rag import settings
-from rag.adapters.embedding.sqlite_cache import CachedEmbedder
-from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.app.container import ContainerOverrides, build_container
 from rag.app.query_runner import run_query
 
@@ -44,27 +41,18 @@ def main() -> None:
         jsonl_index_dir=index_dir,
         embedder_backend="dummy" if args.use_dummy_embeddings else None,
         dummy_embed_dim=args.embed_dim if args.use_dummy_embeddings else None,
+        cache_embeddings=args.cache_embeddings,
     )
 
     # Grab cfg so we can use cfg.retrieval.top_k default if user didn't pass --top-k
     cfg = settings.load_settings()
 
-    base = build_container(cfg=cfg, overrides=overrides)
+    container = build_container(cfg=cfg, overrides=overrides)
 
     # 2) Query lifecycle: load persisted index
-    base.store.load()
+    container.store.load()
 
-    # 3) Optional embedding cache wrapper (and rebuild retriever to match)
-    container = base
-    if args.cache_embeddings:
-        cache_db = artifacts_dir / "cache" / "embeddings" / f"{container.embedder.model_name}.sqlite3"
-        cache_db.parent.mkdir(parents=True, exist_ok=True)
-
-        cached_embedder = CachedEmbedder(embedder=container.embedder, db_path=cache_db)
-        retriever = VectorRetriever(embedder=cached_embedder, store=container.store)
-        container = replace(container, embedder=cached_embedder, retriever=retriever)
-
-    # 4) Run pipeline (use config default for top_k; pipeline default for token_budget)
+    # 3) Run pipeline (use config default for top_k; pipeline default for token_budget)
     top_k = args.top_k if args.top_k is not None else cfg.retrieval.top_k
     token_budget = args.token_budget if args.token_budget is not None else 1800
 

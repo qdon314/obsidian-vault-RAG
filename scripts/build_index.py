@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import asdict, replace
+from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from rag import settings
-from rag.adapters.embedding.sqlite_cache import CachedEmbedder
-from rag.adapters.retrieval.vector_retriever import VectorRetriever
-from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
 from rag.app.container import ContainerOverrides, build_container
 from rag.app.pipeline import index_document
 
@@ -85,8 +82,9 @@ def main() -> None:
         vault_dir=vault_root,  # indexing corpus defines vault root for ingestion
         embedder_backend="dummy" if args.use_dummy_embeddings else None,
         dummy_embed_dim=args.embed_dim if args.use_dummy_embeddings else None,
+        cache_embeddings=args.cache_embeddings,
     )
-    base = build_container(overrides=overrides)
+    container = build_container(overrides=overrides)
 
     # IMPORTANT: In index-build mode, we do NOT call store.load().
     # We want a fresh in-memory store that will be saved at the end.
@@ -106,7 +104,7 @@ def main() -> None:
     else:
         allowed_exts = None
 
-    docs, report = base.ingestor.ingest([str(vault_root)], metadata=metadata)
+    docs, report = container.ingestor.ingest([str(vault_root)], metadata=metadata)
 
     if allowed_exts is not None:
         docs = [d for d in docs if str(Path(d.uri).suffix).lower() in allowed_exts]  # assumes Document.uri exists
@@ -115,28 +113,7 @@ def main() -> None:
         docs = docs[: args.max_docs]
 
     # -----------------------------
-    # 3) Optional embed cache (wrap embedder)
-    #    - rebuild retriever so it stays consistent
-    # -----------------------------
-    container = base
-    if args.cache_embeddings:
-        cache_db = artifacts_dir / "cache" / "embeddings" / f"{container.embedder.model_name}.sqlite3"
-        cache_db.parent.mkdir(parents=True, exist_ok=True)
-
-        cached = CachedEmbedder(embedder=container.embedder, db_path=cache_db)
-
-        # ensure store is jsonl and points at index_dir (it should, via overrides)
-        store = container.store
-        if not isinstance(store, JsonlVectorStore):
-            # Shouldn't happen given overrides, but fail loudly if it does.
-            raise RuntimeError("Expected JsonlVectorStore when building index")
-
-        retriever = VectorRetriever(embedder=cached, store=store)
-
-        container = replace(container, embedder=cached, retriever=retriever)
-
-    # -----------------------------
-    # 4) Index via container (chunk → embed → upsert)
+    # 3) Index via container (chunk → embed → upsert)
     # -----------------------------
     total_chunks = 0
     for doc in docs:
@@ -151,7 +128,7 @@ def main() -> None:
     container.store.save()
 
     # -----------------------------
-    # 5) Manifest
+    # 4) Manifest
     # -----------------------------
     manifest = {
         "index_name": args.index_name,
