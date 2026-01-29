@@ -294,8 +294,10 @@ def _render_query_detail(
                     st.markdown(f"**Role:** :{role_color}[{claim.role.upper()}]")
                 if claim.chunk_id:
                     st.markdown(f"**Chunk ID:** `{claim.chunk_id}`")
-                if claim.quote:
+                if claim.supported and claim.quote:
                     st.markdown(f"**Quote:** _{claim.quote}_")
+                if claim.claim:
+                    st.markdown(f"**Claim:** {claim.claim}")
                 if claim.note:
                     st.markdown(f"**Note:** {claim.note}")
 
