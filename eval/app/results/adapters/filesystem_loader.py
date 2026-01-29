@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 RUN_DIR_PATTERN = re.compile(r"run_(\d{4}_\d{2}_\d{2}T\d{2}-\d{2})")
 
 
+
 def _parse_timestamp_from_dirname(dirname: str) -> datetime | None:
     """Parse timestamp from run directory name."""
     match = RUN_DIR_PATTERN.match(dirname)
@@ -69,9 +70,9 @@ class FilesystemRunLoader:
             if not run_dir.name.startswith("run_"):
                 continue
 
-            metrics_file = run_dir / "metrics.json"
-            if not metrics_file.exists():
-                logger.debug(f"Skipping {run_dir.name}: no metrics.json")
+            metrics_files = sorted(run_dir.glob("metrics*.json"))
+            if not metrics_files:
+                logger.debug(f"Skipping {run_dir.name}: no metrics file")
                 continue
 
             try:
@@ -125,8 +126,10 @@ class FilesystemRunLoader:
 
     def _load_summary_from_dir(self, run_dir: Path) -> RunSummary:
         """Load RunSummary from a run directory."""
-        metrics_file = run_dir / "metrics.json"
-        with metrics_file.open() as f:
+        metrics_files = sorted(run_dir.glob("metrics*.json"))
+        if not metrics_files:
+            raise FileNotFoundError(f"No metrics file in {run_dir}")
+        with metrics_files[0].open() as f:
             data = json.load(f)
 
         meta = data.get("meta", {})
@@ -147,10 +150,14 @@ class FilesystemRunLoader:
         # Use directory name as run_id for easier lookup
         run_id = run_dir.name
 
+        # Build display name: include run_name if present
+        run_name = meta.get("run_name")
+        display_name = f"{run_dir.name} [{run_name}]" if run_name else run_dir.name
+
         return RunSummary(
             run_id=run_id,
             timestamp=timestamp,
-            display_name=run_dir.name,
+            display_name=display_name,
             run_dir=run_dir,
             num_queries=int(overall.get("num_queries", 0)),
             run_generation=meta.get("run_generation", False),
@@ -203,11 +210,12 @@ class FilesystemRunLoader:
         return EvalAggregates.from_flat_dict(data)
 
     def _load_results(self, run_dir: Path) -> list[EvalResult]:
-        """Load results from results.jsonl."""
-        results_file = run_dir / "results.jsonl"
-        if not results_file.exists():
-            logger.warning(f"No results.jsonl in {run_dir}")
+        """Load results from results.jsonl or results.{name}.jsonl."""
+        results_files = sorted(run_dir.glob("results*.jsonl"))
+        if not results_files:
+            logger.warning(f"No results file in {run_dir}")
             return []
+        results_file = results_files[0]
 
         results = []
         with results_file.open() as f:
