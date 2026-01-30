@@ -3,11 +3,13 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
@@ -87,6 +89,23 @@ class FilesystemIngestor(Ingestor):
     text_loader: TextLoader = field(default_factory=TextLoader)
     markdown_loader: ObsidianMarkdownLoader | None = None
 
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _load_one(self, path: Path, ext: str) -> tuple[str, dict[str, Any]] | None:
+        """Load a single file. Thread-safe (read-only shared state)."""
+        if ext == ".md" and self.markdown_loader is not None:
+            return self.markdown_loader.load(path)
+        text = self.text_loader.load(path)
+        if text is None:
+            return None
+        return text, {}
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
     def ingest(
         self,
         inputs: Sequence[str],
@@ -106,85 +125,89 @@ class FilesystemIngestor(Ingestor):
         discovery_dt = perf_counter() - t0
         log.info("File discovery: %d files in %.2fs", len(files), discovery_dt)
 
-        load_dt_total = 0.0
+        # --- Phase 1: filter ---
+        eligible: list[tuple[Path, str]] = []
         for path in files:
             scanned += 1
+            if self.skip_hidden and _is_hidden(path):
+                skipped_hidden += 1
+                continue
+            ext = path.suffix.lower()
+            if self.allowed_extensions and ext not in self.allowed_extensions:
+                skipped_extension += 1
+                continue
+            eligible.append((path, ext))
+
+        # --- Phase 2: parallel load ---
+        t_load = perf_counter()
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [
+                (path, ext, pool.submit(self._load_one, path, ext))
+                for path, ext in eligible
+            ]
+        load_dt = perf_counter() - t_load
+
+        # --- Phase 3: process results ---
+        for path, ext, future in futures:
             try:
-                if self.skip_hidden and _is_hidden(path):
-                    skipped_hidden += 1
-                    continue
-
-                ext = path.suffix.lower()
-                if self.allowed_extensions and ext not in self.allowed_extensions:
-                    skipped_extension += 1
-                    continue
-
-                uri = str(path)
-
-                # Load content + extra md metadata if applicable
-                md_meta: dict[str, object] = {}
-                t_load = perf_counter()
-                if ext == ".md" and self.markdown_loader is not None:
-                    loaded_md = self.markdown_loader.load(path)
-                    if loaded_md is None:
-                        skipped_empty += 1
-                        continue
-                    text, md_meta = loaded_md
-                else:
-                    # Let TextLoader enforce max_bytes; if it returns None treat as too large/unreadable
-                    text = self.text_loader.load(path)
-                    if text is None:
-                        skipped_too_large += 1
-                        continue
-                load_dt_total += perf_counter() - t_load
-
-                if not text or not text.strip():
-                    skipped_empty += 1
-                    continue
-
-                text_hash = _hash_text(text)
-                doc_id = _stable_doc_id(uri, text_hash)
-
-                try:
-                    stat = path.stat()
-                    mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
-                    size = stat.st_size
-                except OSError:
-                    mtime = None
-                    size = None
-
-                doc_meta = {
-                    **base_meta,
-                    "uri": uri,
-                    "title": path.name,
-                    "ext": ext,
-                    "mtime": mtime,
-                    "size_bytes": size,
-                    "content_hash": text_hash,
-                    **md_meta,
-                }
-
-                docs.append(
-                    Document(
-                        doc_id=doc_id,
-                        text=text,
-                        source=self.source_name,
-                        uri=uri,
-                        metadata=doc_meta,
-                    )
-                )
-                loaded += 1
-                by_ext[ext] = by_ext.get(ext, 0) + 1
-
+                result = future.result()
             except Exception:
                 failed += 1
                 continue
 
+            if result is None:
+                if ext == ".md":
+                    skipped_empty += 1
+                else:
+                    skipped_too_large += 1
+                continue
+
+            text, md_meta = result
+
+            if not text or not text.strip():
+                skipped_empty += 1
+                continue
+
+            uri = str(path)
+            text_hash = _hash_text(text)
+            doc_id = _stable_doc_id(uri, text_hash)
+
+            try:
+                stat = path.stat()
+                mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                size = stat.st_size
+            except OSError:
+                mtime = None
+                size = None
+
+            doc_meta = {
+                **base_meta,
+                "uri": uri,
+                "title": path.name,
+                "ext": ext,
+                "mtime": mtime,
+                "size_bytes": size,
+                "content_hash": text_hash,
+                **md_meta,
+            }
+
+            docs.append(
+                Document(
+                    doc_id=doc_id,
+                    text=text,
+                    source=self.source_name,
+                    uri=uri,
+                    metadata=doc_meta,
+                )
+            )
+            loaded += 1
+            by_ext[ext] = by_ext.get(ext, 0) + 1
+
         log.info(
             "Ingest breakdown: discovery=%.2fs, loading=%.2fs, other=%.2fs",
             discovery_dt,
-            load_dt_total,
-            (perf_counter() - t0) - discovery_dt - load_dt_total,
+            load_dt,
+            (perf_counter() - t0) - discovery_dt - load_dt,
         )
 
         report = IngestReport(
