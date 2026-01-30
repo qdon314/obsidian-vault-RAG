@@ -1,13 +1,11 @@
 .PHONY: help index index-dummy ask ask-dummy results tail-logs clean-index \
         test lint fmt typecheck env-check
 
-# ---- Python interpreter (pin to micromamba env) ----
-MAMBA_ROOT_PREFIX ?= /Users/quentindonnelly/micromamba
-CONDA_ENV ?= rag-obsidian
-PYTHON := $(MAMBA_ROOT_PREFIX)/envs/$(CONDA_ENV)/bin/python
+# ---- Python interpreter (pin to .venv) ----
+PYTHON := $(CURDIR)/.venv/bin/python
 
 ifeq ($(wildcard $(PYTHON)),)
-$(error Could not find PYTHON at $(PYTHON). Check MAMBA_ROOT_PREFIX / CONDA_ENV.)
+$(error Could not find PYTHON at $(PYTHON). Run: python3.11 -m venv .venv)
 endif
 # -----------------------------------------------------
 
