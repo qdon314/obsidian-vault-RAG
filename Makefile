@@ -12,8 +12,8 @@ endif
 # -----------------------------------------------------
 
 ARTIFACTS_DIR ?= artifacts
-INDEX ?= obsidian
-CORPUS ?= /Users/quentindonnelly/Documents/Personal\ \&\ Professional
+INDEX ?= obsidian_proposition_index
+CORPUS ?= /Users/quentindonnelly/Documents/Personal & Professional
 QUERY ?= What is this project about?
 NUM_LOGS ?= 20
 
