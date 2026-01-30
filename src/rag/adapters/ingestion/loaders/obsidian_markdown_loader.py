@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,6 +19,19 @@ _ATTACHMENT_EXTS = {
     ".mp3", ".wav", ".m4a",
     ".mp4", ".mov",
 }
+
+# Type alias for the filename → resolved-paths index used by embed resolution.
+FileIndex = dict[str, list[Path]]
+
+
+def _build_file_index(vault_root: Path) -> FileIndex:
+    """Scan *vault_root* once and return a mapping of lower-cased filename → paths."""
+    index: FileIndex = {}
+    for dirpath, dirnames, filenames in os.walk(vault_root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fn in filenames:
+            index.setdefault(fn.lower(), []).append(Path(dirpath, fn).resolve())
+    return index
 
 def split_obsidian_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     """
@@ -153,12 +167,20 @@ def _strip_wikilinks_outside_code(text: str) -> str:
     return "".join(out)
 
 
-def _resolve_embed_target(vault_root: Path, current_file: Path, target: str) -> Path | None:
+def _resolve_embed_target(
+    vault_root: Path,
+    current_file: Path,
+    target: str,
+    file_index: FileIndex,
+) -> Path | None:
     """
     Resolve Obsidian embed target:
       - 'Note Name' -> find 'Note Name.md' anywhere (best-effort)
       - 'path/to/note.md' -> relative to vault root or current dir
       - may include headings/aliases after # or |
+
+    Uses *file_index* (filename→paths mapping) for O(1) lookups instead of
+    scanning the vault directory tree per call.
     """
     target = target.split("|", 1)[0]
     target = target.split("#", 1)[0].strip()
@@ -183,19 +205,19 @@ def _resolve_embed_target(vault_root: Path, current_file: Path, target: str) -> 
         if p2.exists() and p2.is_file():
             return p2
 
-        # Fallback: search by filename within vault
-        name = cand.name or cand.suffix  # same
-        matches = list(vault_root.rglob(name))
-        for m in matches:
-            if m.is_file():
-                return m.resolve()
+        # Fallback: O(1) index lookup instead of rglob
+        name_key = (cand.name or cand.suffix).lower()
+        for m in file_index.get(name_key, ()):
+            return m
 
-    # If we tried "image" without suffix and didn't find it, also search for "image.*"
+    # If we tried "image" without suffix and didn't find it, also search by prefix
     if not tpath.suffix:
-        matches = list(vault_root.rglob(f"{tpath.name}.*"))
-        for m in matches:
-            if m.is_file():
-                return m.resolve()
+        prefix = tpath.name.lower()
+        for key, paths in file_index.items():
+            stem, _, _ = key.rpartition(".")
+            if stem == prefix:
+                for m in paths:
+                    return m
 
     return None
 
@@ -214,6 +236,10 @@ class ObsidianMarkdownLoader:
     text_loader: TextLoader = field(default_factory=TextLoader)
     expand_embeds: bool = True
     max_embed_depth: int = 4
+    _file_index: FileIndex = field(default_factory=dict, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "_file_index", _build_file_index(self.vault_dir))
 
     def load(self, path: Path) -> tuple[str, dict[str, Any]] | None:
         raw = self.text_loader.load(path)
@@ -224,7 +250,9 @@ class ObsidianMarkdownLoader:
         fm_tags = _normalize_tags(frontmatter.get("tags"))
 
         if self.expand_embeds:
-            content = self._expand_embeds(content, current_file=path, depth=0, seen=set())
+            content = self._expand_embeds(
+                content, current_file=path, depth=0, seen=set(), file_index=self._file_index
+            )
 
         # Remove wikilinks outside code
         content = _strip_wikilinks_outside_code(content)
@@ -240,7 +268,15 @@ class ObsidianMarkdownLoader:
 
         return content, meta
 
-    def _expand_embeds(self, content: str, *, current_file: Path, depth: int, seen: set[str]) -> str:
+    def _expand_embeds(
+        self,
+        content: str,
+        *,
+        current_file: Path,
+        depth: int,
+        seen: set[str],
+        file_index: FileIndex,
+    ) -> str:
         if depth >= self.max_embed_depth:
             return content
 
@@ -256,7 +292,9 @@ class ObsidianMarkdownLoader:
             # Expand embeds within non-code text
             def repl(m: re.Match[str]) -> str:
                 target = m.group(1)
-                embed_path = _resolve_embed_target(self.vault_dir, current_file, target)
+                embed_path = _resolve_embed_target(
+                    self.vault_dir, current_file, target, file_index
+                )
                 if embed_path is None:
                     return ""
 
@@ -282,7 +320,11 @@ class ObsidianMarkdownLoader:
 
                 _, embedded_content = split_obsidian_frontmatter(loaded)
                 embedded_expanded = self._expand_embeds(
-                    embedded_content, current_file=embed_path, depth=depth + 1, seen=seen
+                    embedded_content,
+                    current_file=embed_path,
+                    depth=depth + 1,
+                    seen=seen,
+                    file_index=file_index,
                 )
 
                 return f"\n\n<!-- EMBED: {embed_path.name} -->\n{embedded_expanded}\n<!-- /EMBED -->\n\n"
