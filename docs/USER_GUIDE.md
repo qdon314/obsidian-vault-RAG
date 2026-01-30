@@ -29,10 +29,10 @@ A complete guide to using the Obsidian Vault RAG system, from setup to advanced 
    cd obsidian-vault-RAG
    ```
 
-2. **Create the conda environment:**
+2. **Create a virtual environment:**
    ```bash
-   conda env create -f environment.yml
-   conda activate rag-obsidian
+   python3.11 -m venv .venv
+   source .venv/bin/activate
    ```
 
 3. **Install the package:**

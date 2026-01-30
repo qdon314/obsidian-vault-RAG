@@ -20,8 +20,8 @@ This project explores how choices around chunking, embeddings, retrieval, and re
 # Clone and setup
 git clone https://github.com/your-username/obsidian-vault-RAG.git
 cd obsidian-vault-RAG
-conda env create -f environment.yml
-conda activate rag-obsidian
+python3.11 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[openai]"
 
 # Set your API key
@@ -186,14 +186,13 @@ Features:
 ### Prerequisites
 
 - Python >= 3.11
-- Conda (recommended)
 
 ### Setup
 
 ```bash
-# Create environment
-conda env create -f environment.yml
-conda activate rag-obsidian
+# Create virtual environment
+python3.11 -m venv .venv
+source .venv/bin/activate
 
 # Install with OpenAI support
 pip install -e ".[openai]"
