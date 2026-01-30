@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import logging
+import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
+from time import perf_counter
 
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
 from rag.domain.models import Document, IngestReport
 from rag.ports import Ingestor
 
+log = logging.getLogger(__name__)
 
 def _is_hidden(path: Path) -> bool:
     return any(part.startswith(".") for part in path.parts)
@@ -24,6 +28,17 @@ def _stable_doc_id(uri: str, text_hash: str) -> str:
     # Stable across runs; changes when file content changes.
     return sha256(f"{uri}|{text_hash}".encode()).hexdigest()
 
+def _walk_files(root: Path) -> list[Path]:
+    """Recursively collect files, skipping hidden directories."""
+    result: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        # Prune hidden directories in-place so os.walk won't descend into them
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for fn in filenames:
+            result.append(Path(dirpath) / fn)
+    return result
+
+
 def _iter_files(inputs: Sequence[str], *, recursive: bool) -> list[Path]:
     files: list[Path] = []
 
@@ -33,8 +48,10 @@ def _iter_files(inputs: Sequence[str], *, recursive: bool) -> list[Path]:
         # Case 1: direct file or directory
         if p.exists():
             if p.is_dir():
-                it = p.rglob("*") if recursive else p.glob("*")
-                files.extend([x for x in it if x.is_file()])
+                if recursive:
+                    files.extend(_walk_files(p))
+                else:
+                    files.extend([x for x in p.glob("*") if x.is_file()])
             elif p.is_file():
                 files.append(p)
             continue
@@ -46,8 +63,10 @@ def _iter_files(inputs: Sequence[str], *, recursive: bool) -> list[Path]:
 
         for m in Path(".").glob(inp):
             if m.is_dir():
-                it = m.rglob("*") if recursive else m.glob("*")
-                files.extend([x for x in it if x.is_file()])
+                if recursive:
+                    files.extend(_walk_files(m))
+                else:
+                    files.extend([x for x in m.glob("*") if x.is_file()])
             elif m.is_file():
                 files.append(m)
 
@@ -81,8 +100,13 @@ class FilesystemIngestor(Ingestor):
         by_ext: dict[str, int] = {}
 
         docs: list[Document] = []
-        files = _iter_files(inputs, recursive=self.recursive)
 
+        t0 = perf_counter()
+        files = _iter_files(inputs, recursive=self.recursive)
+        discovery_dt = perf_counter() - t0
+        log.info("File discovery: %d files in %.2fs", len(files), discovery_dt)
+
+        load_dt_total = 0.0
         for path in files:
             scanned += 1
             try:
@@ -99,6 +123,7 @@ class FilesystemIngestor(Ingestor):
 
                 # Load content + extra md metadata if applicable
                 md_meta: dict[str, object] = {}
+                t_load = perf_counter()
                 if ext == ".md" and self.markdown_loader is not None:
                     loaded_md = self.markdown_loader.load(path)
                     if loaded_md is None:
@@ -111,6 +136,7 @@ class FilesystemIngestor(Ingestor):
                     if text is None:
                         skipped_too_large += 1
                         continue
+                load_dt_total += perf_counter() - t_load
 
                 if not text or not text.strip():
                     skipped_empty += 1
@@ -153,6 +179,13 @@ class FilesystemIngestor(Ingestor):
             except Exception:
                 failed += 1
                 continue
+
+        log.info(
+            "Ingest breakdown: discovery=%.2fs, loading=%.2fs, other=%.2fs",
+            discovery_dt,
+            load_dt_total,
+            (perf_counter() - t0) - discovery_dt - load_dt_total,
+        )
 
         report = IngestReport(
             scanned=scanned,
