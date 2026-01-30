@@ -10,6 +10,7 @@ from typing import Literal
 # Secrets
 # ----------------------------
 
+
 @dataclass(frozen=True, slots=True)
 class Secrets:
     openai_api_key: str | None
@@ -25,6 +26,7 @@ class Secrets:
 # ----------------------------
 # Config sections
 # ----------------------------
+
 
 @dataclass(frozen=True, slots=True)
 class Paths:
@@ -45,7 +47,7 @@ class Ingestion:
 
 @dataclass(frozen=True, slots=True)
 class Chunking:
-    backend: Literal["fixed", "obsidian_structural"] = "fixed"
+    backend: Literal["fixed", "obsidian_structural", "obsidian_proposition"] = "fixed"
     # fixed chunker params
     chunk_size: int = 800
     overlap: int = 120
@@ -54,6 +56,8 @@ class Chunking:
     hard_max_chars: int = 5200
     overlap_blocks: int = 1
     include_heading_preamble: bool = True
+    # obsidian_proposition chunker params
+    proposition_batch_size: int = 8
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,10 +147,10 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
     # Determine whether OpenAI secrets are required
     emb_tbl = get_tbl("embeddings")
     llm_tbl = get_tbl("llm")
-    require_openai = require_openai and ((
-        emb_tbl.get("backend", emb_tbl.get("provider", "openai")) == "openai") or (
-        llm_tbl.get("backend", llm_tbl.get("provider", "openai")) == "openai"
-    ))
+    require_openai = require_openai and (
+        (emb_tbl.get("backend", emb_tbl.get("provider", "openai")) == "openai")
+        or (llm_tbl.get("backend", llm_tbl.get("provider", "openai")) == "openai")
+    )
 
     paths_tbl = get_tbl("paths")
     ingestion_tbl = get_tbl("ingestion")
@@ -187,6 +191,7 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         hard_max_chars=int(chunking_tbl.get("hard_max_chars", 5200)),
         overlap_blocks=int(chunking_tbl.get("overlap_blocks", 1)),
         include_heading_preamble=bool(chunking_tbl.get("include_heading_preamble", True)),
+        proposition_batch_size=int(chunking_tbl.get("proposition_batch_size", 8)),
     )
 
     # Context
@@ -235,12 +240,17 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
     # Rerank
     rerank = Rerank(
         enabled=bool(rerank_tbl.get("enabled", True)),
-        backend=str(rerank_tbl.get("backend", "heuristic")), # type: ignore
+        backend=str(rerank_tbl.get("backend", "heuristic")),  # type: ignore
         keep_k=int(rerank_tbl.get("keep_k", 4)),
     )
 
     return Settings(
-        paths=Paths(vault_dir=vault_dir, artifacts_dir=artifacts_dir, index_dir=index_dir, queries_file=queries_file),
+        paths=Paths(
+            vault_dir=vault_dir,
+            artifacts_dir=artifacts_dir,
+            index_dir=index_dir,
+            queries_file=queries_file,
+        ),
         ingestion=ingestion,
         chunking=chunking,
         context=context,

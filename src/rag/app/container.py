@@ -6,6 +6,7 @@ from typing import Literal
 
 from rag import settings
 from rag.adapters.chunking.fixed import FixedChunker
+from rag.adapters.chunking.obsidian_proposition import ObsidianPropositionChunker, Propositionizer
 from rag.adapters.chunking.obsidian_structural import ObsidianStructuralChunker
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
@@ -75,7 +76,7 @@ class ContainerOverrides:
     top_k: int | None = None
     rerank_backend: Literal["heuristic", "noop"] | None = None
     rerank_enabled: bool | None = None
-    
+
     logs_directory: Path | None = None
 
 
@@ -89,13 +90,51 @@ def build_container(
 
     # ----- chunking (defaults from settings, overridden by CLI)
     if cfg.chunking.backend == "obsidian_structural":
-        target_chars = ovrds.target_chars if ovrds.target_chars is not None else cfg.chunking.target_chars
-        hard_max_chars = ovrds.hard_max_chars if ovrds.hard_max_chars is not None else cfg.chunking.hard_max_chars
-        overlap_blocks = ovrds.overlap_blocks if ovrds.overlap_blocks is not None else cfg.chunking.overlap_blocks
-        include_heading_preamble = ovrds.include_heading_preamble if ovrds.include_heading_preamble is not None else cfg.chunking.include_heading_preamble
+        target_chars = (
+            ovrds.target_chars if ovrds.target_chars is not None else cfg.chunking.target_chars
+        )
+        hard_max_chars = (
+            ovrds.hard_max_chars
+            if ovrds.hard_max_chars is not None
+            else cfg.chunking.hard_max_chars
+        )
+        overlap_blocks = (
+            ovrds.overlap_blocks
+            if ovrds.overlap_blocks is not None
+            else cfg.chunking.overlap_blocks
+        )
+        include_heading_preamble = (
+            ovrds.include_heading_preamble
+            if ovrds.include_heading_preamble is not None
+            else cfg.chunking.include_heading_preamble
+        )
         chunker = ObsidianStructuralChunker(
             target_chars=target_chars,
             hard_max_chars=hard_max_chars,
+            overlap_blocks=overlap_blocks,
+            include_heading_preamble=include_heading_preamble,
+        )
+    elif cfg.chunking.backend == "obsidian_proposition":
+        target_chars = (
+            ovrds.target_chars if ovrds.target_chars is not None else cfg.chunking.target_chars
+        )
+        hard_max_chars = (
+            ovrds.hard_max_chars
+            if ovrds.hard_max_chars is not None
+            else cfg.chunking.hard_max_chars
+        )
+        overlap_blocks = (
+            ovrds.overlap_blocks
+            if ovrds.overlap_blocks is not None
+            else cfg.chunking.overlap_blocks
+        )
+        include_heading_preamble = (
+            ovrds.include_heading_preamble
+            if ovrds.include_heading_preamble is not None
+            else cfg.chunking.include_heading_preamble
+        )
+        chunker = ObsidianPropositionChunker(
+            propositionizer=Propositionizer(batch_size=cfg.chunking.proposition_batch_size),
             overlap_blocks=overlap_blocks,
             include_heading_preamble=include_heading_preamble,
         )
@@ -134,13 +173,19 @@ def build_container(
         embedder = DummyEmbedder(dim=dim)
     else:
         embedder = OpenAIEmbedder(api_key=api_key, model=str(cfg.embeddings.model))
-        
+
     # ----- optional embedding cache (wraps the embedder with SQLite disk cache)
-    cache_enabled = cfg.embeddings.cache_embeddings if ovrds.cache_embeddings is None else ovrds.cache_embeddings
+    cache_enabled = (
+        cfg.embeddings.cache_embeddings
+        if ovrds.cache_embeddings is None
+        else ovrds.cache_embeddings
+    )
     if cache_enabled:
         from rag.adapters.embedding.sqlite_cache import CachedEmbedder
 
-        cache_db_path = cfg.embeddings.cache_db_path or (cfg.paths.artifacts_dir / "embedding_cache.db")
+        cache_db_path = cfg.embeddings.cache_db_path or (
+            cfg.paths.artifacts_dir / "embedding_cache.db"
+        )
         embedder = CachedEmbedder(embedder=embedder, db_path=cache_db_path)
 
     # ----- generator (usually always OpenAI for now, but can also be made configurable)
@@ -170,7 +215,9 @@ def build_container(
             collection_name=ovrds.qdrant_collection or cfg.vectorstore.qdrant_collection,
             vector_size=vector_size,
             url=ovrds.qdrant_url or cfg.vectorstore.qdrant_url,
-            path=str(ovrds.qdrant_path or cfg.vectorstore.qdrant_path) if (ovrds.qdrant_path or cfg.vectorstore.qdrant_path) else None,
+            path=str(ovrds.qdrant_path or cfg.vectorstore.qdrant_path)
+            if (ovrds.qdrant_path or cfg.vectorstore.qdrant_path)
+            else None,
             api_key=cfg.vectorstore.qdrant_api_key,
         )
     else:
@@ -184,13 +231,13 @@ def build_container(
 
     # IMPORTANT: retriever must be built from the chosen embedder+store
     retriever = VectorRetriever(embedder=embedder, store=store)
-    
+
     # ----- reranker (optional)
     if not cfg.rerank.enabled or cfg.rerank.backend == "noop":
         reranker = NoOpReranker()
     else:
         reranker = HeuristicReranker()
-        
+
     # ----- logger (for query tracing)
     log_path = ovrds.logs_directory or (cfg.paths.artifacts_dir / "logs")
     logger = JsonlQueryLogger(path=log_path / "traces.jsonl")

@@ -32,7 +32,7 @@ max_embed_depth = 4
 # Chunking
 # -------------------------------------------------------------------
 [chunking]
-backend = "obsidian_structural" # "fixed" | "obsidian_structural"
+backend = "obsidian_proposition" # "fixed" | "obsidian_structural" | "obsidian_proposition"
 
 # Simple fixed-size chunker options
 chunk_size = 800
@@ -43,6 +43,9 @@ target_chars = 4000
 hard_max_chars = 5200
 overlap_blocks = 1
 include_heading_preamble = true
+
+# Obsidian proposition chunker options
+proposition_batch_size = 8  # passages per T5 forward pass (increase for GPU)
 
 # -------------------------------------------------------------------
 # Context building
