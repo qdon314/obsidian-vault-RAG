@@ -83,7 +83,7 @@ fmt:  ## Run ruff formatter
 	$(PYTHON) -m ruff format .
 
 typecheck:  ## Run mypy type checks
-	$(PYTHON) -m mypy rag
+	$(PYTHON) -m mypy --config-file pyproject.toml src
 
 env-check:  ## Check Python environment
 	@echo "PYTHON=$(PYTHON)"

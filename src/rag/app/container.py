@@ -6,8 +6,9 @@ from typing import Literal
 
 from rag import settings
 from rag.adapters.chunking.fixed import FixedChunker
-from rag.adapters.chunking.obsidian_proposition import ObsidianPropositionChunker, Propositionizer
 from rag.adapters.chunking.obsidian_structural import ObsidianStructuralChunker
+from rag.adapters.chunking.proposition.backends import T5Propositionizer
+from rag.adapters.chunking.proposition.chunker import ObsidianPropositionChunker
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
 from rag.adapters.embedding.openai_embedder import OpenAIEmbedder
@@ -89,6 +90,7 @@ def build_container(
     ovrds = overrides or ContainerOverrides()
 
     # ----- chunking (defaults from settings, overridden by CLI)
+    chunker: Chunker
     if cfg.chunking.backend == "obsidian_structural":
         target_chars = (
             ovrds.target_chars if ovrds.target_chars is not None else cfg.chunking.target_chars
@@ -134,7 +136,7 @@ def build_container(
             else cfg.chunking.include_heading_preamble
         )
         chunker = ObsidianPropositionChunker(
-            propositionizer=Propositionizer(batch_size=cfg.chunking.proposition_batch_size),
+            propositionizer=T5Propositionizer(batch_size=cfg.chunking.proposition_batch_size),
             overlap_blocks=overlap_blocks,
             include_heading_preamble=include_heading_preamble,
         )
@@ -165,6 +167,7 @@ def build_container(
 
     # ----- embedder selection
     api_key = str(cfg.secrets.openai_api_key)
+    embedder: Embedder
     embedder_backend = ovrds.embedder_backend or cfg.embeddings.backend  # e.g. "openai"
     if embedder_backend == "dummy":
         dim = (
@@ -192,6 +195,7 @@ def build_container(
     generator = OpenAIChatGenerator(api_key=api_key, model=str(cfg.llm.model))
 
     # ----- store selection
+    store: VectorStore
     store_backend = ovrds.store_backend or cfg.vectorstore.backend  # "memory", "jsonl", or "qdrant"
     if store_backend == "memory":
         store = InMemoryVectorStore()
@@ -233,6 +237,7 @@ def build_container(
     retriever = VectorRetriever(embedder=embedder, store=store)
 
     # ----- reranker (optional)
+    reranker: Reranker
     if not cfg.rerank.enabled or cfg.rerank.backend == "noop":
         reranker = NoOpReranker()
     else:

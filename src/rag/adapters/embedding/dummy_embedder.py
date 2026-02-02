@@ -30,7 +30,7 @@ class DummyEmbedder:
         for text in texts:
             text_hash = sha256(text.encode("utf-8")).digest()
             # expand digest to dim floats in [-1,1]
-            vector = []
+            vector: list[float] = []
             i = 0
             while len(vector) < self.dim:
                 block = text_hash[i % len(text_hash)]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Protocol
 
 from rag.domain.models import Candidate
@@ -17,7 +17,7 @@ class Reranker(Protocol):
     def rerank(
         self,
         query: str,
-        candidates: Sequence[Candidate],
+        candidates: list[Candidate],
         *,
         metadata: Mapping[str, object] | None = None,
     ) -> list[Candidate]:
