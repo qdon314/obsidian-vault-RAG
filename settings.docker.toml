@@ -1,0 +1,56 @@
+# Docker-specific settings
+# Overrides for running inside Docker Compose
+
+[paths]
+vault_dir = "/data/vault"
+artifacts_dir = "/app/artifacts"
+queries_file = "eval/datasets/curated_queries.jsonl"
+index_dir = "/app/artifacts/indexes/obsidian"
+
+[ingestion]
+recursive = true
+skip_hidden = true
+allowed_extensions = [".md", ".txt"]
+expand_embeds = true
+max_embed_depth = 4
+
+[chunking]
+backend = "obsidian_structural"
+chunk_size = 800
+overlap = 120
+target_chars = 4000
+hard_max_chars = 5200
+overlap_blocks = 1
+include_heading_preamble = true
+
+[context]
+max_chunks = 5
+dedupe = true
+include_scores = false
+token_budget = 1500
+
+[embeddings]
+backend = "openai"
+model = "text-embedding-3-large"
+cache_embeddings = true
+cache_db_path = "/app/artifacts/cache/embeddings/embedding_cache.db"
+dummy_dim = 128
+
+[vectorstore]
+backend = "qdrant"
+qdrant_collection = "obsidian"
+qdrant_url = "http://qdrant:6333"
+
+[retrieval]
+top_k = 8
+
+[rerank]
+enabled = true
+backend = "heuristic"
+keep_k = 4
+
+[llm]
+backend = "openai"
+model = "gpt-4.1-mini"
+temperature = 0.2
+max_tokens = 1024
