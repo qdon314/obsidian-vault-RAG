@@ -383,6 +383,8 @@ Reranked Candidates (keep_k=4)
 | `ObsidianMarkdownLoader` | - | Loads .md with transclusion expansion |
 | `TextLoader` | - | Loads plain .txt files |
 | `FixedChunker` | `Chunker` | Character-based chunking (800/120) |
+| `ObsidianStructuralChunker` | `Chunker` | Markdown-aware structural chunking |
+| `ObsidianPropositionChunker` | `Chunker` | Proposition-based chunking (seq2seq) |
 | `OpenAIEmbedder` | `Embedder` | OpenAI text-embedding-3-large |
 | `DummyEmbedder` | `Embedder` | Random vectors for testing |
 | `JsonlVectorStore` | `VectorStore` | JSONL-persisted, in-memory search |
@@ -391,6 +393,7 @@ Reranked Candidates (keep_k=4)
 | `HeuristicReranker` | `Reranker` | Lexical overlap boost + diversity |
 | `NoOpReranker` | `Reranker` | Pass-through (baseline) |
 | `SimpleContextBuilder` | `ContextBuilder` | Token budget + deduplication |
+| `PropositionAwareContextBuilder` | `ContextBuilder` | Proposition expansion + deduplication |
 | `OpenAIChatGenerator` | `Generator` | GPT-4.1-mini chat completions |
 | `JsonlQueryLogger` | `QueryLogger` | JSONL append logging |
 
@@ -465,14 +468,16 @@ src/rag/
 │   └── ...
 │
 ├── adapters/            # Concrete implementations
-│   ├── chunking/        # FixedChunker
+│   ├── chunking/        # Fixed, ObsidianStructural, ObsidianProposition
+│   │   └── _markdown.py # Shared markdown parsing infrastructure
 │   ├── embedding/       # OpenAI, Dummy, SQLite cache
 │   ├── generation/      # OpenAI chat
 │   ├── ingestion/       # Filesystem, loaders
 │   ├── retrieval/       # VectorRetriever
 │   ├── reranking/       # Heuristic, NoOp
 │   ├── vectorstores/    # JSONL, in-memory
-│   ├── context_building/
+│   ├── context_building/ # Simple, PropositionAware
+│   │   └── _shared.py   # Shared utilities (token estimation, dedupe)
 │   ├── logging/
 │   └── filters/
 │

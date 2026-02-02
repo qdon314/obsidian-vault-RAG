@@ -55,6 +55,88 @@ doc123:fixed_chars_v1:0:0-800      # First chunk
 doc123:fixed_chars_v1:1:680-1480   # Second chunk (with overlap)
 ```
 
+### ObsidianStructuralChunker
+
+**Location:** `src/rag/adapters/chunking/obsidian_structural.py`
+
+Structure-aware chunker that respects markdown semantic boundaries.  Parses headings, lists, tables, callouts, and code blocks, then packs them into size-constrained chunks with optional overlap.
+
+```python
+@dataclass(frozen=True, slots=True)
+class ObsidianStructuralChunker:
+    target_chars: int = 4000         # Soft target chunk size
+    hard_max_chars: int = 5200       # Hard maximum (only paragraphs split)
+    overlap_blocks: int = 1          # Trailing blocks carried to next chunk
+    include_heading_preamble: bool = True  # Prepend "Title: X\nPath: Y"
+    strategy_name: str = "obsidian_structural_v1"
+```
+
+**Pipeline (shared parsing from `_markdown.py`):**
+1. **Code block isolation** -- separates fenced code from markdown
+2. **Section parsing** -- builds heading hierarchy
+3. **Block detection** -- identifies para, list, callout, table, code blocks
+4. **Chunk assembly** -- packs blocks into chunks respecting size constraints
+
+**Example:**
+```python
+from rag.adapters.chunking.obsidian_structural import ObsidianStructuralChunker
+
+chunker = ObsidianStructuralChunker(target_chars=2000, overlap_blocks=1)
+chunks = chunker.chunk(doc)
+```
+
+### ObsidianPropositionChunker
+
+**Location:** `src/rag/adapters/chunking/proposition.py`
+
+Proposition-based chunker that decomposes documents into atomic, self-contained sentences using a seq2seq model.  Based on the [Dense X Retrieval](https://arxiv.org/abs/2312.06648) approach.
+
+```python
+@dataclass(frozen=True, slots=True)
+class ObsidianPropositionChunker:
+    propositionizer: Propositionizer    # seq2seq model wrapper
+    passage_target_chars: int = 900     # Soft target for propositionizer input
+    passage_hard_max_chars: int = 1400  # Hard max for propositionizer input
+    include_heading_preamble: bool = False
+    overlap_blocks: int = 0
+    strategy_name: str = "obsidian_proposition_v1"
+```
+
+**Pipeline:**
+1. Stages 1-3 from the shared `_markdown.py` parsing pipeline (same as structural chunker)
+2. Code blocks emitted as chunks unchanged
+3. Non-code blocks packed into passages (~900 chars)
+4. Each passage fed to `Propositionizer` (batch inference)
+5. Each returned proposition becomes one Chunk
+
+**Chunk Metadata:**
+
+Proposition chunks carry extra metadata for downstream expansion:
+
+| Key | Description |
+|-----|-------------|
+| `chunk_kind` | Always `"proposition"` |
+| `passage_index` | Index of parent passage within its section |
+| `prop_index` | Index of this proposition within parent passage |
+| `parent_passage_text` | Full text of the source passage |
+| `parent_start_char` | Start offset of parent passage in document |
+| `parent_end_char` | End offset of parent passage in document |
+
+**Example:**
+```python
+from rag.adapters.chunking.proposition import (
+    ObsidianPropositionChunker,
+    Propositionizer,
+)
+
+propositionizer = Propositionizer()  # loads HF model
+chunker = ObsidianPropositionChunker(propositionizer=propositionizer)
+chunks = chunker.chunk(doc)
+# Each chunk.text is a single self-contained proposition
+```
+
+**Model:** `chentong00/propositionizer-wiki-flan-t5-large` (HuggingFace, runs on CPU or CUDA).
+
 ---
 
 ## Embedding Adapters
@@ -458,6 +540,58 @@ builder = SimpleContextBuilder(
 context_pack = builder.build("What is X?", candidates, token_budget=1500)
 ```
 
+### PropositionAwareContextBuilder
+
+**Location:** `src/rag/adapters/context_building/propositional_context_builder.py`
+
+Extends the context-building step to handle proposition chunks.  Expands short proposition text back to the parent passage so the LLM receives enough surrounding context.
+
+```python
+@dataclass(frozen=True, slots=True)
+class PropositionAwareContextBuilder:
+    min_score: float | None = None
+    max_chunks: int = 12
+    dedupe: bool = True
+    include_scores: bool = False
+    expand_propositions: bool = True      # Expand propositions to passages
+    expansion_mode: str = "passage"       # "passage" | "none"
+    include_prop_header: bool = True      # Show "Proposition: ..." before passage
+```
+
+**Expansion Behavior:**
+- When `expand_propositions=True` and `expansion_mode="passage"`, proposition chunks are rendered as their parent passage text (stored in `chunk.metadata["parent_passage_text"]`).
+- Optionally prefixed with `Proposition: <retrieved text>` so the LLM sees what was actually retrieved.
+- Non-proposition chunks (code, para, list, etc.) are rendered as-is.
+
+**Dual-Layer Deduplication:**
+1. **Passage identity**: For expanded propositions, track `doc_id:start:end` of the parent passage.  Skip if the same passage was already included (prevents repeating a passage when multiple propositions from it are retrieved).
+2. **Text signature**: Normalize and truncate the rendered text (800 chars).  Skip if already seen.
+
+**Rendered Context Format (with `include_prop_header=True`):**
+```
+[1]
+Source: My Note /vault/note.md
+Proposition: Python was created by Guido van Rossum.
+
+Passage:
+Python is a programming language created by Guido van Rossum.
+It was first released in 1991 and emphasizes code readability.
+```
+
+**Example:**
+```python
+from rag.adapters.context_building.propositional_context_builder import (
+    PropositionAwareContextBuilder,
+)
+
+builder = PropositionAwareContextBuilder(
+    expand_propositions=True,
+    expansion_mode="passage",
+    include_prop_header=True,
+)
+context_pack = builder.build("Who created Python?", candidates, token_budget=2000)
+```
+
 ---
 
 ## Generation Adapters
@@ -652,7 +786,7 @@ The filter system provides a backend-agnostic way to express metadata filters us
 Evaluates filter AST against chunk metadata in Python. Used by `JsonlVectorStore` and `InMemoryVectorStore`.
 
 ```python
-class InMemoryFilterEvaluator(FilterEvaluator):
+class InMemoryFilterEvaluator:
     def matches(self, where: Where, metadata: Mapping[str, object]) -> bool:
         ...
 ```
@@ -682,7 +816,7 @@ results = store.search(query_vector=vec, top_k=10, where=filter)
 Compiles filter AST to Qdrant's native filter format. Used by `QdrantVectorStore`.
 
 ```python
-class QdrantFilterCompiler(FilterCompiler[QdrantFilter]):
+class QdrantFilterCompiler:
     def compile(self, where: Where) -> QdrantFilter | None:
         ...
 ```
