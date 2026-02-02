@@ -14,13 +14,12 @@ from qdrant_client.models import (
 from rag.adapters.filters.qdrant_compiler import QdrantFilterCompiler
 from rag.domain.filters import Where
 from rag.domain.models import Candidate, Chunk
-from rag.ports import VectorStore
 
 Vector = list[float]
 
 
 @dataclass(slots=True)
-class QdrantVectorStore(VectorStore):
+class QdrantVectorStore:
     """
     Qdrant-backed vector store for scalable similarity search.
 

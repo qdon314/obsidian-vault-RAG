@@ -5,11 +5,10 @@ from dataclasses import dataclass
 
 from rag.adapters.context_building._shared import _estimate_tokens, _normalize_for_dedupe
 from rag.domain.models import Candidate, Chunk, Citation, ContextPack
-from rag.ports import ContextBuilder
 
 
 @dataclass(frozen=True, slots=True)
-class SimpleContextBuilder(ContextBuilder):
+class SimpleContextBuilder:
     """
     Builds a context pack from candidates:
       - optional score thresholding

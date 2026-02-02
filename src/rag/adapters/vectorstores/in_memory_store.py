@@ -7,7 +7,6 @@ from math import sqrt
 from rag.adapters.filters.inmemory_evaluator import InMemoryFilterEvaluator
 from rag.domain.filters import Where
 from rag.domain.models import Candidate, Chunk
-from rag.ports import VectorStore
 
 Vector = list[float]
 
@@ -25,7 +24,7 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
 
 
 @dataclass(slots=True)
-class InMemoryVectorStore(VectorStore):
+class InMemoryVectorStore:
     """
     Simple cosine-similarity vector store to validate architecture.
 

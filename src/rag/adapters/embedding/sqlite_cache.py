@@ -19,7 +19,7 @@ def _key_for_text(model_name: str, text: str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
-class CachedEmbedder(Embedder):
+class CachedEmbedder:
     """
     Wraps any Embedder with a disk cache (SQLite).
     Keyed by (model_name, text hash) so it is stable across runs.

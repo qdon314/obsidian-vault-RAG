@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from rag.domain.models import QueryTrace
-from rag.ports import QueryLogger
 
 
 def _json_default(o: Any):
@@ -16,7 +15,7 @@ def _json_default(o: Any):
         return asdict(o) # type: ignore
     return str(o)
 
-class JsonlQueryLogger(QueryLogger):
+class JsonlQueryLogger:
     def __init__(self, path: str | Path, *, redact_text: bool = False) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)

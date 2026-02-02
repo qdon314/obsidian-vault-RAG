@@ -7,11 +7,10 @@ from dataclasses import dataclass
 from openai import OpenAI
 
 from rag.domain.models import Answer, ContextPack
-from rag.ports import Generator
 
 
 @dataclass(frozen=True, slots=True)
-class OpenAIChatGenerator(Generator):
+class OpenAIChatGenerator:
     """
     OpenAI chat generator.
     """

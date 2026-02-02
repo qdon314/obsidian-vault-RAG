@@ -14,10 +14,9 @@ from qdrant_client.models import (
 )
 
 from rag.domain.filters import And, Contains, Eq, Filter, In, Not, Or, Prefix, Range, Where
-from rag.ports import FilterCompiler
 
 
-class QdrantFilterCompiler(FilterCompiler[QdrantFilter]):
+class QdrantFilterCompiler:
     def compile(self, where: Where) -> QdrantFilter | None:
         if where is None:
             return None

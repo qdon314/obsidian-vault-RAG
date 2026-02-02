@@ -4,14 +4,13 @@ import re
 from collections import Counter
 
 from rag.domain.models import Candidate
-from rag.ports import Reranker
 
 _WORD = re.compile(r"[A-Za-z0-9_]+")
 
 def _tokens(s: str) -> list[str]:
     return [t.lower() for t in _WORD.findall(s)]
 
-class HeuristicReranker(Reranker):
+class HeuristicReranker:
     """
     Cheap reranker:
     - starts from vector similarity score

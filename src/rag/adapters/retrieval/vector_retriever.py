@@ -5,11 +5,11 @@ from dataclasses import dataclass
 
 from rag.domain.filters import Where
 from rag.domain.models import Candidate
-from rag.ports import Embedder, Retriever, VectorStore
+from rag.ports import Embedder, VectorStore
 
 
 @dataclass(frozen=True, slots=True)
-class VectorRetriever(Retriever):
+class VectorRetriever:
     """
     Retrieves candidates by embedding the query and searching the vector store.
     """

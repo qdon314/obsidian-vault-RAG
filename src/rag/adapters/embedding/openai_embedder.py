@@ -6,13 +6,11 @@ from dataclasses import dataclass
 # Requires: pip install openai, and set OPENAI_API_KEY in env
 from openai import OpenAI
 
-from rag.ports import Embedder
-
 Vector = list[float]
 
 
 @dataclass(frozen=True, slots=True)
-class OpenAIEmbedder(Embedder):
+class OpenAIEmbedder:
     """
     OpenAI embeddings adapter.
 

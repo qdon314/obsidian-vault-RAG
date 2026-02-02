@@ -3,10 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from rag.domain.filters import And, Contains, Eq, Filter, In, Not, Or, Prefix, Range, Where
-from rag.ports import FilterEvaluator
 
 
-class InMemoryFilterEvaluator(FilterEvaluator):
+class InMemoryFilterEvaluator:
     def matches(self, where: Where, metadata: Mapping[str, object]) -> bool:
         if where is None:
             return True

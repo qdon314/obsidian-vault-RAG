@@ -4,13 +4,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 
-from rag.ports import Embedder
-
 Vector = list[float]
 
 
 @dataclass(frozen=True, slots=True)
-class DummyEmbedder(Embedder):
+class DummyEmbedder:
     """
     Deterministic fake embeddings for wiring tests.
     Not semantically meaningful, but stable across runs.

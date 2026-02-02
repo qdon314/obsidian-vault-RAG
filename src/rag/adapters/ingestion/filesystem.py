@@ -14,7 +14,6 @@ from typing import Any
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
 from rag.domain.models import Document, IngestReport
-from rag.ports import Ingestor
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ def _iter_files(inputs: Sequence[str], *, recursive: bool) -> list[Path]:
 
 
 @dataclass(frozen=True, slots=True)
-class FilesystemIngestor(Ingestor):
+class FilesystemIngestor:
     allowed_extensions: set[str] = field(
         default_factory=lambda: {".md", ".txt", ".py", ".json", ".yaml", ".yml"}
     )

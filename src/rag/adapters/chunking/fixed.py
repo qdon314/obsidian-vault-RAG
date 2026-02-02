@@ -5,11 +5,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from rag.domain.models import Chunk, Document
-from rag.ports import Chunker
 
 
 @dataclass(frozen=True, slots=True)
-class FixedChunker(Chunker):
+class FixedChunker:
     """
     Simple character-based chunker (good enough to validate architecture).
 

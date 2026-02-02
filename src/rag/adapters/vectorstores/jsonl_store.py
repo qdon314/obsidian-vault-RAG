@@ -9,7 +9,7 @@ from pathlib import Path
 from rag.adapters.filters.inmemory_evaluator import InMemoryFilterEvaluator
 from rag.domain.filters import Where
 from rag.domain.models import Candidate, Chunk
-from rag.ports import FilterEvaluator, VectorStore
+from rag.ports import FilterEvaluator
 from rag.utils.json_sanitize import json_sanitize
 
 Vector = list[float]
@@ -28,7 +28,7 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
   
 
 @dataclass(slots=True)
-class JsonlVectorStore(VectorStore):
+class JsonlVectorStore:
     """
     Disk-persisted store, loaded into memory for search.
 
