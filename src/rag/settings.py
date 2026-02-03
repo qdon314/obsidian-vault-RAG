@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from rag.config.env_override import apply_env_overrides
+
 # ----------------------------
 # Secrets
 # ----------------------------
@@ -134,6 +136,8 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
 
     with path.open("rb") as f:
         raw = tomllib.load(f)
+
+    raw = apply_env_overrides(raw)
 
     def expand(p: str) -> Path:
         return Path(os.path.expandvars(os.path.expanduser(p))).resolve()
