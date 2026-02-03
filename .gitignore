@@ -209,7 +209,8 @@ __marimo__/
 # Outputs
 data/
 logs/
-artifacts/
+artifacts/cache/
+artifacts/indexes/
 
 # IDEs and editors
 **/.DS_Store
