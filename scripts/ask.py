@@ -56,7 +56,7 @@ def main() -> None:
     top_k = args.top_k if args.top_k is not None else cfg.retrieval.top_k
     token_budget = args.token_budget if args.token_budget is not None else 1800
 
-    run_query(
+    result = run_query(
         args.q,
         retriever=container.retriever,
         reranker=container.reranker,
@@ -67,6 +67,8 @@ def main() -> None:
         top_k=top_k,
         token_budget=token_budget,
     )
+
+    print(f"\n{result.answer.text}")
 
 
 if __name__ == "__main__":
