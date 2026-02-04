@@ -10,8 +10,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import boto3
-
 
 @dataclass(frozen=True, slots=True)
 class S3ArtifactStore:
@@ -30,6 +28,7 @@ class S3ArtifactStore:
 
     def __post_init__(self) -> None:
         if self.client is None:
+            import boto3  # type: ignore[import-untyped]
 
             object.__setattr__(self, "client", boto3.client("s3"))
 
