@@ -4,39 +4,93 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A production-minded retrieval-augmented generation (RAG) system for answering questions over document corpora, with a deliberate focus on **retrieval behavior**, **evaluation**, and **failure modes** rather than prompt tuning or UI polish.
+A **production-minded Retrieval-Augmented Generation (RAG) system** focused on **behavioral correctness, regression detection, and operational safety** of LLM-powered systems.
+
+This project treats LLMs as **non-deterministic production dependencies** and centers on *owning model behavior over time* rather than prompt tuning or UI polish.
+
+---
 
 ## Why This Exists
 
-In practice, most RAG failures come from retrieval issues, not generation. If the right information isn't surfaced, no amount of prompt engineering fixes the result.
+In real systems, most RAG failures are **retrieval failures**, not generation failures.
+If the right evidence is not surfaced, generation quality is irrelevant.
 
-This project explores how choices around chunking, embeddings, retrieval, and reranking actually affect downstream answers—and makes those effects visible through comprehensive logging and evaluation.
+More importantly, **LLM failures are often silent**:
+
+* partial grounding
+* confidently incorrect answers
+* regressions masked by aggregate metrics
+
+This project exists to explore how changes in **chunking, embeddings, retrieval, reranking, and context construction** affect downstream answers — and to make those effects **observable, measurable, and gateable** before they reach users.
+
+---
+
+## What This Project Optimizes For
+
+This system is explicitly designed around **production concerns**:
+
+* **Behavioral regression detection** (not just offline metrics)
+* **Evidence-bounded answers** (citations, groundedness, abstention)
+* **Go / no-go decisions** for retrieval and model changes
+* **Traceability** across every stage of the pipeline
+* **Operational repeatability** via containers, CI, and deployment manifests
+
+---
+
+## Production Safety Model
+
+This system treats evaluation as a **release gate**, not a research artifact.
+
+Every change to retrieval, chunking, reranking, or generation is evaluated against a **fixed, versioned evaluation dataset**.
+
+Changes are blocked if they violate defined safety thresholds.
+
+### Example Gates
+
+* Recall@10 must not regress beyond an acceptable margin
+* Unsupported claims must not increase
+* Groundedness must not regress
+* Abstention rate must remain within bounds
+* P95 latency must remain within budget
+
+Each evaluation run produces a **human-readable decision summary**:
+
+```
+Change: Fixed chunking → proposition-aware chunking
+
+Results:
+- Recall@10: +6.1%
+- NDCG@10: +4.3%
+- Unsupported claims: unchanged
+- P95 latency: +9%
+
+Decision: SHIP
+Rationale: Gains concentrated in multi-hop queries without new hallucination classes
+```
+
+This framing reflects how production teams reason about LLM behavior.
 
 ---
 
 ## Quick Start
 
 ```bash
-# Clone and setup
 git clone https://github.com/your-username/obsidian-vault-RAG.git
 cd obsidian-vault-RAG
+
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[openai]"
 
-# Set your API key
 echo "OPENAI_API_KEY='sk-your-key'" > .env
 
-# Build an index
 python scripts/build_index.py --corpus ~/obsidian-vault --index-name my_index
-
-# Ask a question
 python scripts/ask.py --index my_index --q "What are the main concepts?"
 ```
 
 ---
 
-## Architecture
+## Architecture Overview
 
 ```
 Documents
@@ -46,114 +100,68 @@ Documents
         → (Optional) Reranking
           → Context Building
             → LLM Generation
-              → Answer with Citations
+              → Answer + Citations
+              → Query Trace
 ```
 
-The system follows **Hexagonal Architecture** (Ports & Adapters), enabling:
-- Clean separation between interfaces and implementations
-- Easy swapping of components (OpenAI ↔ local models)
-- Comprehensive testing through protocol-based interfaces
+The system follows **Hexagonal Architecture (Ports & Adapters)** to enable:
 
-### Design Principles
+* Strict separation of interfaces and implementations
+* Swappable components (OpenAI ↔ local models)
+* Deterministic testing and evaluation
+* Clear ownership boundaries
 
-- **Observability First**: Every query generates a complete trace with all intermediate results
-- **Evaluation as First-Class**: Built-in evaluation framework with retrieval and answer quality metrics
-- **Clean Boundaries**: Protocol-based interfaces allow easy component swapping
-- **Reproducibility**: Stable IDs for documents and chunks enable deterministic behavior
+### Core Design Principles
+
+* **Observability First**
+  Every query produces a complete trace of retrieval, reranking, context packing, and generation.
+
+* **Evaluation as Infrastructure**
+  Evaluation is treated as a production dependency, not an experiment.
+
+* **Behavior Over Outputs**
+  The system measures *why* an answer was produced, not just whether it looks correct.
+
+* **Reproducibility**
+  Stable document and chunk IDs enable deterministic comparisons across runs.
 
 ---
 
-## Project Structure
+## CI, Deployment, and Operational Guarantees
 
-```
-src/rag/
-├── domain/           # Core data models (Document, Chunk, Candidate, Answer, QueryTrace)
-├── ports/            # Abstract interfaces (Chunker, Embedder, Retriever, Generator, etc.)
-├── adapters/         # Concrete implementations
-│   ├── chunking/     # Fixed-size chunker
-│   ├── embedding/    # OpenAI, dummy embedder, SQLite cache
-│   ├── generation/   # OpenAI chat
-│   ├── ingestion/    # Filesystem loader, Obsidian markdown loader
-│   ├── retrieval/    # Vector retriever
-│   ├── vectorstores/ # JSONL store, in-memory store
-│   ├── reranking/    # Heuristic reranker, no-op
-│   ├── context_building/
-│   └── logging/      # JSONL query logger
-├── app/              # Pipeline orchestration & dependency injection
-├── eval/             # Evaluation harness & metrics
-└── settings.py       # Configuration loading
+The system is designed to be **operated**, not demoed.
 
-scripts/
-├── build_index.py    # Build index from corpus
-├── ask.py            # Query the system
-└── project_state.py  # Project inspection
+* Containerized runtime for reproducible execution
+* Cloud-ready deployment manifests
+* GitHub Actions for:
 
-experiments/
-├── run_eval.py                  # Evaluation runner
-├── generate_queries.py
-├── curate_queries.py
-├── create_starter_set.py
-└── streamlit_query_curator.py   # Interactive query curation UI
-```
+  * build validation
+  * evaluation execution
+  * regression gating
+* Immutable evaluation artifacts persisted per run
 
----
-
-## Features
-
-### Ingestion
-- **Obsidian-aware loading**: Expands transclusions/embeds (`![[...]]` syntax)
-- **Multiple formats**: Markdown (`.md`), plain text (`.txt`)
-- **Document tracking**: Stable `doc_id` from content hash
-
-### Chunking
-- **Fixed-size chunking**: 800 chars default, 120 char overlap
-- **Metadata preservation**: Section headings, paths, language tags
-- **Chunk provenance**: Stable `chunk_id` with document offsets
-
-### Embeddings
-- **OpenAI backend**: `text-embedding-3-large` (configurable)
-- **Dummy embedder**: Random vectors for testing without API costs
-- **SQLite caching**: Persistent embedding cache to reduce API calls
-
-### Vector Storage
-- **JSONL store**: Human-readable `chunks.jsonl` for inspection
-- **In-memory store**: For experiments & testing
-- **Cosine similarity search** with metadata filtering
-
-### Reranking
-- **Heuristic reranker**: Lexical overlap boost + diversity by `doc_id`
-- **No-op reranker**: Baseline (vector similarity only)
-
-### Context Building
-- **Token budget enforcement**: Fits chunks within max tokens (~4 chars/token)
-- **Deduplication**: Removes near-duplicate chunks
-
-### Generation
-- **OpenAI integration**: `gpt-4o-mini` (configurable)
-- **Temperature control**: 0.2 default for consistency
-- **Abstention detection**: Recognizes "I don't know" responses
-
-### Query Tracing
-- **Structured `QueryTrace`**: Documents every retrieval stage
-- **JSONL persistence**: One query per line for analysis
-- **Timing breakdown**: Per-stage latency metrics
+This mirrors how LLM-backed systems are operated in production environments.
 
 ---
 
 ## Evaluation System
 
 ### Retrieval Metrics
-- **Recall@k**, **Precision@k**, **Hit Rate@k**
-- **Mean Reciprocal Rank (MRR)**
-- **Mean Average Precision (MAP)**
-- **NDCG@k**
 
-### Answer Quality (LLM-as-Judge)
-- **Correctness**, **Completeness**, **Relevance** (0-5 scale)
-- **Hallucination detection**
-- **Semantic similarity**
+* Recall@k, Precision@k, Hit Rate@k
+* MRR, MAP
+* NDCG@k
+* Breakdown by query type and difficulty
 
-### Running Evaluations
+### Answer Quality & Safety
+
+* Correctness, completeness, relevance (LLM-as-judge)
+* Hallucination detection
+* Citation coverage
+* Unsupported claim detection
+* Abstention behavior
+
+### Running an Evaluation
 
 ```bash
 python -m experiments.run_eval \
@@ -164,143 +172,45 @@ python -m experiments.run_eval \
   --keep-k 4
 ```
 
-### Query Curation UI
+Each run produces:
 
-Interactive Streamlit tool for creating evaluation datasets:
+* aggregate metrics
+* per-query breakdowns
+* trace-level debugging artifacts
+* a ship / block verdict
+
+---
+
+## Query Curation & Dataset Ownership
+
+Evaluation datasets are treated as **first-class assets**.
+
+An interactive Streamlit UI supports:
+
+* browsing chunks in context
+* creating single- and multi-hop queries
+* selecting ground-truth chunks
+* annotating difficulty and failure modes
 
 ```bash
 pip install -e ".[ui]"
 streamlit run experiments/streamlit_query_curator.py
 ```
 
-Features:
-- Chunk browser with document tree navigation
-- Multi-chunk selection for synthesis queries
-- LLM-generated query suggestions
-- Full `EvalQuery` field editing
+This enables continuous evolution of eval datasets alongside the system.
 
 ---
 
-## Installation
+## Moving Beyond Personal Notes
 
-### Prerequisites
+While the system supports Obsidian vaults, it is intentionally designed to scale to **harder, adversarial corpora**, including:
 
-- Python >= 3.11
+* technical documentation + RFCs
+* regulatory or policy text
+* multi-repository codebases
+* time-sensitive or contradictory sources
 
-### Setup
-
-```bash
-# Create virtual environment
-python3.11 -m venv .venv
-source .venv/bin/activate
-
-# Install with OpenAI support
-pip install -e ".[openai]"
-
-# Or for local models
-pip install -e ".[ollama]"
-
-# For the Streamlit UI
-pip install -e ".[ui]"
-
-# For development
-pip install -e ".[dev]"
-```
-
-### API Keys
-
-Create a `.env` file:
-
-```bash
-OPENAI_API_KEY='sk-your-key-here'
-```
-
----
-
-## Usage
-
-### Building an Index
-
-```bash
-# With OpenAI embeddings
-python scripts/build_index.py \
-  --corpus ~/obsidian-vault \
-  --index-name my_index
-
-# With dummy embeddings (free, for testing)
-python scripts/build_index.py \
-  --corpus ~/obsidian-vault \
-  --index-name test_index \
-  --use-dummy-embeddings
-```
-
-### Querying
-
-```bash
-python scripts/ask.py \
-  --index my_index \
-  --q "What is the main concept?"
-```
-
-### Make Commands
-
-```bash
-make help          # Show available commands
-make index         # Build index with OpenAI embeddings
-make index-dummy   # Build index with dummy embeddings
-make ask QUERY="your question here"
-make tail-logs     # Inspect recent query logs
-make clean-index   # Remove index (dangerous)
-```
-
----
-
-## Configuration
-
-Configuration lives in `settings.toml`:
-
-```toml
-[paths]
-vault_dir = "~/obsidian-vault"
-artifacts_dir = "artifacts"
-
-[chunking]
-chunk_size = 800
-overlap = 120
-
-[embeddings]
-backend = "openai"  # or "dummy"
-model = "text-embedding-3-large"
-
-[retrieval]
-top_k = 8
-
-[rerank]
-enabled = true
-backend = "heuristic"
-keep_k = 4
-
-[llm]
-backend = "openai"
-model = "gpt-4o-mini"
-temperature = 0.2
-```
-
-CLI flags can override settings for one-off experiments.
-
----
-
-## Documentation
-
-Comprehensive documentation is available in the `docs/` directory:
-
-| Document | Description |
-|----------|-------------|
-| [User Guide](docs/USER_GUIDE.md) | Step-by-step usage instructions |
-| [Configuration](docs/CONFIGURATION.md) | Complete settings reference |
-| [Architecture](docs/ARCHITECTURE.md) | System design with diagrams |
-| [API Reference](docs/API_REFERENCE.md) | Domain models and ports |
-| [Adapters](docs/ADAPTERS.md) | Implementation details |
+These domains surface subtle retrieval failures that simpler corpora hide.
 
 ---
 
@@ -309,13 +219,9 @@ Comprehensive documentation is available in the `docs/` directory:
 ```python
 from rag.app.container import build_container
 from rag.app.query_runner import run_query
-from rag.settings import load_settings
 
-# Build container with settings
-settings = load_settings()
-container = build_container(cfg=settings)
+container = build_container()
 
-# Run a query
 result = run_query(
     "What is the main concept?",
     retriever=container.retriever,
@@ -329,46 +235,17 @@ result = run_query(
 )
 
 print(result.answer.text)
-print(f"Latency: {result.latency_ms}ms")
 ```
 
 ---
 
 ## Open Questions
 
-- How far reranking scales before cost dominates
-- When multi-hop or decomposed retrieval is actually worth it
-- How to balance determinism with model-driven ranking
-
----
-
-## Future Work
-
-### Near-term
-- Additional chunking strategies (semantic, header-aware)
-- LLM-based reranking implementations
-- Larger, more diverse evaluation datasets
-
-### Longer-term
-- Multi-hop retrieval
-- Query decomposition
-- Agent-style orchestration
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+* When retrieval improvements justify latency tradeoffs
+* How eval metrics fail under real user distributions
+* Where deterministic heuristics outperform learned rerankers
+* How to surface partial grounding failures earlier
+* When and how to blend semantic and keyword retrieval
 
 ---
 
