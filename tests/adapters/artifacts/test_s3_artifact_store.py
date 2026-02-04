@@ -48,7 +48,7 @@ class TestS3ArtifactStorePush:
         local_dir.mkdir()
         (local_dir / "chunks.jsonl").write_text("{}")
 
-        with pytest.raises(FileNotFoundError, match="manifest.json not found"):
+        with pytest.raises(FileNotFoundError, match=r"manifest\.json not found"):
             store.push(local_dir, "indexes/bad")
 
         mock_s3_client.upload_file.assert_not_called()
