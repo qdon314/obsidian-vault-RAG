@@ -20,6 +20,7 @@ class ClaimRole(StrEnum):
     CORE = "core"
     PERIPHERAL = "peripheral"
 
+
 # !--------  Update version when prompt changes! -----------!
 GOLD_JUDGE_VERSION = "gold_v2"
 GOLD_JUDGE_PROMPT = """You are an expert evaluator for a Retrieval-Augmented Generation (RAG) system.
@@ -243,9 +244,7 @@ class GroundednessJudgeResult(DataClassJsonMixin):
         raw_claims = data.get("claims")
         parsed_claims: list[AnswerClaim] | None = None
         if isinstance(raw_claims, list):
-            parsed_claims = [
-                _parse_answer_claim(c) for c in raw_claims if isinstance(c, dict)
-            ]
+            parsed_claims = [_parse_answer_claim(c) for c in raw_claims if isinstance(c, dict)]
 
         return cls(
             answerable_from_context=_to_bool(data.get("answerable_from_context")),
@@ -254,6 +253,7 @@ class GroundednessJudgeResult(DataClassJsonMixin):
             unsupported_claims=_to_int(data.get("unsupported_claims")),
             claims=parsed_claims,
         )
+
 
 def make_gold_prompt(
     *,
@@ -273,12 +273,14 @@ def make_gold_prompt(
         requires_synthesis=requires_synthesis,
     )
 
+
 def make_groundedness_prompt(*, query: str, context_chunks: str, generated_answer: str) -> str:
     return GROUNDEDNESS_JUDGE_PROMPT.format(
         query=query,
         context_chunks=context_chunks,
         generated_answer=generated_answer,
     )
+
 
 def _safe_json_loads(text: str) -> dict[str, Any] | None:
     """

@@ -66,49 +66,33 @@ class FilterService:
 
         if query_types:
             filtered = [
-                r for r in filtered
-                if r.query_type is not None and r.query_type in query_types
+                r for r in filtered if r.query_type is not None and r.query_type in query_types
             ]
 
         if difficulties:
             filtered = [
-                r for r in filtered
-                if r.difficulty is not None and r.difficulty in difficulties
+                r for r in filtered if r.difficulty is not None and r.difficulty in difficulties
             ]
 
         if pass_only:
-            filtered = [
-                r for r in filtered
-                if _compute_recall_at_k(r) >= self.pass_threshold
-            ]
+            filtered = [r for r in filtered if _compute_recall_at_k(r) >= self.pass_threshold]
 
         if fail_only:
-            filtered = [
-                r for r in filtered
-                if _compute_recall_at_k(r) < self.pass_threshold
-            ]
+            filtered = [r for r in filtered if _compute_recall_at_k(r) < self.pass_threshold]
 
         if has_answer is not None:
-            filtered = [
-                r for r in filtered
-                if (r.answer is not None) == has_answer
-            ]
+            filtered = [r for r in filtered if (r.answer is not None) == has_answer]
 
         if min_recall is not None:
-            filtered = [
-                r for r in filtered
-                if _compute_recall_at_k(r) >= min_recall
-            ]
+            filtered = [r for r in filtered if _compute_recall_at_k(r) >= min_recall]
 
         if max_recall is not None:
-            filtered = [
-                r for r in filtered
-                if _compute_recall_at_k(r) <= max_recall
-            ]
+            filtered = [r for r in filtered if _compute_recall_at_k(r) <= max_recall]
 
         if min_quality is not None:
             filtered = [
-                r for r in filtered
+                r
+                for r in filtered
                 if (
                     r.answer_metrics is not None
                     and r.answer_metrics.quality_score is not None
@@ -118,10 +102,7 @@ class FilterService:
 
         if query_search:
             search_lower = query_search.lower()
-            filtered = [
-                r for r in filtered
-                if search_lower in r.query.lower()
-            ]
+            filtered = [r for r in filtered if search_lower in r.query.lower()]
 
         return filtered
 

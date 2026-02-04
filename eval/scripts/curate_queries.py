@@ -74,7 +74,7 @@ def create_template_file(output_path: Path, num_examples: int = 10) -> None:
     for i in range(num_examples):
         config = template_configs[i % len(template_configs)]
         query = EvalQuery(
-            qid=f"manual_{i+1:03d}",
+            qid=f"manual_{i + 1:03d}",
             query=config["query"],
             relevant_chunk_ids={"EDIT: doc_id:chunking_strategy:chunk_idx:start-end"},
             expected_answer="EDIT: Write the expected answer here (optional but recommended)",
@@ -90,7 +90,11 @@ def create_template_file(output_path: Path, num_examples: int = 10) -> None:
 
         if query.is_unanswerable:
             query = EvalQuery(
-                **{**query.to_dict(), "relevant_chunk_ids": set(), "unanswerable_reason": "not_in_corpus"}
+                **{
+                    **query.to_dict(),
+                    "relevant_chunk_ids": set(),
+                    "unanswerable_reason": "not_in_corpus",
+                }
             )
 
         templates.append(query)
@@ -106,7 +110,9 @@ def create_template_file(output_path: Path, num_examples: int = 10) -> None:
         f.write("# 2. Update relevant_chunk_ids with actual chunk IDs from your index\n")
         f.write("# 3. Add expected_answer if you want to evaluate answer quality\n")
         f.write("# 4. Adjust query_type, difficulty, and other metadata\n")
-        f.write("# 5. For negative examples, set is_unanswerable: true and clear relevant_chunk_ids\n")
+        f.write(
+            "# 5. For negative examples, set is_unanswerable: true and clear relevant_chunk_ids\n"
+        )
         f.write("#\n")
         f.write("# To find chunk IDs, you can:\n")
         f.write("# - Look at artifacts/data/chunks_with_embeddings.jsonl\n")
@@ -117,7 +123,9 @@ def create_template_file(output_path: Path, num_examples: int = 10) -> None:
             f.write(json.dumps(query.to_dict(), indent=2) + "\n")
 
     logger.info(f"Created template with {len(templates)} examples at {output_path}")
-    logger.info(f"Edit the file and run: python experiments/curate_queries.py --validate {output_path}")
+    logger.info(
+        f"Edit the file and run: python experiments/curate_queries.py --validate {output_path}"
+    )
 
 
 def validate_queries(input_path: Path) -> list[EvalQuery]:
@@ -150,11 +158,15 @@ def validate_queries(input_path: Path) -> list[EvalQuery]:
                     continue
 
                 if not query.is_unanswerable and not query.relevant_chunk_ids:
-                    errors.append(f"Line {line_num}: Answerable query has no relevant chunks: {query.qid}")
+                    errors.append(
+                        f"Line {line_num}: Answerable query has no relevant chunks: {query.qid}"
+                    )
                     continue
 
                 if query.is_unanswerable and query.relevant_chunk_ids:
-                    errors.append(f"Line {line_num}: Unanswerable query has relevant chunks: {query.qid}")
+                    errors.append(
+                        f"Line {line_num}: Unanswerable query has relevant chunks: {query.qid}"
+                    )
                     continue
 
                 # Check for placeholder chunk IDs

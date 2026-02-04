@@ -16,6 +16,7 @@ class SimpleContextBuilder:
       - pack chunks into a token budget
       - produce citations for provenance
     """
+
     min_score: float | None = None
     max_chunks: int = 12
     dedupe: bool = True
@@ -56,12 +57,14 @@ class SimpleContextBuilder:
                     continue
                 seen.add(sig)
 
-            label = f"[{len(chosen)+1}]"
+            label = f"[{len(chosen) + 1}]"
             if self.include_scores:
                 label += f" score={score:.4f}"
             label += "\n"
 
-            chunk_tokens = _estimate_tokens(label) + _estimate_tokens(chunk.text) + _estimate_tokens("\n\n")
+            chunk_tokens = (
+                _estimate_tokens(label) + _estimate_tokens(chunk.text) + _estimate_tokens("\n\n")
+            )
             if tokens_used + chunk_tokens > token_budget:
                 break
 
@@ -87,7 +90,9 @@ class SimpleContextBuilder:
             if len(chosen) >= self.max_chunks:
                 break
 
-        rendered = self._render_context(chosen, ordered_scores=ordered[: len(chosen)] if self.include_scores else None)
+        rendered = self._render_context(
+            chosen, ordered_scores=ordered[: len(chosen)] if self.include_scores else None
+        )
 
         return ContextPack(
             query=query,
@@ -98,9 +103,13 @@ class SimpleContextBuilder:
             metadata={**(dict(metadata) if metadata else {}), "tokens_used_est": tokens_used},
         )
 
-    def _render_context(self, chunks: Sequence[Chunk], ordered_scores: Sequence[Candidate] | None = None) -> str:
+    def _render_context(
+        self, chunks: Sequence[Chunk], ordered_scores: Sequence[Candidate] | None = None
+    ) -> str:
         lines: list[str] = []
-        lines.append("You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.\n")
+        lines.append(
+            "You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.\n"
+        )
         lines.append("If the answer is not supported by the CONTEXT, say you don't know.\n")
         lines.append("CONTEXT:\n")
 

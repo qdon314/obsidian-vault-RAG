@@ -11,5 +11,6 @@ class Ingestor(Protocol):
     Converts raw inputs (paths, URLs, etc.) into Documents.
     """
 
-    def ingest(self, inputs: Sequence[str], *, metadata: Mapping[str, object] | None = None) -> tuple[list[Document], IngestReport]:
-        ...
+    def ingest(
+        self, inputs: Sequence[str], *, metadata: Mapping[str, object] | None = None
+    ) -> tuple[list[Document], IngestReport]: ...

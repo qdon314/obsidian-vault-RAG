@@ -41,10 +41,7 @@ def render_query_explorer(
 
     with col1:
         # Query type filter
-        available_types = sorted({
-            r.query_type.value for r in results
-            if r.query_type is not None
-        })
+        available_types = sorted({r.query_type.value for r in results if r.query_type is not None})
         selected_types = st.multiselect(
             "Query Type",
             options=available_types,
@@ -54,10 +51,7 @@ def render_query_explorer(
 
     with col2:
         # Difficulty filter
-        available_diffs = sorted({
-            r.difficulty.value for r in results
-            if r.difficulty is not None
-        })
+        available_diffs = sorted({r.difficulty.value for r in results if r.difficulty is not None})
         selected_diffs = st.multiselect(
             "Difficulty",
             options=available_diffs,
@@ -82,14 +76,8 @@ def render_query_explorer(
         )
 
     # Apply filters
-    query_types = (
-        {QueryType(t) for t in selected_types}
-        if selected_types else None
-    )
-    difficulties = (
-        {Difficulty(d) for d in selected_diffs}
-        if selected_diffs else None
-    )
+    query_types = {QueryType(t) for t in selected_types} if selected_types else None
+    difficulties = {Difficulty(d) for d in selected_diffs} if selected_diffs else None
     pass_only = "Pass" in pass_fail
     fail_only = "Fail" in pass_fail
 
@@ -141,7 +129,7 @@ def render_query_explorer(
         options=qid_options,
         format_func=lambda qid: next(
             (f"{qid}: {r.query[:50]}..." for r in filtered if r.qid == qid),
-            f"{qid}: (query not found)"
+            f"{qid}: (query not found)",
         ),
         key="explorer_selected_query",
     )
@@ -234,7 +222,11 @@ def _render_query_detail(
                 for i, cit in enumerate(result.answer.citations, 1):
                     st.markdown(f"**[{i}]** `{cit.chunk_id}`")
                     if cit.quote:
-                        st.caption(f'"{cit.quote[:200]}..."' if len(cit.quote or "") > 200 else f'"{cit.quote}"')
+                        st.caption(
+                            f'"{cit.quote[:200]}..."'
+                            if len(cit.quote or "") > 200
+                            else f'"{cit.quote}"'
+                        )
 
     # Answer metrics (if available)
     if result.answer_metrics:
@@ -257,7 +249,10 @@ def _render_query_detail(
 
         with col3:
             if result.answer_metrics.hallucination_severity is not None:
-                st.metric("Hallucination Severity (0-5)", f"{result.answer_metrics.hallucination_severity:.1f}")
+                st.metric(
+                    "Hallucination Severity (0-5)",
+                    f"{result.answer_metrics.hallucination_severity:.1f}",
+                )
             if result.answer_metrics.semantic_similarity is not None:
                 st.metric("Semantic Similarity", f"{result.answer_metrics.semantic_similarity:.2f}")
         with col4:
@@ -289,7 +284,9 @@ def _render_query_detail(
             icon = "✓" if claim.supported else "✗"
             status_color = "green" if claim.supported else "red"
             role_badge = "🔑" if claim.role == "core" else "📎"
-            header = f"{icon} {role_badge} {claim.claim[:80]}{'...' if len(claim.claim) > 80 else ''}"
+            header = (
+                f"{icon} {role_badge} {claim.claim[:80]}{'...' if len(claim.claim) > 80 else ''}"
+            )
 
             with st.expander(header, expanded=not claim.supported):
                 col1, col2 = st.columns(2)

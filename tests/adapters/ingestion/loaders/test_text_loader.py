@@ -160,7 +160,7 @@ class TestTextLoaderEncodingFallback:
     def test_custom_fallback_encoding(self, tmp_path: Path):
         loader = TextLoader(prefer_encoding="utf-8", fallback_encoding="cp1252")
         file = tmp_path / "windows.txt"
-        
+
         # \u201c is the Unicode "Left Double Quote" that corresponds to cp1252's \x93
         file.write_bytes("Smart quotes: \u201chello\u201d".encode("cp1252"))
 
@@ -170,5 +170,5 @@ class TestTextLoaderEncodingFallback:
         # If this fails, pytest only prints the message, not the character that crashes the terminal.
         if content and "\u201c" not in content:
             pytest.fail("The smart quote was not correctly decoded into Unicode.")
-            
+
         assert content is not None

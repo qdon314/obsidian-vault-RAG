@@ -58,25 +58,29 @@ def render_delta_table(comparison: RunComparison) -> None:
     if comparison.quality_delta is not None:
         qa_a = comparison.run_a.aggregates.answer_quality or {}
         qa_b = comparison.run_b.aggregates.answer_quality or {}
-        data.append(_build_row(
-            "Quality Score",
-            qa_a.get("avg_quality_score", 0),
-            qa_b.get("avg_quality_score", 0),
-            comparison.quality_delta,
-        ))
+        data.append(
+            _build_row(
+                "Quality Score",
+                qa_a.get("avg_quality_score", 0),
+                qa_b.get("avg_quality_score", 0),
+                comparison.quality_delta,
+            )
+        )
 
     # Latency delta (note: lower is better for latency)
     if comparison.latency_delta is not None:
         lat_a = comparison.run_a.aggregates.latency_ms or {}
         lat_b = comparison.run_b.aggregates.latency_ms or {}
-        data.append(_build_row(
-            "Avg Latency (ms)",
-            lat_a.get("avg", 0),
-            lat_b.get("avg", 0),
-            comparison.latency_delta,
-            lower_is_better=True,
-            format_ms=True,
-        ))
+        data.append(
+            _build_row(
+                "Avg Latency (ms)",
+                lat_a.get("avg", 0),
+                lat_b.get("avg", 0),
+                comparison.latency_delta,
+                lower_is_better=True,
+                format_ms=True,
+            )
+        )
 
     df = pd.DataFrame(data)
     st.dataframe(df, use_container_width=True, hide_index=True)

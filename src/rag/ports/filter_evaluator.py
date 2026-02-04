@@ -7,5 +7,4 @@ from rag.domain.filters import Where
 
 
 class FilterEvaluator(Protocol):
-    def matches(self, where: Where, metadata: Mapping[str, object]) -> bool:
-        ...
+    def matches(self, where: Where, metadata: Mapping[str, object]) -> bool: ...

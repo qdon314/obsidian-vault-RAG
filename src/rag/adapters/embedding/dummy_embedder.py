@@ -13,6 +13,7 @@ class DummyEmbedder:
     Deterministic fake embeddings for wiring tests.
     Not semantically meaningful, but stable across runs.
     """
+
     dim: int = 128
     model: str = "dummy-embedder-v1"
 
@@ -34,7 +35,7 @@ class DummyEmbedder:
             i = 0
             while len(vector) < self.dim:
                 block = text_hash[i % len(text_hash)]
-                vector.append((block / 127.5) - 1.0) # map byte to [-1,1]
+                vector.append((block / 127.5) - 1.0)  # map byte to [-1,1]
                 i += 1
             out.append(vector)
         return out

@@ -152,6 +152,7 @@ def _safe_enum(enum_cls: Any, value: Any, default: Any):
 @dataclass(frozen=True, slots=True)
 class QueryPack:
     """A context pack used to generate multiple queries (possibly multi-chunk)."""
+
     chunk_ids: tuple[str, ...]
     context: str
 
@@ -263,7 +264,9 @@ def build_query_packs(
         if seed_chunk is None:
             continue
 
-        same_doc = [c for c in by_doc.get(seed_chunk.doc_id, []) if c.chunk_id != seed_chunk.chunk_id]
+        same_doc = [
+            c for c in by_doc.get(seed_chunk.doc_id, []) if c.chunk_id != seed_chunk.chunk_id
+        ]
         rng.shuffle(same_doc)
 
         selected: list[Chunk] = [seed_chunk]
@@ -277,7 +280,9 @@ def build_query_packs(
 
         # If still short, add other-doc chunks
         if len(selected) < chunks_per_pack:
-            others = [c for c in chunks if c.doc_id != seed_chunk.doc_id and 200 <= len(c.text) <= 2000]
+            others = [
+                c for c in chunks if c.doc_id != seed_chunk.doc_id and 200 <= len(c.text) <= 2000
+            ]
             rng.shuffle(others)
             for c in others:
                 if len(selected) >= chunks_per_pack:
@@ -378,6 +383,7 @@ def _dedupe_keep_order(items: list[EvalQuery]) -> list[EvalQuery]:
 # Dataset generation
 # ----------------------------
 
+
 def generate_eval_dataset(
     *,
     chunks: list[Chunk],
@@ -396,12 +402,20 @@ def generate_eval_dataset(
     num_positive = max(0, num_queries - num_negative)
 
     # How many packs we need to request from the LLM
-    pos_packs = max(1, (num_positive + queries_per_pack - 1) // queries_per_pack) if num_positive else 0
-    neg_packs = max(1, (num_negative + queries_per_pack - 1) // queries_per_pack) if num_negative else 0
+    pos_packs = (
+        max(1, (num_positive + queries_per_pack - 1) // queries_per_pack) if num_positive else 0
+    )
+    neg_packs = (
+        max(1, (num_negative + queries_per_pack - 1) // queries_per_pack) if num_negative else 0
+    )
 
     # Build context packs
-    logger.info("Building %d positive context packs (multi_chunk_ratio=%.2f, chunks_per_pack=%d)",
-                pos_packs, multi_chunk_ratio, chunks_per_pack)
+    logger.info(
+        "Building %d positive context packs (multi_chunk_ratio=%.2f, chunks_per_pack=%d)",
+        pos_packs,
+        multi_chunk_ratio,
+        chunks_per_pack,
+    )
     positive_packs = build_query_packs(
         chunks,
         pos_packs,
@@ -411,13 +425,17 @@ def generate_eval_dataset(
     )
 
     logger.info("Building %d negative context packs", neg_packs)
-    negative_packs = build_query_packs(
-        chunks,
-        neg_packs,
-        multi_chunk_ratio=multi_chunk_ratio,
-        chunks_per_pack=chunks_per_pack,
-        rng=rng,
-    ) if num_negative else []
+    negative_packs = (
+        build_query_packs(
+            chunks,
+            neg_packs,
+            multi_chunk_ratio=multi_chunk_ratio,
+            chunks_per_pack=chunks_per_pack,
+            rng=rng,
+        )
+        if num_negative
+        else []
+    )
 
     out: list[EvalQuery] = []
     qid_counter = 1
@@ -472,7 +490,9 @@ def generate_eval_dataset(
     neg_out: list[EvalQuery] = []
     if num_negative:
         for pack in negative_packs:
-            logger.info("Generating %d unanswerable items for pack=%s", queries_per_pack, pack.chunk_ids)
+            logger.info(
+                "Generating %d unanswerable items for pack=%s", queries_per_pack, pack.chunk_ids
+            )
             items = generate_items_for_pack(
                 pack=pack,
                 client=client,
@@ -487,7 +507,10 @@ def generate_eval_dataset(
                 if not _is_good_query(query_text):
                     continue
 
-                reason = _compact(str(it.get("unanswerable_reason", "not_in_context"))) or "not_in_context"
+                reason = (
+                    _compact(str(it.get("unanswerable_reason", "not_in_context")))
+                    or "not_in_context"
+                )
                 notes = it.get("notes")
 
                 neg_out.append(
@@ -524,9 +547,12 @@ def generate_eval_dataset(
 # CLI
 # ----------------------------
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate synthetic evaluation queries")
-    parser.add_argument("--num-queries", type=int, default=50, help="Total number of queries to generate")
+    parser.add_argument(
+        "--num-queries", type=int, default=50, help="Total number of queries to generate"
+    )
     parser.add_argument(
         "--store-path",
         type=Path,
@@ -539,8 +565,12 @@ def main() -> None:
         default=Path("eval/datasets/generated_queries.jsonl"),
         help="Output path for generated queries JSONL",
     )
-    parser.add_argument("--queries-per-pack", type=int, default=3, help="Queries generated per context pack")
-    parser.add_argument("--negative-ratio", type=float, default=0.10, help="Fraction unanswerable (0.0-1.0)")
+    parser.add_argument(
+        "--queries-per-pack", type=int, default=3, help="Queries generated per context pack"
+    )
+    parser.add_argument(
+        "--negative-ratio", type=float, default=0.10, help="Fraction unanswerable (0.0-1.0)"
+    )
     parser.add_argument(
         "--multi-chunk-ratio",
         type=float,
@@ -554,7 +584,9 @@ def main() -> None:
         help="Number of chunks in a multi-chunk pack (>=2 recommended)",
     )
     load_dotenv()
-    parser.add_argument("--model", type=str, default="gpt-4o-mini", help="OpenAI model for generation")
+    parser.add_argument(
+        "--model", type=str, default="gpt-4o-mini", help="OpenAI model for generation"
+    )
     parser.add_argument("--seed", type=int, default=42, help="Seed for reproducibility")
 
     args = parser.parse_args()
@@ -574,8 +606,12 @@ def main() -> None:
 
     client = OpenAI(api_key=api_key)
 
-    logger.info("Generating %d queries (negative_ratio=%.2f, multi_chunk_ratio=%.2f)",
-                args.num_queries, args.negative_ratio, args.multi_chunk_ratio)
+    logger.info(
+        "Generating %d queries (negative_ratio=%.2f, multi_chunk_ratio=%.2f)",
+        args.num_queries,
+        args.negative_ratio,
+        args.multi_chunk_ratio,
+    )
 
     eval_queries = generate_eval_dataset(
         chunks=chunks,

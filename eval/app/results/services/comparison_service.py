@@ -44,15 +44,9 @@ class ComparisonService:
         agg_b = run_b.aggregates.overall
 
         # Compute retrieval metric deltas
-        recall_delta = self._compute_metric_delta(
-            agg_a.recall_at_k, agg_b.recall_at_k
-        )
-        precision_delta = self._compute_metric_delta(
-            agg_a.precision_at_k, agg_b.precision_at_k
-        )
-        ndcg_delta = self._compute_metric_delta(
-            agg_a.ndcg_at_k, agg_b.ndcg_at_k
-        )
+        recall_delta = self._compute_metric_delta(agg_a.recall_at_k, agg_b.recall_at_k)
+        precision_delta = self._compute_metric_delta(agg_a.precision_at_k, agg_b.precision_at_k)
+        ndcg_delta = self._compute_metric_delta(agg_a.ndcg_at_k, agg_b.ndcg_at_k)
 
         # Global metrics
         mrr_delta = agg_b.mrr - agg_a.mrr
@@ -92,9 +86,7 @@ class ComparisonService:
             unchanged_queries=tuple(unchanged),
         )
 
-    def _compute_metric_delta(
-        self, a: dict[int, float], b: dict[int, float]
-    ) -> dict[int, float]:
+    def _compute_metric_delta(self, a: dict[int, float], b: dict[int, float]) -> dict[int, float]:
         """Compute b - a for each k value."""
         all_keys = set(a.keys()) | set(b.keys())
         return {k: b.get(k, 0.0) - a.get(k, 0.0) for k in all_keys}

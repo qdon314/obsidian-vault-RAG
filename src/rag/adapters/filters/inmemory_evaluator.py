@@ -11,6 +11,7 @@ class InMemoryFilterEvaluator:
             return True
         return _matches(where, metadata)
 
+
 def _matches(node: Filter, meta: Mapping[str, object]) -> bool:
     if isinstance(node, Eq):
         return meta.get(node.field) == node.value
@@ -30,9 +31,12 @@ def _matches(node: Filter, meta: Mapping[str, object]) -> bool:
         v = meta.get(node.field)
         if v is None:
             return False
-        if node.gte is not None and not (v >= node.gte): return False  # noqa: E701
-        if node.lte is not None and not (v <= node.lte): return False  # noqa: E701
-        if node.gt  is not None and not (v >  node.gt ): return False  # noqa: E701
+        if node.gte is not None and not (v >= node.gte):
+            return False  # noqa: E701
+        if node.lte is not None and not (v <= node.lte):
+            return False  # noqa: E701
+        if node.gt is not None and not (v > node.gt):
+            return False  # noqa: E701
         return not (node.lt is not None and not v < node.lt)
 
     if isinstance(node, And):

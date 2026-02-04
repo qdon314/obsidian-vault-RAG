@@ -9,14 +9,18 @@ from dataclasses_json import DataClassJsonMixin
 
 _WORD_RE = re.compile(r"\b\w+\b", re.UNICODE)
 
+
 def _word_count(text: str) -> int:
     return len(_WORD_RE.findall(text))
+
 
 def _clamp01(x: float) -> float:
     return 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
 
+
 def _norm_0_5(x: float) -> float:
     return _clamp01(x / 5.0)
+
 
 def _severity_to_goodness(x: float) -> float:
     # hallucination_severity: 0..5 higher worse
@@ -27,9 +31,9 @@ def _severity_to_goodness(x: float) -> float:
 class AnswerQualityMetrics(DataClassJsonMixin):
     semantic_similarity: float | None = None  # 0..1 if present
 
-    correctness: float | None = None          # 0..5 higher better
-    completeness: float | None = None         # 0..5 higher better
-    relevance: float | None = None            # 0..5 higher better
+    correctness: float | None = None  # 0..5 higher better
+    completeness: float | None = None  # 0..5 higher better
+    relevance: float | None = None  # 0..5 higher better
     hallucination_severity: float | None = None  # 0..5 higher worse
 
     is_correct: bool | None = None

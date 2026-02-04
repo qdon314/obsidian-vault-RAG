@@ -129,6 +129,7 @@ class Settings:
 # Loader
 # ----------------------------
 
+
 def load_settings(path: str | Path = "settings.toml", require_openai: bool = True) -> Settings:
     path = Path(path)
     if not path.exists():
@@ -210,7 +211,7 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
     # Embeddings
     cache_db_path_raw = emb_tbl.get("cache_db_path", None)
     embeddings = Embeddings(
-        backend=str(emb_tbl.get("backend", emb_tbl.get("provider", "openai"))), # type: ignore
+        backend=str(emb_tbl.get("backend", emb_tbl.get("provider", "openai"))),  # type: ignore
         model=str(emb_tbl.get("model", "text-embedding-3-large")),
         dummy_dim=int(emb_tbl.get("dummy_dim", 128)),
         cache_embeddings=bool(emb_tbl.get("cache_embeddings", True)),
@@ -232,7 +233,7 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
 
     # LLM
     llm = LLM(
-        backend=str(llm_tbl.get("backend", llm_tbl.get("provider", "openai"))), # type: ignore
+        backend=str(llm_tbl.get("backend", llm_tbl.get("provider", "openai"))),  # type: ignore
         model=str(llm_tbl.get("model", "gpt-4.1-mini")),
         temperature=float(llm_tbl.get("temperature", 0.2)),
         max_tokens=int(llm_tbl.get("max_tokens", 1024)),

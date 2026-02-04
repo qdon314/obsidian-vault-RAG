@@ -16,10 +16,11 @@ class FixedChunker:
       - split doc.text into chunks of size `chunk_size`
       - optional overlap in chars
     """
+
     chunk_size: int = 1200
     overlap: int = 150
     strategy_name: str = "fixed_chars_v1"
-    
+
     def chunk(self, doc: Document, *, metadata: Mapping[str, object] | None = None) -> list[Chunk]:
         text = doc.text or ""
         if not text.strip():

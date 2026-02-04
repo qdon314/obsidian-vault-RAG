@@ -8,6 +8,7 @@ from rag.domain.models import Candidate
 
 Vector = list[float]
 
+
 class Retriever(Protocol):
     """
     Retrieves candidate chunks for a query string.
@@ -20,5 +21,4 @@ class Retriever(Protocol):
         top_k: int,
         where: Where = None,
         metadata: Mapping[str, object] | None = None,
-    ) -> list[Candidate]:
-        ...
+    ) -> list[Candidate]: ...

@@ -16,13 +16,32 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--artifacts-dir", default="artifacts", help="Artifacts root directory")
     ap.add_argument("--q", required=True, help="Query text")
 
-    ap.add_argument("--top-k", type=int, default=None, help="Override retrieval top_k (default: from settings)")
-    ap.add_argument("--token-budget", type=int, default=None, help="Override token budget (default: pipeline default)")
+    ap.add_argument(
+        "--top-k", type=int, default=None, help="Override retrieval top_k (default: from settings)"
+    )
+    ap.add_argument(
+        "--token-budget",
+        type=int,
+        default=None,
+        help="Override token budget (default: pipeline default)",
+    )
 
-    ap.add_argument("--use-dummy-embeddings", action="store_true", help="Use DummyEmbedder instead of OpenAI")
-    ap.add_argument("--embed-dim", type=int, default=128, help="Dummy embed dim (only used with --use-dummy-embeddings)")
+    ap.add_argument(
+        "--use-dummy-embeddings", action="store_true", help="Use DummyEmbedder instead of OpenAI"
+    )
+    ap.add_argument(
+        "--embed-dim",
+        type=int,
+        default=128,
+        help="Dummy embed dim (only used with --use-dummy-embeddings)",
+    )
 
-    ap.add_argument("--cache-embeddings", action="store_true", default=True, help="Cache embeddings in SQLite (default: true)")
+    ap.add_argument(
+        "--cache-embeddings",
+        action="store_true",
+        default=True,
+        help="Cache embeddings in SQLite (default: true)",
+    )
     ap.add_argument("--no-cache-embeddings", dest="cache_embeddings", action="store_false")
 
     return ap

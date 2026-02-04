@@ -28,6 +28,7 @@ Examples:
     python -m eval.scripts.run_eval --queries eval/datasets/generated_queries.jsonl \\
         --top-k 20 --keep-k 5 --token-budget 2000
 """
+
 from __future__ import annotations
 
 import argparse
@@ -51,7 +52,9 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run RAG evaluation")
-    parser.add_argument("--queries", type=Path, default=Path("eval/datasets/generated_queries.jsonl"))
+    parser.add_argument(
+        "--queries", type=Path, default=Path("eval/datasets/generated_queries.jsonl")
+    )
     parser.add_argument("--index", type=Path, default=Path("artifacts/indexes/obsidian"))
     parser.add_argument("--output", type=Path, default=Path("eval/runs"))
     parser.add_argument("--run-name", type=str, default=None)
@@ -95,7 +98,7 @@ def main() -> None:
         jsonl_index_dir=Path("artifacts/indexes/obsidian"),
         logs_directory=Path(run_dir),
     )
-    
+
     # Build container (your app wiring)
     logger.info("Building container")
     container = build_container(overrides=overrides)

@@ -77,7 +77,9 @@ def run_query(
 
     # Context build - pass reranked candidates (already ordered by reranker)
     t1 = time.perf_counter()
-    context = context_builder.build(query, candidates=reranked_candidates, token_budget=token_budget, metadata=metadata)
+    context = context_builder.build(
+        query, candidates=reranked_candidates, token_budget=token_budget, metadata=metadata
+    )
     t_context_ms = int((time.perf_counter() - t1) * 1000)
 
     # Generation
@@ -86,13 +88,12 @@ def run_query(
     t_gen_ms = int((time.perf_counter() - t2) * 1000)
 
     total_ms = int((time.perf_counter() - started) * 1000)
-    
+
     retrieved_ids = tuple(c.chunk.chunk_id for c in retrieved_candidates)
     reranked_ids = tuple(c.chunk.chunk_id for c in reranked_candidates)
 
     packed_ids = tuple(
-        getattr(c, "chunk_id", None) or c.chunk.chunk_id
-        for c in getattr(context, "chunks", [])
+        getattr(c, "chunk_id", None) or c.chunk.chunk_id for c in getattr(context, "chunks", [])
     )
 
     # Fill trace (immutably)
@@ -119,7 +120,7 @@ def run_query(
     )
 
     logger.log(trace)
-    
+
     return QueryRunResult(
         trace_id=trace_id,
         answer=answer,
@@ -127,5 +128,5 @@ def run_query(
         retrieved_chunk_ids=retrieved_ids,
         reranked_chunk_ids=reranked_ids,
         packed_chunk_ids=packed_ids,
-        latency_ms=total_ms
+        latency_ms=total_ms,
     )

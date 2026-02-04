@@ -23,6 +23,7 @@ class RunSummary:
     This contains just enough information to display runs in a selector
     without loading the full results.
     """
+
     run_id: str
     timestamp: datetime
     display_name: str
@@ -48,6 +49,7 @@ class QueryTrace:
 
     Contains detailed pipeline execution information for a single query.
     """
+
     trace_id: str
     query: str
     created_at: datetime | None
@@ -84,6 +86,7 @@ class LoadedRun:
     Contains the complete EvalRun object from the harness plus
     computed summary for quick access.
     """
+
     summary: RunSummary
     meta: EvalRunMeta
     aggregates: EvalAggregates
@@ -97,17 +100,11 @@ class LoadedRun:
 
     def get_results_by_type(self, query_type: str) -> list[EvalResult]:
         """Filter results by query type."""
-        return [
-            r for r in self.results
-            if r.query_type and r.query_type.value == query_type
-        ]
+        return [r for r in self.results if r.query_type and r.query_type.value == query_type]
 
     def get_results_by_difficulty(self, difficulty: str) -> list[EvalResult]:
         """Filter results by difficulty level."""
-        return [
-            r for r in self.results
-            if r.difficulty and r.difficulty.value == difficulty
-        ]
+        return [r for r in self.results if r.difficulty and r.difficulty.value == difficulty]
 
     def get_passing_results(self, threshold: float = 0.5) -> list[EvalResult]:
         """Filter results where recall@10 >= threshold."""
@@ -143,6 +140,7 @@ class RunComparison:
 
     Contains metric deltas and lists of improved/regressed queries.
     """
+
     run_a: LoadedRun
     run_b: LoadedRun
 
@@ -169,6 +167,7 @@ class TrendAnalysis:
 
     Contains time series data for key metrics across multiple runs.
     """
+
     runs: tuple[LoadedRun, ...]  # Sorted by timestamp
 
     # Time series data (indexed same as runs)
@@ -196,6 +195,5 @@ class TrendAnalysis:
     def date_range(self) -> tuple[datetime, datetime] | None:
         """Start and end timestamps of the analysis."""
         if not self.timestamps:
-            
             return None
         return (self.timestamps[0], self.timestamps[-1])

@@ -20,5 +20,4 @@ class Reranker(Protocol):
         candidates: list[Candidate],
         *,
         metadata: Mapping[str, object] | None = None,
-    ) -> list[Candidate]:
-        ...
+    ) -> list[Candidate]: ...

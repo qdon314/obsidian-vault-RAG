@@ -21,5 +21,4 @@ class ContextBuilder(Protocol):
         *,
         token_budget: int,
         metadata: Mapping[str, object] | None = None,
-    ) -> ContextPack:
-        ...
+    ) -> ContextPack: ...

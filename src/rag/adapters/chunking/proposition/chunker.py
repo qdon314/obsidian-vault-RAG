@@ -254,7 +254,9 @@ class ObsidianPropositionChunker:
                     continue
 
                 lang = _extract_code_language(b.text)
-                text = (preamble + b.text).strip() if self.include_heading_preamble else b.text.strip()
+                text = (
+                    (preamble + b.text).strip() if self.include_heading_preamble else b.text.strip()
+                )
 
                 chunk_id = _stable_hash(
                     [

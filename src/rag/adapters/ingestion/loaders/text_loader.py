@@ -28,6 +28,7 @@ class TextLoader:
     - Tries utf-8 first, falls back to latin-1 if needed.
     - Skips files larger than max_bytes (best-effort guardrail).
     """
+
     max_bytes: int = 2_000_000  # 2MB
     prefer_encoding: str = "utf-8"
     fallback_encoding: str = "latin-1"

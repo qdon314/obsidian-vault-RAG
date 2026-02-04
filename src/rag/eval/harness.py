@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ----------------------------
 
+
 def format_context_chunks(chunks: Sequence[Chunk], max_chars_per_chunk: int = 1200) -> str:
     lines: list[str] = []
     for ch in chunks:
@@ -82,6 +83,7 @@ def run_retrieval_eval(
         retrieved_chunk_ids=tuple(retrieved_ids),
         relevant_chunk_ids=query.relevant_chunk_ids,
     )
+
 
 def evaluate_answer_quality(
     *,
@@ -137,9 +139,13 @@ def evaluate_answer_quality(
                 model=judge_model,
                 prompt=gold_prompt,
             )
-            hallucination_severity = reducers.hallucination_severity(
-                groundedness=gr,
-            ) if gr else None
+            hallucination_severity = (
+                reducers.hallucination_severity(
+                    groundedness=gr,
+                )
+                if gr
+                else None
+            )
             correctness = gold.correctness
             completeness = gold.completeness
             relevance = gold.relevance
@@ -163,6 +169,7 @@ def evaluate_answer_quality(
 # ----------------------------
 # Main eval
 # ----------------------------
+
 
 def run_full_eval(
     *,
@@ -254,7 +261,7 @@ def run_full_eval(
             embedder=getattr(container, "embedder", None),
             use_llm_judge=use_llm_judge,
         )
-        
+
         outcome_label = reducers.outcome_label(
             gold=gold_result,
             groundedness=groundedness_result,
@@ -331,11 +338,9 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
     }
 
     aq: dict[str, float] | None = None
-    judged = [
-        r for r in results
-        if r.answer is not None and r.answer_metrics is not None
-    ]
+    judged = [r for r in results if r.answer is not None and r.answer_metrics is not None]
     if judged:
+
         def vals(attr: str) -> list[float]:
             out: list[float] = []
             for r in judged:
@@ -371,8 +376,14 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
             "avg_citation_coverage": float(np.mean(coverage)) if coverage else 0.0,
             "avg_correctness_0_5": float(np.mean(correctness)) if correctness else 0.0,
             "avg_hallucination_severity_0_5": float(np.mean(halluc)) if halluc else 0.0,
-            "evidence_bounded_rate": (evidence_bounded_count / total_judged_groundedness) if total_judged_groundedness else 0.0,
-            "hallucinated_on_unanswerable_rate": (not_evidence_bounded_when_unanswerable / unanswerable_count) if unanswerable_count else 0.0,
+            "evidence_bounded_rate": (evidence_bounded_count / total_judged_groundedness)
+            if total_judged_groundedness
+            else 0.0,
+            "hallucinated_on_unanswerable_rate": (
+                not_evidence_bounded_when_unanswerable / unanswerable_count
+            )
+            if unanswerable_count
+            else 0.0,
         }
 
     lat: dict[str, float] | None = None
@@ -426,10 +437,10 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
 
             if r.groundedness_result is not None:
                 row["groundedness_result"] = asdict(r.groundedness_result)
-            
+
             if r.outcome_label is not None:
                 row["outcome_label"] = r.outcome_label.value
-                
+
             f.write(json.dumps(row) + "\n")
 
     metrics_file = output_dir / "metrics.json"

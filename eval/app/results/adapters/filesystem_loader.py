@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 RUN_DIR_PATTERN = re.compile(r"run_(\d{4}_\d{2}_\d{2}T\d{2}-\d{2})")
 
 
-
 def _parse_timestamp_from_dirname(dirname: str) -> datetime | None:
     """Parse timestamp from run directory name."""
     match = RUN_DIR_PATTERN.match(dirname)

@@ -70,7 +70,7 @@ def apply_env_overrides(
         if not key.startswith(_PREFIX):
             continue
 
-        remainder = key[len(_PREFIX):]
+        remainder = key[len(_PREFIX) :]
         if _SEP not in remainder:
             continue
 

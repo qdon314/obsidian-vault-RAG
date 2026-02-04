@@ -25,7 +25,7 @@ def _norm(a: Sequence[float]) -> float:
 
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
     return _dot(a, b) / (_norm(a) * _norm(b))
-  
+
 
 @dataclass(slots=True)
 class JsonlVectorStore:
@@ -35,6 +35,7 @@ class JsonlVectorStore:
     Files:
       - chunks.jsonl  (one row per chunk+vector)
     """
+
     path: Path
     _chunks: list[Chunk] = field(default_factory=list)
     _vectors: list[Vector] = field(default_factory=list)
@@ -59,8 +60,7 @@ class JsonlVectorStore:
             except json.JSONDecodeError as e:
                 snippet = line[:200].replace("\n", "\\n")
                 raise RuntimeError(
-                    f"Invalid JSON on {self.data_file} line {i}: {e}\n"
-                    f"Snippet: {snippet}"
+                    f"Invalid JSON on {self.data_file} line {i}: {e}\nSnippet: {snippet}"
                 ) from e
             self._chunks.append(Chunk.from_dict(row["chunk"]))
             self._vectors.append(list(row["vector"]))
@@ -87,7 +87,6 @@ class JsonlVectorStore:
 
         # Atomic replace (macOS/Linux). On Windows this also works in most cases.
         tmp_file.replace(self.data_file)
-
 
     def upsert(
         self,
@@ -120,7 +119,6 @@ class JsonlVectorStore:
 
         scored.sort(key=lambda c: c.score, reverse=True)
         return scored[:top_k]
-
 
     def count(self) -> int:
         return len(self._chunks)

@@ -13,6 +13,7 @@ class VectorRetriever:
     """
     Retrieves candidates by embedding the query and searching the vector store.
     """
+
     embedder: Embedder
     store: VectorStore
 

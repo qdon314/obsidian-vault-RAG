@@ -30,6 +30,7 @@ class InMemoryVectorStore:
 
     Stores chunks + vectors in memory; supports naive linear scan search.
     """
+
     _chunks: list[Chunk] = field(default_factory=list)
     _vectors: list[Vector] = field(default_factory=list)
     _filter_eval: InMemoryFilterEvaluator = field(default_factory=InMemoryFilterEvaluator)
@@ -54,7 +55,7 @@ class InMemoryVectorStore:
         top_k: int,
         where: Where = None,
         metadata: Mapping[str, object] | None = None,
-    ) -> list[Candidate]:        
+    ) -> list[Candidate]:
         scored: list[Candidate] = []
         for chunk, vec in zip(self._chunks, self._vectors, strict=False):
             if where is not None:
@@ -69,11 +70,11 @@ class InMemoryVectorStore:
 
     def count(self) -> int:
         return len(self._chunks)
-    
+
     def save(self) -> None:
         """In-memory store has no persistence; no-op."""
         pass
-    
+
     def load(self) -> None:
         """In-memory store has no persistence; no-op."""
         pass

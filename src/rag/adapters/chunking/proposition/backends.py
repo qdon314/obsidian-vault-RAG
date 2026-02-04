@@ -13,10 +13,11 @@ class Propositionizer(Protocol):
     def propositionize_many(self, inputs: list[str]) -> list[list[str]]:
         """Convert a list of passage strings into lists of proposition strings."""
         ...
-        
+
     def get_config(self) -> dict[str, Any]:
         """Backend-specific config for manifests/debugging."""
         ...
+
 
 @dataclass
 class T5Propositionizer:
@@ -95,10 +96,12 @@ class T5Propositionizer:
         self.model.eval()
 
         # Useful sanity check during debugging
-        print(f"[Propositionizer] device={self.device}, "
-              f"batch_size={self.batch_size}, "
-              f"max_new_tokens={self.max_new_tokens}, "
-              f"max_input_tokens={self.max_input_tokens}")
+        print(
+            f"[Propositionizer] device={self.device}, "
+            f"batch_size={self.batch_size}, "
+            f"max_new_tokens={self.max_new_tokens}, "
+            f"max_input_tokens={self.max_input_tokens}"
+        )
 
     def propositionize_many(self, inputs: list[str]) -> list[list[str]]:
         """
@@ -148,8 +151,8 @@ class T5Propositionizer:
                 gen = self.model.generate(
                     **toks,
                     max_new_tokens=self.max_new_tokens,
-                    do_sample=False,   # deterministic, faster
-                    num_beams=1,       # beam search is *very* slow here
+                    do_sample=False,  # deterministic, faster
+                    num_beams=1,  # beam search is *very* slow here
                 )
 
             # ----------------------------
@@ -160,7 +163,7 @@ class T5Propositionizer:
             out.extend([_extract_json_list(t) for t in decoded])
 
         return out
-    
+
     def get_config(self) -> dict[str, Any]:
         """Return backend-specific config for manifests/debugging."""
         return {
@@ -170,7 +173,8 @@ class T5Propositionizer:
             "max_new_tokens": self.max_new_tokens,
             "max_input_tokens": self.max_input_tokens,
         }
-    
+
+
 @dataclass
 class GGUFPropositionizer:
     """
@@ -187,6 +191,7 @@ class GGUFPropositionizer:
 
     You must provide a GGUF model file path.
     """
+
     model_path: str
 
     # llama.cpp runtime knobs
@@ -259,7 +264,7 @@ class GGUFPropositionizer:
 
         props = _parse_json_list_loose(text)
         return props
-    
+
     def get_config(self) -> dict[str, Any]:
         """Return backend-specific config for manifests/debugging."""
         return {
@@ -290,4 +295,4 @@ class GGUFPropositionizer:
             "4) Output ONLY JSON: a list of strings.\n\n"
             f"PASSAGE:\n{inp}\n\n"
             "OUTPUT JSON ARRAY:"
-    )
+        )

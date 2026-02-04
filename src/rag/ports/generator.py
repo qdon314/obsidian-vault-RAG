@@ -20,5 +20,4 @@ class Generator(Protocol):
         context: ContextPack,
         *,
         metadata: Mapping[str, object] | None = None,
-    ) -> Answer:
-        ...
+    ) -> Answer: ...

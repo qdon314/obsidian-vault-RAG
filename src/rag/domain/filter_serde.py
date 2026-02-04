@@ -141,7 +141,7 @@ def deserialize_filter(data: dict[str, Any] | None) -> Where:
             raise ValueError("And filter must have at least one clause")
 
         parsed = [deserialize_filter(c) for c in raw_clauses]  # list[Filter | None]
-        clauses = [c for c in parsed if c is not None]         # list[Filter]
+        clauses = [c for c in parsed if c is not None]  # list[Filter]
 
         if not clauses:
             raise ValueError("And filter clauses cannot all be None")

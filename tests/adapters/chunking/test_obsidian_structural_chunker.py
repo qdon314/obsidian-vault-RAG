@@ -467,7 +467,9 @@ class TestObsidianStructuralChunkerOversizeParagraph:
 
         chunks = chunker.chunk(doc)
 
-        split_chunks = [ch for ch in chunks if ch.metadata.get("split_reason") == "oversize_paragraph"]
+        split_chunks = [
+            ch for ch in chunks if ch.metadata.get("split_reason") == "oversize_paragraph"
+        ]
         assert len(split_chunks) > 0, "Expected chunks with split_reason metadata"
 
     def test_code_blocks_never_split_mid_block(self) -> None:

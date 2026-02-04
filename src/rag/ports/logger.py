@@ -10,5 +10,4 @@ class QueryLogger(Protocol):
     Persists query traces (typically JSONL). Useful for debugging + eval.
     """
 
-    def log(self, trace: QueryTrace) -> None:
-        ...
+    def log(self, trace: QueryTrace) -> None: ...

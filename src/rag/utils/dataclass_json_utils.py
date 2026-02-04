@@ -13,6 +13,7 @@ T = TypeVar("T", bound=Enum)
 
 # --- Tuple/Set encoders (for JSON array serialization) ---
 
+
 def tuple_encoder(val: tuple[str, ...]) -> list[str]:
     """Encode a tuple as a JSON list."""
     return list(val)
@@ -35,6 +36,7 @@ def set_decoder(val: list[str] | None) -> set[str]:
 
 # --- Datetime encoders ---
 
+
 def datetime_encoder(dt: datetime) -> str:
     """Encode a datetime as an ISO string."""
     return dt.isoformat()
@@ -54,6 +56,7 @@ def datetime_decoder(val: Any) -> datetime:
 
 # --- Enum encoders (factory functions) ---
 
+
 def enum_encoder(val: Enum | None) -> str | None:
     """Encode an enum as its value string."""
     return val.value if val else None
@@ -70,7 +73,9 @@ def make_enum_decoder(enum_cls: type[T], default: T | None = None):
     Returns:
         A decoder function suitable for dataclasses_json config
     """
+
     def decoder(val: str | None) -> T | None:
         result = parse_enum(enum_cls, val)
         return result if result is not None else default
+
     return decoder

@@ -28,6 +28,7 @@ class CachedEmbedder:
       - repeatable experiments
       - avoiding repeated embedding costs
     """
+
     embedder: Embedder
     db_path: Path
 
@@ -61,7 +62,9 @@ class CachedEmbedder:
             found: dict[str, Vector] = {}
             if keys:
                 qmarks = ",".join(["?"] * len(keys))
-                cur = conn.execute(f"SELECT key, vector_json FROM embeddings WHERE key IN ({qmarks})", keys)
+                cur = conn.execute(
+                    f"SELECT key, vector_json FROM embeddings WHERE key IN ({qmarks})", keys
+                )
                 for k, vjson in cur.fetchall():
                     found[str(k)] = list(json.loads(vjson))
 
@@ -76,6 +79,9 @@ class CachedEmbedder:
                     found[k] = vec
                     rows.append((k, self.model_name, json.dumps(vec)))
 
-                conn.executemany("INSERT OR REPLACE INTO embeddings(key, model, vector_json) VALUES (?, ?, ?)", rows)
+                conn.executemany(
+                    "INSERT OR REPLACE INTO embeddings(key, model, vector_json) VALUES (?, ?, ?)",
+                    rows,
+                )
 
         return [found[k] for k in keys]

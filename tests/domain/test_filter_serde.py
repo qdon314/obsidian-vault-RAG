@@ -56,7 +56,7 @@ class TestSerializeFilter:
         """Range filter with partial bounds serializes correctly."""
         f = Range(field="index", gte=10)
         result = serialize_filter(f)
-        
+
         assert result is not None
         assert result["type"] == "Range"
         assert result["field"] == "index"
@@ -72,7 +72,7 @@ class TestSerializeFilter:
             ]
         )
         result = serialize_filter(f)
-        
+
         assert result is not None
         assert result["type"] == "And"
         assert len(result["clauses"]) == 2
@@ -88,7 +88,7 @@ class TestSerializeFilter:
             ]
         )
         result = serialize_filter(f)
-        
+
         assert result is not None
         assert result["type"] == "Or"
         assert len(result["clauses"]) == 2
@@ -116,7 +116,7 @@ class TestSerializeFilter:
             ]
         )
         result = serialize_filter(f)
-        
+
         assert result is not None
         assert result["type"] == "And"
         assert result["clauses"][0]["type"] == "Or"

@@ -20,8 +20,7 @@ class VectorStore(Protocol):
         chunks: Sequence[Chunk],
         vectors: Sequence[Vector],
         metadata: Mapping[str, object] | None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def search(
         self,
@@ -30,12 +29,10 @@ class VectorStore(Protocol):
         top_k: int,
         where: Where = None,
         metadata: Mapping[str, object] | None = None,
-    ) -> list[Candidate]:
-        ...
+    ) -> list[Candidate]: ...
 
-    def count(self) -> int:
-        ...
-    
+    def count(self) -> int: ...
+
     def save(self) -> None:
         """Persist the store to disk, if applicable."""
         ...

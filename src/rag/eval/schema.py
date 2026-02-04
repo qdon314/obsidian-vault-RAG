@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class QueryType(str, Enum):
     """Types of queries in the evaluation set."""
+
     FACTUAL = "factual"  # Simple fact lookup
     COMPARISON = "comparison"  # Comparing two or more concepts
     AGGREGATION = "aggregation"  # Requires synthesizing multiple chunks
@@ -34,6 +35,7 @@ class QueryType(str, Enum):
 
 class Difficulty(str, Enum):
     """Difficulty levels for queries."""
+
     EASY = "easy"  # Direct match, single chunk
     MEDIUM = "medium"  # Requires 2-3 chunks or some reasoning
     HARD = "hard"  # Multi-hop reasoning, synthesis across many chunks
@@ -66,6 +68,7 @@ class EvalQuery(DataClassJsonMixin):
     - Ground truth relevant chunks
     - Optional expected answer and metadata
     """
+
     qid: str
     query: str
     relevant_chunk_ids: set[str] = field(
@@ -137,6 +140,7 @@ class EvalDataset(DataClassJsonMixin):
     """
     A collection of evaluation queries with metadata.
     """
+
     name: str
     version: str
     description: str
@@ -165,12 +169,10 @@ class EvalDataset(DataClassJsonMixin):
         return {
             "total": total,
             "by_type": {
-                qt.value: len([q for q in self.queries if q.query_type == qt])
-                for qt in QueryType
+                qt.value: len([q for q in self.queries if q.query_type == qt]) for qt in QueryType
             },
             "by_difficulty": {
-                d.value: len([q for q in self.queries if q.difficulty == d])
-                for d in Difficulty
+                d.value: len([q for q in self.queries if q.difficulty == d]) for d in Difficulty
             },
             "answerable": len([q for q in self.queries if not q.is_unanswerable]),
             "unanswerable": len([q for q in self.queries if q.is_unanswerable]),

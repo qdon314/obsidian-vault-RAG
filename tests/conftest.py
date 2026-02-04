@@ -39,45 +39,52 @@ SAMPLE_VECTOR_DIM = 128
 SAMPLE_VECTOR = [0.1] * SAMPLE_VECTOR_DIM
 
 
-
 # =============================================================================
 # Adapter Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def dummy_embedder() -> Embedder:
     """DummyEmbedder with test-appropriate dimensions."""
     return DummyEmbedder(dim=SAMPLE_VECTOR_DIM, model="test-embedder")
 
+
 @pytest.fixture
 def fixed_chunker() -> Chunker:
     """FixedChunker with small test-friendly chunk size."""
     return FixedChunker(chunk_size=100, overlap=20, strategy_name="test_v1")
+
 
 @pytest.fixture
 def in_memory_store() -> VectorStore:
     """Fresh InMemoryVectorStore for each test."""
     return InMemoryVectorStore()
 
+
 @pytest.fixture
 def heuristic_reranker() -> Reranker:
     """HeuristicReranker with test defaults."""
     return HeuristicReranker(overlap_weight=0.15, diversify=True, max_per_doc=3)
+
 
 @pytest.fixture
 def noop_reranker() -> Reranker:
     """NoOpReranker instance."""
     return NoOpReranker()
 
+
 @pytest.fixture
 def simple_context_builder() -> ContextBuilder:
     """SimpleContextBuilder with test defaults."""
     return SimpleContextBuilder(max_chunks=5, dedupe=True)
 
+
 @pytest.fixture
 def text_loader() -> TextLoader:
     """TextLoader with default settings."""
     return TextLoader()
+
 
 # =============================================================================
 # Domain Model Factory Functions

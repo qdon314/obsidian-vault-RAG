@@ -151,11 +151,13 @@ def list_profiles() -> None:
             git_info += f", days={profile.git.days}"
 
         print(f"  {name:15s}  depth={profile.depth:10s}  {git_info}")
-        print(f"  {'':<15s}  git={profile.git.enabled}, "
-              f"files={profile.files.enabled}, "
-              f"docs={profile.docs.enabled}, "
-              f"arch={profile.architecture.enabled}, "
-              f"validation={profile.validation.enabled}")
+        print(
+            f"  {'':<15s}  git={profile.git.enabled}, "
+            f"files={profile.files.enabled}, "
+            f"docs={profile.docs.enabled}, "
+            f"arch={profile.architecture.enabled}, "
+            f"validation={profile.validation.enabled}"
+        )
         print()
 
 

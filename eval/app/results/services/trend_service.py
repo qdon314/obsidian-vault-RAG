@@ -48,17 +48,12 @@ class TrendService:
 
         for k in k_values:
             recall_series[k] = tuple(
-                r.aggregates.overall.recall_at_k.get(k, 0.0)
-                for r in sorted_runs
+                r.aggregates.overall.recall_at_k.get(k, 0.0) for r in sorted_runs
             )
             precision_series[k] = tuple(
-                r.aggregates.overall.precision_at_k.get(k, 0.0)
-                for r in sorted_runs
+                r.aggregates.overall.precision_at_k.get(k, 0.0) for r in sorted_runs
             )
-            ndcg_series[k] = tuple(
-                r.aggregates.overall.ndcg_at_k.get(k, 0.0)
-                for r in sorted_runs
-            )
+            ndcg_series[k] = tuple(r.aggregates.overall.ndcg_at_k.get(k, 0.0) for r in sorted_runs)
 
         # Global metrics series
         mrr_series = tuple(r.aggregates.overall.mrr for r in sorted_runs)
@@ -68,9 +63,7 @@ class TrendService:
         quality_series: list[float | None] = []
         for r in sorted_runs:
             if r.aggregates.answer_quality:
-                quality_series.append(
-                    r.aggregates.answer_quality.get("avg_quality_score")
-                )
+                quality_series.append(r.aggregates.answer_quality.get("avg_quality_score"))
             else:
                 quality_series.append(None)
 
@@ -125,9 +118,7 @@ class TrendService:
 
         return series[-1] - series[0]
 
-    def find_best_run(
-        self, trend: TrendAnalysis, metric: str = "recall", k: int = 10
-    ) -> LoadedRun:
+    def find_best_run(self, trend: TrendAnalysis, metric: str = "recall", k: int = 10) -> LoadedRun:
         """Find the run with the best value for a given metric.
 
         Args:

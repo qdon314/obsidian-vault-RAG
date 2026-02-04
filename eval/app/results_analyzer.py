@@ -111,7 +111,7 @@ def main() -> None:
     # Sidebar navigation
     with st.sidebar:
         st.title("Results Analyzer")
-        
+
         view = st.radio(
             "View Mode",
             options=["single", "comparison", "trending"],
@@ -167,8 +167,7 @@ def main() -> None:
     if not available_runs:
         st.warning("No evaluation runs found")
         st.info(
-            "Run `make eval` to create evaluation runs, "
-            "or add external runs using the sidebar."
+            "Run `make eval` to create evaluation runs, or add external runs using the sidebar."
         )
         st.caption(f"Looking in: {DEFAULT_RUNS_DIR}")
         return
@@ -277,23 +276,29 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
 
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        x=[f"@{k}" for k in k_values],
-        y=[agg.recall_at_k.get(k, 0) for k in k_values],
-        name="Recall",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=[f"@{k}" for k in k_values],
+            y=[agg.recall_at_k.get(k, 0) for k in k_values],
+            name="Recall",
+        )
+    )
 
-    fig.add_trace(go.Bar(
-        x=[f"@{k}" for k in k_values],
-        y=[agg.precision_at_k.get(k, 0) for k in k_values],
-        name="Precision",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=[f"@{k}" for k in k_values],
+            y=[agg.precision_at_k.get(k, 0) for k in k_values],
+            name="Precision",
+        )
+    )
 
-    fig.add_trace(go.Bar(
-        x=[f"@{k}" for k in k_values],
-        y=[agg.ndcg_at_k.get(k, 0) for k in k_values],
-        name="NDCG",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=[f"@{k}" for k in k_values],
+            y=[agg.ndcg_at_k.get(k, 0) for k in k_values],
+            name="NDCG",
+        )
+    )
 
     fig.update_layout(
         title="Retrieval Metrics by K",
@@ -311,18 +316,17 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
         st.subheader("Recall@10 by Query Type")
 
         types = sorted(loaded_run.aggregates.by_type.keys())
-        recalls = [
-            loaded_run.aggregates.by_type[t].recall_at_k.get(10, 0)
-            for t in types
-        ]
+        recalls = [loaded_run.aggregates.by_type[t].recall_at_k.get(10, 0) for t in types]
 
         fig2 = go.Figure()
-        fig2.add_trace(go.Bar(
-            x=types,
-            y=recalls,
-            text=[f"{r:.2f}" for r in recalls],
-            textposition="auto",
-        ))
+        fig2.add_trace(
+            go.Bar(
+                x=types,
+                y=recalls,
+                text=[f"{r:.2f}" for r in recalls],
+                textposition="auto",
+            )
+        )
 
         fig2.update_layout(
             title="Recall@10 by Query Type",
@@ -339,7 +343,9 @@ def _render_traces_tab(loaded_run: LoadedRun) -> None:
     """Render the traces tab for a single run."""
     if not loaded_run.traces:
         st.info("No traces available for this run")
-        st.caption("Traces are recorded in traces.jsonl during evaluation runs with generation enabled.")
+        st.caption(
+            "Traces are recorded in traces.jsonl during evaluation runs with generation enabled."
+        )
         return
 
     st.subheader(f"Pipeline Traces ({len(loaded_run.traces)} total)")
@@ -364,8 +370,7 @@ def _render_traces_tab(loaded_run: LoadedRun) -> None:
         "Select trace to view",
         options=[t.trace_id for t in traces_list],
         format_func=lambda tid: next(
-            (f"{tid[:8]}... | {t.query[:50]}..." for t in traces_list if t.trace_id == tid),
-            tid
+            (f"{tid[:8]}... | {t.query[:50]}..." for t in traces_list if t.trace_id == tid), tid
         ),
         key="trace_tab_selector",
     )
@@ -518,6 +523,7 @@ def _render_raw_data_tab(loaded_run: LoadedRun) -> None:
     st.markdown("### Download Raw Data")
 
     import json
+
     json_str = json.dumps(raw, indent=2, default=str)
     st.download_button(
         label="Download metrics.json",
@@ -589,11 +595,13 @@ def render_comparison_view(
     render_query_changes_summary(comparison)
 
     # Tabs for detailed views
-    tab_charts, tab_deltas, tab_queries = st.tabs([
-        "Charts",
-        "Delta Table",
-        "Query Changes",
-    ])
+    tab_charts, tab_deltas, tab_queries = st.tabs(
+        [
+            "Charts",
+            "Delta Table",
+            "Query Changes",
+        ]
+    )
 
     with tab_charts:
         col1, col2 = st.columns(2)
@@ -617,10 +625,7 @@ def _render_query_changes(comparison, filter_service: FilterService) -> None:
         st.subheader(f"Improved Queries ({len(comparison.improved_queries)})")
         with st.expander("Show improved queries", expanded=True):
             for qid in comparison.improved_queries[:20]:  # Limit display
-                result = next(
-                    (r for r in comparison.run_b.results if r.qid == qid),
-                    None
-                )
+                result = next((r for r in comparison.run_b.results if r.qid == qid), None)
                 if result:
                     recall_a = _get_recall(comparison.run_a, qid)
                     recall_b = filter_service.compute_recall(result)
@@ -637,10 +642,7 @@ def _render_query_changes(comparison, filter_service: FilterService) -> None:
         st.subheader(f"Regressed Queries ({len(comparison.regressed_queries)})")
         with st.expander("Show regressed queries", expanded=True):
             for qid in comparison.regressed_queries[:20]:
-                result = next(
-                    (r for r in comparison.run_b.results if r.qid == qid),
-                    None
-                )
+                result = next((r for r in comparison.run_b.results if r.qid == qid), None)
                 if result:
                     recall_a = _get_recall(comparison.run_a, qid)
                     recall_b = filter_service.compute_recall(result)
@@ -701,7 +703,9 @@ def render_trending_view(
 
     date_range = trend.date_range
     if date_range:
-        st.write(f"Analyzing {trend.num_runs} runs from {date_range[0].strftime('%Y-%m-%d')} to {date_range[1].strftime('%Y-%m-%d')}")
+        st.write(
+            f"Analyzing {trend.num_runs} runs from {date_range[0].strftime('%Y-%m-%d')} to {date_range[1].strftime('%Y-%m-%d')}"
+        )
     else:
         st.write(f"Analyzing {trend.num_runs} runs")
 

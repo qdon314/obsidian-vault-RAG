@@ -18,6 +18,7 @@ class OpenAIEmbedder:
       - uses the official OpenAI Python client
       - returns List[List[float]] in the same order as inputs
     """
+
     api_key: str
     model: str = "text-embedding-3-small"
 

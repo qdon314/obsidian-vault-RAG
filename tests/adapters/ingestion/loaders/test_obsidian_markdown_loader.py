@@ -376,12 +376,10 @@ class TestObsidianMarkdownLoader:
     def test_embed_expansion_max_depth(self, temp_vault: Path):
         # Create chain of 6 notes
         for i in range(6):
-            content = f"Note {i} embeds ![[note{i+1}]]" if i < 5 else f"Note {i} final"
+            content = f"Note {i} embeds ![[note{i + 1}]]" if i < 5 else f"Note {i} final"
             write_note(temp_vault, f"note{i}.md", content)
 
-        loader = ObsidianMarkdownLoader(
-            vault_dir=temp_vault, expand_embeds=True, max_embed_depth=4
-        )
+        loader = ObsidianMarkdownLoader(vault_dir=temp_vault, expand_embeds=True, max_embed_depth=4)
         result = loader.load(temp_vault / "note0.md")
 
         assert result is not None

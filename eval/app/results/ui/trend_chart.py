@@ -74,10 +74,7 @@ def render_trend_chart(
         return
 
     # Filter out None values for quality/latency
-    valid_points = [
-        (x, y) for x, y in zip(x_labels, y_values, strict=False)
-        if y is not None
-    ]
+    valid_points = [(x, y) for x, y in zip(x_labels, y_values, strict=False) if y is not None]
 
     if not valid_points:
         st.info(f"No valid data points for {metric}")
@@ -88,17 +85,19 @@ def render_trend_chart(
 
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(
-        x=x_valid,
-        y=y_valid,
-        mode="lines+markers",
-        name=metric.title(),
-        line={"width": 2},
-        marker={"size": 8},
-        text=[f"{v:.3f}" if metric != "latency" else f"{v:.0f}" for v in y_valid],
-        hovertemplate="%{x}<br>%{text}<extra></extra>",
-    ))
-    
+    fig.add_trace(
+        go.Scatter(
+            x=x_valid,
+            y=y_valid,
+            mode="lines+markers",
+            name=metric.title(),
+            line={"width": 2},
+            marker={"size": 8},
+            text=[f"{v:.3f}" if metric != "latency" else f"{v:.0f}" for v in y_valid],
+            hovertemplate="%{x}<br>%{text}<extra></extra>",
+        )
+    )
+
     y_range = None if metric == "latency" else [0, 1.05]
 
     fig.update_layout(
@@ -160,14 +159,16 @@ def render_multi_metric_trend(
         if not y_values:
             continue
 
-        fig.add_trace(go.Scatter(
-            x=x_labels,
-            y=y_values,
-            mode="lines+markers",
-            name=name,
-            line={"width": 2},
-            marker={"size": 6},
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=x_labels,
+                y=y_values,
+                mode="lines+markers",
+                name=name,
+                line={"width": 2},
+                marker={"size": 6},
+            )
+        )
 
     fig.update_layout(
         title=f"Metrics Trend (k={k})",

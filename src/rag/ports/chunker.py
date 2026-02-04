@@ -11,8 +11,9 @@ class Chunker(Protocol):
     Splits a Document into Chunks.
     """
 
-    def chunk(self, doc: Document, *, metadata: Mapping[str, object] | None = None) -> list[Chunk]:
-        ...
+    def chunk(
+        self, doc: Document, *, metadata: Mapping[str, object] | None = None
+    ) -> list[Chunk]: ...
 
     def get_config(self) -> dict[str, Any]:
         """Return chunker configuration for manifest/introspection."""

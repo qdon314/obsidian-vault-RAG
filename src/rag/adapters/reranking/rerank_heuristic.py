@@ -7,8 +7,10 @@ from rag.domain.models import Candidate
 
 _WORD = re.compile(r"[A-Za-z0-9_]+")
 
+
 def _tokens(s: str) -> list[str]:
     return [t.lower() for t in _WORD.findall(s)]
+
 
 class HeuristicReranker:
     """
@@ -17,7 +19,10 @@ class HeuristicReranker:
     - adds lexical overlap boost between query and chunk text
     - optionally diversifies by doc_id (avoid many from same doc)
     """
-    def __init__(self, *, overlap_weight: float = 0.15, diversify: bool = True, max_per_doc: int = 3):
+
+    def __init__(
+        self, *, overlap_weight: float = 0.15, diversify: bool = True, max_per_doc: int = 3
+    ):
         self.overlap_weight = overlap_weight
         self.diversify = diversify
         self.max_per_doc = max_per_doc

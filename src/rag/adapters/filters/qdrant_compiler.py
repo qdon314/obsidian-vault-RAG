@@ -22,6 +22,7 @@ class QdrantFilterCompiler:
             return None
         return _compile_filter(where)
 
+
 def _compile_filter(f: Filter) -> QdrantFilter:
     match f:
         case And(clauses=clauses):

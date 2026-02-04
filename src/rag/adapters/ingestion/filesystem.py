@@ -17,6 +17,7 @@ from rag.domain.models import Document, IngestReport
 
 log = logging.getLogger(__name__)
 
+
 def _is_hidden(path: Path) -> bool:
     return any(part.startswith(".") for part in path.parts)
 
@@ -28,6 +29,7 @@ def _hash_text(text: str) -> str:
 def _stable_doc_id(uri: str, text_hash: str) -> str:
     # Stable across runs; changes when file content changes.
     return sha256(f"{uri}|{text_hash}".encode()).hexdigest()
+
 
 def _walk_files(root: Path) -> list[Path]:
     """Recursively collect files, skipping hidden directories."""
@@ -141,8 +143,7 @@ class FilesystemIngestor:
         t_load = perf_counter()
         with ThreadPoolExecutor(max_workers=8) as pool:
             futures = [
-                (path, ext, pool.submit(self._load_one, path, ext))
-                for path, ext in eligible
+                (path, ext, pool.submit(self._load_one, path, ext)) for path, ext in eligible
             ]
         load_dt = perf_counter() - t_load
 

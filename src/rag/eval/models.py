@@ -53,6 +53,7 @@ class RetrievalResult(DataClassJsonMixin):
             relevant_chunk_ids=set(data.get("relevant_chunk_ids", [])),
         )
 
+
 def _parse_flattened_metrics(data: dict[str, Any], prefix: str) -> dict[int, float]:
     """Extract metrics like 'recall@10' -> {10: 0.42}."""
     result = {}
@@ -66,6 +67,7 @@ def _parse_flattened_metrics(data: dict[str, Any], prefix: str) -> dict[int, flo
 @dataclass(frozen=True, slots=True)
 class RetrievalSummary(DataClassJsonMixin):
     """Aggregate retrieval metrics over a set of queries."""
+
     num_queries: int
     avg_retrieved: float
 
@@ -114,10 +116,12 @@ class RetrievalSummary(DataClassJsonMixin):
             mrr=float(data.get("mrr", 0.0)),
             map=float(data.get("map", 0.0)),
         )
-   
+
+
 @dataclass
 class EvalResult(DataClassJsonMixin):
     """Complete evaluation result for a single query."""
+
     qid: str
     query: str
 
@@ -202,7 +206,7 @@ class EvalResult(DataClassJsonMixin):
             latency_ms=data.get("latency_ms"),
             trace_id=data.get("trace_id"),
         )
-    
+
 
 @dataclass(frozen=True, slots=True)
 class EvalRunMeta(DataClassJsonMixin):
@@ -263,6 +267,7 @@ class EvalAggregates(DataClassJsonMixin):
             latency_ms=data.get("latency_ms"),
         )
 
+
 @dataclass(frozen=True, slots=True)
 class EvalRun:
     meta: EvalRunMeta
@@ -270,5 +275,3 @@ class EvalRun:
     aggregates: EvalAggregates
     # optional: where things were written
     artifacts: dict[str, str] | None = None  # e.g. {"results_jsonl": "...", "metrics_json": "..."}
-    
-    

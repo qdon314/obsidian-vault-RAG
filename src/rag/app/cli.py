@@ -15,7 +15,8 @@ def main() -> None:
             "Chunking strategy affects recall and precision. "
             "Reranking can improve relevance at the cost of latency. "
             "Evaluation metrics like Recall@K and MRR help quantify retrieval quality.\n"
-        ) * 25,
+        )
+        * 25,
         source="demo",
         uri="memory://demo",
         metadata={"title": "Demo Doc", "uri": "memory://demo"},

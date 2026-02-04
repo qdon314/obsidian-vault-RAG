@@ -29,7 +29,7 @@ def render_comparison_chart(
     except ImportError:
         st.error("Plotly is required for charts. Install with: pip install plotly")
         return
-    
+
     agg_a = comparison.run_a.aggregates.overall
     agg_b = comparison.run_b.aggregates.overall
 
@@ -63,22 +63,26 @@ def render_comparison_chart(
     fig = go.Figure()
 
     # Run A bars
-    fig.add_trace(go.Bar(
-        x=[f"@{k}" for k in k_values],
-        y=[a_data.get(k, 0) for k in k_values],
-        name=comparison.run_a.summary.display_name,
-        text=[f"{a_data.get(k, 0):.3f}" for k in k_values],
-        textposition="auto",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=[f"@{k}" for k in k_values],
+            y=[a_data.get(k, 0) for k in k_values],
+            name=comparison.run_a.summary.display_name,
+            text=[f"{a_data.get(k, 0):.3f}" for k in k_values],
+            textposition="auto",
+        )
+    )
 
     # Run B bars
-    fig.add_trace(go.Bar(
-        x=[f"@{k}" for k in k_values],
-        y=[b_data.get(k, 0) for k in k_values],
-        name=comparison.run_b.summary.display_name,
-        text=[f"{b_data.get(k, 0):.3f}" for k in k_values],
-        textposition="auto",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=[f"@{k}" for k in k_values],
+            y=[b_data.get(k, 0) for k in k_values],
+            name=comparison.run_b.summary.display_name,
+            text=[f"{b_data.get(k, 0):.3f}" for k in k_values],
+            textposition="auto",
+        )
+    )
 
     fig.update_layout(
         title=title,
@@ -106,7 +110,7 @@ def render_global_metrics_comparison(comparison: RunComparison) -> None:
     except ImportError:
         st.error("Plotly is required for charts. Install with: pip install plotly")
         return
-    
+
     agg_a = comparison.run_a.aggregates.overall
     agg_b = comparison.run_b.aggregates.overall
 
@@ -116,21 +120,25 @@ def render_global_metrics_comparison(comparison: RunComparison) -> None:
 
     fig = go.Figure()
 
-    fig.add_trace(go.Bar(
-        x=metrics,
-        y=a_values,
-        name=comparison.run_a.summary.display_name,
-        text=[f"{v:.3f}" for v in a_values],
-        textposition="auto",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=metrics,
+            y=a_values,
+            name=comparison.run_a.summary.display_name,
+            text=[f"{v:.3f}" for v in a_values],
+            textposition="auto",
+        )
+    )
 
-    fig.add_trace(go.Bar(
-        x=metrics,
-        y=b_values,
-        name=comparison.run_b.summary.display_name,
-        text=[f"{v:.3f}" for v in b_values],
-        textposition="auto",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=metrics,
+            y=b_values,
+            name=comparison.run_b.summary.display_name,
+            text=[f"{v:.3f}" for v in b_values],
+            textposition="auto",
+        )
+    )
 
     fig.update_layout(
         title="Global Metrics Comparison",

@@ -114,6 +114,7 @@ class PropositionAwareContextBuilder:
             A ContextPack containing the chosen chunks, rendered context
             string, and citations with provenance metadata.
         """
+
         def candidate_key(c: Candidate) -> float:
             return c.rerank_score if c.rerank_score is not None else c.score
 
@@ -138,7 +139,11 @@ class PropositionAwareContextBuilder:
 
             if self.dedupe:
                 # Layer 1: passage-identity dedupe for proposition chunks
-                if ck == "proposition" and self.expand_propositions and self.expansion_mode == "passage":
+                if (
+                    ck == "proposition"
+                    and self.expand_propositions
+                    and self.expansion_mode == "passage"
+                ):
                     ps = chunk.metadata.get("parent_start_char")
                     pe = chunk.metadata.get("parent_end_char")
 
@@ -154,15 +159,13 @@ class PropositionAwareContextBuilder:
                     continue
                 seen_text.add(sig)
 
-            label = f"[{len(chosen)+1}]"
+            label = f"[{len(chosen) + 1}]"
             if self.include_scores:
                 label += f" score={score:.4f}"
             label += "\n"
 
             chunk_tokens = (
-                _estimate_tokens(label)
-                + _estimate_tokens(rendered_text)
-                + _estimate_tokens("\n\n")
+                _estimate_tokens(label) + _estimate_tokens(rendered_text) + _estimate_tokens("\n\n")
             )
             if tokens_used + chunk_tokens > token_budget:
                 break
@@ -210,7 +213,12 @@ class PropositionAwareContextBuilder:
     def _rendered_kind(self, ch: Chunk) -> str:
         """Classify how a chunk was rendered: expanded to passage or as-is."""
         ck = str(ch.metadata.get("chunk_kind") or "")
-        if self.expand_propositions and ck == "proposition" and self.expansion_mode == "passage" and ch.metadata.get("parent_passage_text"):
+        if (
+            self.expand_propositions
+            and ck == "proposition"
+            and self.expansion_mode == "passage"
+            and ch.metadata.get("parent_passage_text")
+        ):
             return "proposition_expanded_to_passage"
         return ck or "unknown"
 
@@ -247,14 +255,18 @@ class PropositionAwareContextBuilder:
     ) -> str:
         """Render the final context string sent to the LLM."""
         lines: list[str] = []
-        lines.append("You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.\n")
+        lines.append(
+            "You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.\n"
+        )
         lines.append("If the answer is not supported by the CONTEXT, say you don't know.\n")
         lines.append("CONTEXT:\n")
 
         score_by_id: dict[str, float] = {}
         if self.include_scores:
+
             def candidate_key(c: Candidate) -> float:
                 return c.rerank_score if c.rerank_score is not None else c.score
+
             for c in ordered:
                 score_by_id[c.chunk.chunk_id] = candidate_key(c)
 

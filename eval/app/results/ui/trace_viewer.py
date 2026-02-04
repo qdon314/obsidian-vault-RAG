@@ -65,13 +65,15 @@ def _render_trace_detail(trace: QueryTrace) -> None:
         st.caption(f"Created: {trace.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Pipeline stages as tabs
-    tabs = st.tabs([
-        "Retrieval",
-        "Reranking",
-        "Context",
-        "Generation",
-        "Raw Data",
-    ])
+    tabs = st.tabs(
+        [
+            "Retrieval",
+            "Reranking",
+            "Context",
+            "Generation",
+            "Raw Data",
+        ]
+    )
 
     with tabs[0]:
         _render_retrieval_stage(trace)

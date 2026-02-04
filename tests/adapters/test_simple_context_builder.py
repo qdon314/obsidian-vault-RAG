@@ -21,7 +21,9 @@ class TestSimpleContextBuilderBasics:
     def test_build_creates_context_pack(self, simple_context_builder: ContextBuilder):
         """Build returns a ContextPack with chunks and citations."""
         candidates = [
-            make_candidate(score=0.9, chunk=make_chunk(text="First chunk text.")), # Needs to have different text to avoid dedupe
+            make_candidate(
+                score=0.9, chunk=make_chunk(text="First chunk text.")
+            ),  # Needs to have different text to avoid dedupe
             make_candidate(chunk=make_chunk(chunk_id="c2"), score=0.8),
         ]
 

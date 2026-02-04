@@ -11,6 +11,7 @@ from rag.ports import Embedder
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+
 def semantic_similarity(
     text1: str,
     text2: str,
@@ -18,7 +19,7 @@ def semantic_similarity(
 ) -> float:
     """
     Compute semantic similarity between two text strings using embeddings.
-    
+
     Args:
         text1: First text string.
         text2: Second text string.
@@ -161,7 +162,10 @@ def ndcg_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
 
     return dcg / idcg if idcg > 0 else 0.0
 
-def summarize(results: Iterable[RetrievalResult], *, ks: Sequence[int] = (5, 10)) -> RetrievalSummary:
+
+def summarize(
+    results: Iterable[RetrievalResult], *, ks: Sequence[int] = (5, 10)
+) -> RetrievalSummary:
     results = list(results)
     if not results:
         return RetrievalSummary(
@@ -184,13 +188,23 @@ def summarize(results: Iterable[RetrievalResult], *, ks: Sequence[int] = (5, 10)
     ndcg_at_k_res = {}
 
     for k in ks:
-        recall_at_k_res[k] = sum(recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
-        precision_at_k_res[k] = sum(precision_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
-        hit_rate_at_k_res[k] = sum(hit_rate_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
-        ndcg_at_k_res[k] = sum(ndcg_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        recall_at_k_res[k] = (
+            sum(recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        )
+        precision_at_k_res[k] = (
+            sum(precision_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        )
+        hit_rate_at_k_res[k] = (
+            sum(hit_rate_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        )
+        ndcg_at_k_res[k] = (
+            sum(ndcg_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        )
 
     mrr_score = sum(mrr(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results) / n
-    map_score = sum(average_precision(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results) / n
+    map_score = (
+        sum(average_precision(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results) / n
+    )
 
     return RetrievalSummary(
         num_queries=n,

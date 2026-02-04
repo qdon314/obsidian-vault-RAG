@@ -12,8 +12,9 @@ from rag.domain.models import QueryTrace
 
 def _json_default(o: Any):
     if is_dataclass(o):
-        return asdict(o) # type: ignore
+        return asdict(o)  # type: ignore
     return str(o)
+
 
 class JsonlQueryLogger:
     def __init__(self, path: str | Path, *, redact_text: bool = False) -> None:
@@ -38,6 +39,7 @@ class JsonlQueryLogger:
         # atomic append on POSIX (good enough for single-process; for multi-proc add a file lock)
         with self.path.open("a", encoding="utf-8") as f:
             f.write(line + "\n")
+
 
 def _redact(obj: Any) -> Any:
     if isinstance(obj, dict):

@@ -8,16 +8,24 @@ from typing import Any
 
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
 
-_WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")          # [[target]] or [[target|alias]]
-_EMBED_RE = re.compile(r"!\[\[([^\]]+)\]\]")           # ![[target]] or ![[target|alias]]
-_TAG_RE = re.compile(r"(?<!\w)#([A-Za-z0-9/_-]+)")     # #tag #a/b etc.
+_WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")  # [[target]] or [[target|alias]]
+_EMBED_RE = re.compile(r"!\[\[([^\]]+)\]\]")  # ![[target]] or ![[target|alias]]
+_TAG_RE = re.compile(r"(?<!\w)#([A-Za-z0-9/_-]+)")  # #tag #a/b etc.
 
 _TEXT_NOTE_EXTS = {".md", ".txt"}
 _ATTACHMENT_EXTS = {
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".svg",
     ".pdf",
-    ".mp3", ".wav", ".m4a",
-    ".mp4", ".mov",
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".mp4",
+    ".mov",
 }
 
 # Type alias for the filename → resolved-paths index used by embed resolution.
@@ -32,6 +40,7 @@ def _build_file_index(vault_root: Path) -> FileIndex:
         for fn in filenames:
             index.setdefault(fn.lower(), []).append(Path(dirpath, fn).resolve())
     return index
+
 
 def split_obsidian_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     """
@@ -232,6 +241,7 @@ class ObsidianMarkdownLoader:
       - wikilink stripping ([[...]] -> alias/target) outside code fences
       - preserves code blocks (included as-is)
     """
+
     vault_dir: Path
     text_loader: TextLoader = field(default_factory=TextLoader)
     expand_embeds: bool = True
@@ -261,8 +271,8 @@ class ObsidianMarkdownLoader:
 
         meta: dict[str, Any] = {
             "frontmatter": frontmatter,
-            "frontmatter_tags": fm_tags,   # list[str]
-            "inline_tags": inline_tags,    # list[str]
+            "frontmatter_tags": fm_tags,  # list[str]
+            "inline_tags": inline_tags,  # list[str]
             "classification": classify_note(path.name, frontmatter, fm_tags),
         }
 
@@ -292,9 +302,7 @@ class ObsidianMarkdownLoader:
             # Expand embeds within non-code text
             def repl(m: re.Match[str]) -> str:
                 target = m.group(1)
-                embed_path = _resolve_embed_target(
-                    self.vault_dir, current_file, target, file_index
-                )
+                embed_path = _resolve_embed_target(self.vault_dir, current_file, target, file_index)
                 if embed_path is None:
                     return ""
 

@@ -28,7 +28,8 @@ def test_make_gold_prompt_includes_metadata():
     assert "factual" in prompt
     assert "easy" in prompt
     assert "False" in prompt
-    
+
+
 def test_make_gold_prompt_defaults():
     """make_gold_prompt should use defaults when metadata not provided."""
     prompt = make_gold_prompt(
@@ -40,4 +41,4 @@ def test_make_gold_prompt_defaults():
     # Should not raise, defaults should be used
     assert "Test query" in prompt
     assert "unknown" in prompt  # default query_type and difficulty
-    assert "False" in prompt    # default requires_synthesis
+    assert "False" in prompt  # default requires_synthesis

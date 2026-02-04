@@ -5,6 +5,7 @@ import re
 
 _JSON_ARRAY_RE = re.compile(r"\[[\s\S]*\]")
 
+
 def _parse_json_list_loose(text: str) -> list[str]:
     """
     Best-effort parse of a JSON list from a model response.
@@ -34,6 +35,7 @@ def _parse_json_list_loose(text: str) -> list[str]:
             pass
 
     return []
+
 
 def _extract_json_list(text: str) -> list[str]:
     """

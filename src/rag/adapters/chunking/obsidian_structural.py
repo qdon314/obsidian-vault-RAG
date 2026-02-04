@@ -275,7 +275,9 @@ class ObsidianStructuralChunker:
             buf: list[_Block] = []
             buf_len = len(preamble)  # Track buffer size including preamble
 
-            def flush(preamble=preamble, section_path=section_path, section_heading=section_heading):
+            def flush(
+                preamble=preamble, section_path=section_path, section_heading=section_heading
+            ):
                 """
                 Emit current buffer as a chunk and optionally preserve overlap.
 
