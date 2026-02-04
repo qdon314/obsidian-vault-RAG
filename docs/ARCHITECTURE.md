@@ -30,32 +30,38 @@ The Obsidian Vault RAG system implements a **Retrieval-Augmented Generation** pi
 
 ### Hexagonal Architecture (Ports & Adapters)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Application Layer                         │
-│                   (CLI, Scripts, Streamlit UI)                   │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-┌──────────────────────────────▼──────────────────────────────────┐
-│                    Dependency Injection                          │
-│                  Container (app/container.py)                    │
-│              Composes Ports with Adapter Implementations         │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-        ┌──────────────────────┼──────────────────────┐
-        │                      │                      │
-        ▼                      ▼                      ▼
-┌───────────────┐      ┌───────────────┐      ┌───────────────┐
-│     PORTS     │      │    DOMAIN     │      │   ADAPTERS    │
-│   (Abstract   │      │    MODELS     │      │  (Concrete    │
-│  Interfaces)  │      │               │      │Implementations│
-│               │      │  - Document   │      │               │
-│ - Chunker     │      │  - Chunk      │      │ - OpenAI      │
-│ - Embedder    │      │  - Candidate  │      │ - JSONL Store │
-│ - Retriever   │      │  - Answer     │      │ - Heuristic   │
-│ - Generator   │      │  - QueryTrace │      │   Reranker    │
-│ - VectorStore │      │               │      │               │
-└───────────────┘      └───────────────┘      └───────────────┘
+```mermaid
+graph TB
+    App["Application Layer<br/>(CLI, Scripts, Streamlit UI)"]
+    DI["Dependency Injection<br/>Container (app/container.py)<br/>Composes Ports with Adapter Implementations"]
+
+    App --> DI
+    DI --> Ports & Domain & Adapters
+
+    subgraph Ports ["PORTS (Abstract Interfaces)"]
+        direction TB
+        Chunker
+        Embedder
+        Retriever
+        Generator
+        VectorStore
+    end
+
+    subgraph Domain ["DOMAIN MODELS"]
+        direction TB
+        Document
+        Chunk
+        Candidate
+        Answer
+        QueryTrace
+    end
+
+    subgraph Adapters ["ADAPTERS (Concrete Implementations)"]
+        direction TB
+        OpenAI
+        JSONL_Store["JSONL Store"]
+        Heuristic_Reranker["Heuristic Reranker"]
+    end
 ```
 
 ### Benefits
@@ -259,90 +265,36 @@ graph LR
 
 ### Document Processing Pipeline
 
-```
-Raw File (*.md, *.txt)
-    │
-    ▼
-┌─────────────────────────────────────┐
-│           Document                  │
-│  - doc_id (hash-based, stable)      │
-│  - text (full content)              │
-│  - source ("filesystem")            │
-│  - uri (file path)                  │
-│  - metadata                         │
-└─────────────────────────────────────┘
-    │
-    │  Chunking (800 chars, 120 overlap)
-    ▼
-┌─────────────────────────────────────┐
-│            Chunk                    │
-│  - chunk_id (doc_id:strategy:idx)   │
-│  - doc_id (reference)               │
-│  - text (chunk content)             │
-│  - chunk_index, start_char, end_char│
-│  - section_heading, section_path    │
-│  - metadata                         │
-└─────────────────────────────────────┘
-    │
-    │  Embedding (OpenAI / Dummy)
-    ▼
-┌─────────────────────────────────────┐
-│           Vector                    │
-│  - list[float] (e.g., 3072 dims)    │
-└─────────────────────────────────────┘
-    │
-    │  Storage
-    ▼
-┌─────────────────────────────────────┐
-│  VectorStore (JSONL / In-Memory)    │
-│  - Chunk + Vector pairs             │
-│  - Cosine similarity search         │
-└─────────────────────────────────────┘
+```mermaid
+graph TB
+    Raw["Raw File (*.md, *.txt)"]
+    Doc["<strong>Document</strong><br/>- doc_id (hash-based, stable)<br/>- text (full content)<br/>- source ('filesystem')<br/>- uri (file path)<br/>- metadata"]
+    Chunk["<strong>Chunk</strong><br/>- chunk_id (doc_id:strategy:idx)<br/>- doc_id (reference)<br/>- text (chunk content)<br/>- chunk_index, start_char, end_char<br/>- section_heading, section_path<br/>- metadata"]
+    Vec["<strong>Vector</strong><br/>- list[float] (e.g., 3072 dims)"]
+    Store["<strong>VectorStore (JSONL / In-Memory)</strong><br/>- Chunk + Vector pairs<br/>- Cosine similarity search"]
+
+    Raw --> Doc
+    Doc -- "Chunking (800 chars, 120 overlap)" --> Chunk
+    Chunk -- "Embedding (OpenAI / Dummy)" --> Vec
+    Vec -- "Storage" --> Store
 ```
 
 ### Query Processing Pipeline
 
-```
-User Query: "What is X?"
-    │
-    │  Embedding
-    ▼
-Query Vector
-    │
-    │  Vector Search (top_k=8)
-    ▼
-┌─────────────────────────────────────┐
-│          Candidates                 │
-│  - chunk: Chunk                     │
-│  - score: float (similarity)        │
-│  - rerank_score: float | None       │
-└─────────────────────────────────────┘
-    │
-    │  Reranking (lexical boost + diversity)
-    ▼
-Reranked Candidates (keep_k=4)
-    │
-    │  Context Building (token_budget=1500)
-    ▼
-┌─────────────────────────────────────┐
-│          ContextPack                │
-│  - query                            │
-│  - chunks: List[Chunk]              │
-│  - rendered_context: str            │
-│  - citations: List[Citation]        │
-│  - token_budget                     │
-└─────────────────────────────────────┘
-    │
-    │  LLM Generation
-    ▼
-┌─────────────────────────────────────┐
-│            Answer                   │
-│  - query                            │
-│  - text (generated response)        │
-│  - citations                        │
-│  - abstained: bool                  │
-│  - confidence                       │
-└─────────────────────────────────────┘
+```mermaid
+graph TB
+    Query["User Query: 'What is X?'"]
+    QVec["Query Vector"]
+    Cand["<strong>Candidates</strong><br/>- chunk: Chunk<br/>- score: float (similarity)<br/>- rerank_score: float | None"]
+    Reranked["Reranked Candidates (keep_k=4)"]
+    Context["<strong>ContextPack</strong><br/>- query<br/>- chunks: List[Chunk]<br/>- rendered_context: str<br/>- citations: List[Citation]<br/>- token_budget"]
+    Ans["<strong>Answer</strong><br/>- query<br/>- text (generated response)<br/>- citations<br/>- abstained: bool<br/>- confidence"]
+
+    Query -- "Embedding" --> QVec
+    QVec -- "Vector Search (top_k=8)" --> Cand
+    Cand -- "Reranking (lexical boost + diversity)" --> Reranked
+    Reranked -- "Context Building (token_budget=1500)" --> Context
+    Context -- "LLM Generation" --> Ans
 ```
 
 ---
@@ -497,26 +449,17 @@ src/rag/
 
 ## Configuration Flow
 
-```
-settings.toml (defaults)
-        │
-        ▼
-Settings.load_settings()
-        │
-        ▼
-CLI Arguments (overrides)
-        │
-        ▼
-ContainerOverrides
-        │
-        ▼
-build_container(cfg, overrides)
-        │
-        ▼
-Container (fully wired)
-        │
-        ▼
-run_query() / index_document()
+```mermaid
+graph TB
+    Settings["settings.toml (defaults)"]
+    Load["Settings.load_settings()"]
+    CLI["CLI Arguments (overrides)"]
+    Overrides["ContainerOverrides"]
+    Build["build_container(cfg, overrides)"]
+    Container["Container (fully wired)"]
+    Run["run_query() / index_document()"]
+
+    Settings --> Load --> CLI --> Overrides --> Build --> Container --> Run
 ```
 
 The configuration system allows:
