@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import asdict
-from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
 
@@ -14,6 +12,7 @@ from dotenv import load_dotenv
 from rag import settings
 from rag.app.container import ContainerOverrides, build_container
 from rag.app.pipeline import index_documents
+from rag.domain.index_manifest import IndexManifest
 from rag.domain.models import Chunk, Document
 from rag.ports import Embedder, VectorStore
 
@@ -112,10 +111,6 @@ def build_argparser() -> argparse.ArgumentParser:
     )
 
     return ap
-
-
-def _utcnow_iso() -> str:
-    return datetime.now(UTC).isoformat()
 
 
 def _format_duration(seconds: float) -> str:
@@ -348,30 +343,29 @@ def main() -> None:
     # -----------------------------
     # 4) Manifest
     # -----------------------------
-    manifest = {
-        "index_name": args.index_name,
-        "created_at": _utcnow_iso(),
-        "corpus": str(vault_root),
-        "recursive": args.recursive,
-        "doc_count": len(docs),
-        "chunk_count": total_chunks,
-        "chunking": container.chunker.get_config(),
-        "embedding": {
+    wall_dt = perf_counter() - wall_start
+
+    manifest = IndexManifest.create(
+        index_name=args.index_name,
+        corpus=str(vault_root),
+        doc_count=len(docs),
+        chunk_count=total_chunks,
+        chunking=container.chunker.get_config(),
+        embedding={
             "backend": emb_backend,
             "model": container.embedder.model_name,
             "cached": bool(args.cache_embeddings),
         },
-        "ingest_report": asdict(report),
-        "store": {
+        ingest_report=asdict(report),
+        store={
             "type": "jsonl",
             "path": str(index_dir),
             "file": "chunks.jsonl",
         },
-    }
+        build_duration_s=round(wall_dt, 2),
+    )
+    manifest.save(index_dir)
 
-    (index_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-
-    wall_dt = perf_counter() - wall_start
     log.info("Done in %s", _format_duration(wall_dt))
     log.info("  docs:     %d", len(docs))
     log.info("  chunks:   %s", f"{total_chunks:,}")
