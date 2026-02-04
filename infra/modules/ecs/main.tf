@@ -66,10 +66,9 @@ resource "aws_ecs_task_definition" "qdrant" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/${var.cluster_name}/qdrant"
+          "awslogs-group"         = aws_cloudwatch_log_group.qdrant.name
           "awslogs-region"        = data.aws_region.current.name
           "awslogs-stream-prefix" = "qdrant"
-          "awslogs-create-group"  = "false"
         }
       }
     }
@@ -130,10 +129,9 @@ resource "aws_ecs_task_definition" "app" {
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = "/ecs/${var.cluster_name}/app"
+          "awslogs-group"         = aws_cloudwatch_log_group.app.name
           "awslogs-region"        = data.aws_region.current.name
           "awslogs-stream-prefix" = "app"
-          "awslogs-create-group"  = "false"
         }
       }
     }
