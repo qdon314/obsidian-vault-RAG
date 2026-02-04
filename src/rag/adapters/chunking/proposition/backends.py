@@ -249,8 +249,11 @@ class GGUFPropositionizer:
                 temperature=self.temperature,
                 top_p=self.top_p,
                 max_tokens=self.max_tokens,
+                stream=False,
             )
-            text = resp["choices"][0]["message"]["content"]
+            # stream=False guarantees a dict response, but the library's
+            # return type is a union that mypy can't narrow.
+            text = resp["choices"][0]["message"]["content"]  # type: ignore[union-attr]
         except Exception:
             # Fallback: raw completion
             resp = self.llm(
@@ -260,9 +263,9 @@ class GGUFPropositionizer:
                 max_tokens=self.max_tokens,
                 stop=["\n\n\n"],  # crude stop
             )
-            text = resp["choices"][0]["text"]
+            text = resp["choices"][0]["text"]  # type: ignore[union-attr]
 
-        props = _parse_json_list_loose(text)
+        props = _parse_json_list_loose(text if text else "")
         return props
 
     def get_config(self) -> dict[str, Any]:
