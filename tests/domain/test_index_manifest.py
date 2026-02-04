@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from rag.domain.errors import IndexIncompatibleError, RagAppError
 from rag.domain.index_manifest import IndexManifest
 
 
@@ -72,3 +73,71 @@ class TestIndexManifest:
         }
         m = IndexManifest.from_dict(d)
         assert m.index_name == "test"
+
+    def test_create_populates_build_id(self) -> None:
+        m = IndexManifest.create(
+            index_name="test",
+            corpus="/data",
+            doc_count=5,
+            chunk_count=20,
+        )
+        assert m.build_id  # non-empty UUID string
+        assert len(m.build_id) == 32  # hex UUID without dashes
+
+    def test_create_populates_status_default(self) -> None:
+        m = IndexManifest.create(
+            index_name="test",
+            corpus="/data",
+            doc_count=5,
+            chunk_count=20,
+        )
+        assert m.status == "complete"
+
+    def test_create_accepts_status_override(self) -> None:
+        m = IndexManifest.create(
+            index_name="test",
+            corpus="/data",
+            doc_count=0,
+            chunk_count=0,
+            status="failed",
+        )
+        assert m.status == "failed"
+
+    def test_create_populates_git_dirty(self) -> None:
+        m = IndexManifest.create(
+            index_name="test",
+            corpus="/data",
+            doc_count=5,
+            chunk_count=20,
+        )
+        assert isinstance(m.git_dirty, bool)
+
+    def test_create_accepts_build_duration(self) -> None:
+        m = IndexManifest.create(
+            index_name="test",
+            corpus="/data",
+            doc_count=5,
+            chunk_count=20,
+            build_duration_s=12.5,
+        )
+        assert m.build_duration_s == 12.5
+
+    def test_roundtrip_preserves_new_fields(self) -> None:
+        m = IndexManifest.create(
+            index_name="test",
+            corpus="/data",
+            doc_count=5,
+            chunk_count=20,
+            build_duration_s=10.0,
+        )
+        d = m.to_dict()
+        m2 = IndexManifest.from_dict(d)
+        assert m2.build_id == m.build_id
+        assert m2.status == m.status
+        assert m2.git_dirty == m.git_dirty
+        assert m2.build_duration_s == m.build_duration_s
+
+    def test_index_incompatible_error_is_rag_app_error(self) -> None:
+        err = IndexIncompatibleError("model mismatch")
+        assert isinstance(err, RagAppError)
+        assert str(err) == "model mismatch"

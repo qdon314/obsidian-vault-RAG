@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -24,6 +25,19 @@ def _get_git_sha() -> str:
         return "unknown"
 
 
+def _is_git_dirty() -> bool:
+    """Check if working tree has uncommitted changes."""
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--quiet", "HEAD"],
+            capture_output=True,
+            timeout=5,
+        )
+        return result.returncode != 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
 @dataclass(frozen=True, slots=True)
 class IndexManifest:
     """Self-describing manifest for an index build.
@@ -42,6 +56,10 @@ class IndexManifest:
     embedding: dict[str, Any] = field(default_factory=dict)
     ingest_report: dict[str, Any] = field(default_factory=dict)
     store: dict[str, Any] = field(default_factory=dict)
+    build_id: str = ""
+    status: str = "complete"
+    git_dirty: bool = False
+    build_duration_s: float = 0.0
 
     @staticmethod
     def create(
@@ -54,8 +72,10 @@ class IndexManifest:
         embedding: dict[str, Any] | None = None,
         ingest_report: dict[str, Any] | None = None,
         store: dict[str, Any] | None = None,
+        status: str = "complete",
+        build_duration_s: float = 0.0,
     ) -> IndexManifest:
-        """Create a manifest with auto-populated timestamp and git SHA."""
+        """Create a manifest with auto-populated timestamp, git SHA, build_id."""
         return IndexManifest(
             index_name=index_name,
             created_at=datetime.now(UTC).isoformat(),
@@ -67,6 +87,10 @@ class IndexManifest:
             embedding=embedding or {},
             ingest_report=ingest_report or {},
             store=store or {},
+            build_id=uuid.uuid4().hex,
+            status=status,
+            git_dirty=_is_git_dirty(),
+            build_duration_s=build_duration_s,
         )
 
     def to_dict(self) -> dict[str, Any]:
