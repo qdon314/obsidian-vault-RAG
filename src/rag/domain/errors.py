@@ -28,3 +28,7 @@ class RerankError(RagAppError):
 
 class GenerationError(RagAppError):
     pass
+
+
+class IndexIncompatibleError(RagAppError):
+    pass
