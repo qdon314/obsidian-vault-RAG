@@ -27,6 +27,9 @@ non-interactive shells used by Claude Code.
 - DO produce a set of suggested commits indicating files and message for each commit at the end of implementation / in the summary of changes.
 - I am the final reviewer of changes.
 
+## Documentation
+ - Use mermaid diagrams INSTEAD of ascii diagrams where appropriate / possible.
+
 ## Build & Test Commands
 
 ```bash
