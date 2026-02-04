@@ -1,0 +1,13 @@
+aws_region     = "us-east-1"
+project_name   = "obsidian-rag"
+openai_api_key = "sk-your-key-here"
+
+# Find these with: aws ec2 describe-subnets --query 'Subnets[].SubnetId'
+subnet_ids = ["subnet-xxxxxxxx"]
+
+# Optional: restrict traffic
+# security_group_ids = ["sg-xxxxxxxx"]
+
+# Scale to zero by default (set to 1 to run)
+app_desired_count    = 0
+qdrant_desired_count = 0
