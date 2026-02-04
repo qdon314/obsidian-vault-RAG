@@ -251,19 +251,19 @@ class GGUFPropositionizer:
                 max_tokens=self.max_tokens,
                 stream=False,
             )
-            # stream=False guarantees a dict response, but the library's
-            # return type is a union that mypy can't narrow.
-            text = resp["choices"][0]["message"]["content"]  # type: ignore[union-attr]
+            # stream=False guarantees a non-iterator response, but the
+            # library's return type is a union that mypy can't narrow.
+            text = resp["choices"][0]["message"]["content"]  # type: ignore[index]
         except Exception:
             # Fallback: raw completion
-            resp = self.llm(
+            fallback = self.llm(
                 f"{self.system_prompt}\n\n{prompt}\n",
                 temperature=self.temperature,
                 top_p=self.top_p,
                 max_tokens=self.max_tokens,
                 stop=["\n\n\n"],  # crude stop
             )
-            text = resp["choices"][0]["text"]  # type: ignore[union-attr]
+            text = fallback["choices"][0]["text"]  # type: ignore[index]
 
         props = _parse_json_list_loose(text if text else "")
         return props
