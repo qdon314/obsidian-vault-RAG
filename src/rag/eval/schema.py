@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from dataclasses_json import DataClassJsonMixin, config
@@ -19,7 +19,7 @@ from rag.utils.dataclass_json_utils import (
 logger = logging.getLogger(__name__)
 
 
-class QueryType(str, Enum):
+class QueryType(StrEnum):
     """Types of queries in the evaluation set."""
 
     FACTUAL = "factual"  # Simple fact lookup
@@ -33,7 +33,7 @@ class QueryType(str, Enum):
     MULTI_HOP = "multi_hop"  # Requires connecting multiple pieces of information
 
 
-class Difficulty(str, Enum):
+class Difficulty(StrEnum):
     """Difficulty levels for queries."""
 
     EASY = "easy"  # Direct match, single chunk
