@@ -32,11 +32,11 @@ def _matches(node: Filter, meta: Mapping[str, object]) -> bool:
         if v is None:
             return False
         if node.gte is not None and not (v >= node.gte):
-            return False  # noqa: E701
+            return False
         if node.lte is not None and not (v <= node.lte):
-            return False  # noqa: E701
+            return False
         if node.gt is not None and not (v > node.gt):
-            return False  # noqa: E701
+            return False
         return not (node.lt is not None and not v < node.lt)
 
     if isinstance(node, And):
