@@ -95,7 +95,7 @@ def main() -> None:
 
     overrides = ContainerOverrides(
         store_backend="jsonl",
-        jsonl_index_dir=Path("artifacts/indexes/obsidian"),
+        jsonl_index_dir=args.index,
         logs_directory=Path(run_dir),
     )
 
@@ -117,6 +117,7 @@ def main() -> None:
         eval_queries=eval_queries,
         container=container,
         queries_path=str(args.queries),
+        index_dir=args.index,
         top_k=args.top_k,
         keep_k=args.keep_k,
         token_budget=args.token_budget,

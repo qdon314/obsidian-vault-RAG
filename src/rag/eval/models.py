@@ -230,6 +230,8 @@ class EvalRunMeta(DataClassJsonMixin):
     gold_judge_version: str | None = None
     groundedness_judge_version: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
+    index_name: str | None = None
+    index_build_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

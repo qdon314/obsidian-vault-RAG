@@ -25,7 +25,9 @@ import numpy as np
 from openai import OpenAI
 
 from rag.app.container import Container
+from rag.app.manifest_validation import validate_index
 from rag.app.query_runner import run_query
+from rag.domain.index_manifest import IndexManifest
 from rag.domain.models import Answer, Chunk
 from rag.eval import reducers
 from rag.eval.answer_metrics import AnswerQualityMetrics
@@ -176,6 +178,7 @@ def run_full_eval(
     eval_queries: list[EvalQuery],
     container: Container,
     queries_path: str | None,
+    index_dir: Path | None = None,
     top_k: int = 10,
     keep_k: int | None = None,
     token_budget: int = 1500,
@@ -187,6 +190,16 @@ def run_full_eval(
     run_name: str | None = None,
 ) -> EvalRun:
     container.store.load()
+
+    # Validate index if directory provided
+    manifest: IndexManifest | None = None
+    if index_dir is not None:
+        manifest_path = index_dir / "manifest.json"
+        if manifest_path.exists():
+            manifest = IndexManifest.load(index_dir)
+            validate_index(manifest, container.embedder)
+        else:
+            logger.warning("No manifest.json in %s — skipping validation", index_dir)
     run_id = uuid.uuid4().hex
     started_at = datetime.now(UTC)
 
@@ -302,6 +315,8 @@ def run_full_eval(
         run_name=run_name,
         gold_judge_version=GOLD_JUDGE_VERSION if use_llm_judge else None,
         groundedness_judge_version=GROUNDEDNESS_JUDGE_VERSION if use_llm_judge else None,
+        index_name=manifest.index_name if manifest else None,
+        index_build_id=manifest.build_id if manifest else None,
     )
 
     return EvalRun(
