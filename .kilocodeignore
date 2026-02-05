@@ -1,0 +1,15 @@
+# Outputs
+data/
+logs/
+artifacts/cache/
+artifacts/indexes/
+
+# IDEs and editors
+**/.DS_Store
+config.py
+.vscode/settings.json
+config.py
+
+# Experimental Project State Script
+scripts/project_state/*
+eval/runs/*
