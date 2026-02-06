@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -22,6 +23,7 @@ from rag.adapters.reranking.rerank_noop import NoOpReranker
 from rag.adapters.retrieval.vector_retriever import VectorRetriever
 from rag.adapters.vectorstores.in_memory_store import InMemoryVectorStore
 from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
+from rag.domain.models import Chunk
 from rag.ports import (
     Chunker,
     ContextBuilder,
@@ -74,11 +76,31 @@ class ContainerOverrides:
 
     vault_dir: Path | None = None
 
+    retrieval_backend: Literal["vector", "hybrid"] | None = None
     top_k: int | None = None
     rerank_backend: Literal["heuristic", "noop"] | None = None
     rerank_enabled: bool | None = None
 
     logs_directory: Path | None = None
+
+
+def _get_store_chunks(store: VectorStore) -> Sequence[Chunk]:
+    """Access loaded chunks from an in-memory or JSONL vector store.
+
+    Hybrid retrieval requires direct chunk access for BM25 indexing.
+    Only stores that hold chunks in memory (InMemory, JSONL) are supported.
+
+    TODO: Replace private-attribute access with a public ChunkLoader port
+    or a ``list_chunks()`` method on VectorStore to respect the hexagonal
+    architecture boundary.
+    """
+    chunks = getattr(store, "_chunks", None)
+    if chunks is None:
+        raise TypeError(
+            "Hybrid retrieval requires a store with in-memory chunk access "
+            "(memory or jsonl). The current store does not expose chunks."
+        )
+    return chunks
 
 
 def build_container(
@@ -244,8 +266,28 @@ def build_container(
             )
         store = JsonlVectorStore(path=index_dir)
 
-    # IMPORTANT: retriever must be built from the chosen embedder+store
-    retriever = VectorRetriever(embedder=embedder, store=store)
+    # ----- retriever selection
+    retriever: Retriever
+    retriever_backend = ovrds.retrieval_backend or cfg.retrieval.backend
+    if retriever_backend == "hybrid":
+        from rag.adapters.retrieval.bm25_retriever import BM25Retriever
+        from rag.adapters.retrieval.hybrid_retriever import HybridRetriever
+
+        vector_retriever = VectorRetriever(embedder=embedder, store=store)
+        bm25 = BM25Retriever(
+            k1=cfg.retrieval.hybrid_bm25_k1,
+            b=cfg.retrieval.hybrid_bm25_b,
+            chunk_source=lambda: _get_store_chunks(store),
+        )
+        retriever = HybridRetriever(
+            primary=vector_retriever,
+            secondary=bm25,
+            primary_weight=cfg.retrieval.hybrid_primary_weight,
+            secondary_weight=cfg.retrieval.hybrid_secondary_weight,
+            rrf_k=cfg.retrieval.hybrid_rrf_k,
+        )
+    else:
+        retriever = VectorRetriever(embedder=embedder, store=store)
 
     # ----- reranker (optional)
     reranker: Reranker
