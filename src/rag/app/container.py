@@ -175,7 +175,12 @@ def build_container(
         )
         embedder = DummyEmbedder(dim=dim)
     else:
-        embedder = OpenAIEmbedder(api_key=api_key, model=str(cfg.embeddings.model))
+        embedder = OpenAIEmbedder(
+            api_key=api_key,
+            model=str(cfg.embeddings.model),
+            timeout=cfg.embeddings.timeout,
+            max_retries=cfg.embeddings.max_retries,
+        )
 
     # ----- optional embedding cache (wraps the embedder with SQLite disk cache)
     cache_enabled = (
@@ -192,7 +197,13 @@ def build_container(
         embedder = CachedEmbedder(embedder=embedder, db_path=cache_db_path)
 
     # ----- generator (usually always OpenAI for now, but can also be made configurable)
-    generator = OpenAIChatGenerator(api_key=api_key, model=str(cfg.llm.model))
+    generator = OpenAIChatGenerator(
+        api_key=api_key,
+        model=str(cfg.llm.model),
+        temperature=cfg.llm.temperature,
+        timeout=cfg.llm.timeout,
+        max_retries=cfg.llm.max_retries,
+    )
 
     # ----- store selection
     store: VectorStore
