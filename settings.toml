@@ -93,7 +93,15 @@ jsonl_dir = "artifacts/indexes/obsidian_index"
 # Retrieval
 # -------------------------------------------------------------------
 [retrieval]
+backend = "vector"            # "vector" | "hybrid"
 top_k = 8
+
+# Hybrid retrieval settings (only used when backend = "hybrid")
+# hybrid_primary_weight = 0.7
+# hybrid_secondary_weight = 0.3
+# hybrid_rrf_k = 60
+# hybrid_bm25_k1 = 1.5
+# hybrid_bm25_b = 0.75
 
 
 # -------------------------------------------------------------------

@@ -105,7 +105,14 @@ class LLM:
 
 @dataclass(frozen=True, slots=True)
 class Retrieval:
+    backend: Literal["vector", "hybrid"] = "vector"
     top_k: int = 8
+    # Hybrid retrieval settings (only used when backend = "hybrid")
+    hybrid_primary_weight: float = 0.7
+    hybrid_secondary_weight: float = 0.3
+    hybrid_rrf_k: int = 60
+    hybrid_bm25_k1: float = 1.5
+    hybrid_bm25_b: float = 0.75
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,7 +255,15 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
     )
 
     # Retrieval
-    retrieval = Retrieval(top_k=int(retrieval_tbl.get("top_k", 8)))
+    retrieval = Retrieval(
+        backend=str(retrieval_tbl.get("backend", "vector")),  # type: ignore[arg-type]
+        top_k=int(retrieval_tbl.get("top_k", 8)),
+        hybrid_primary_weight=float(retrieval_tbl.get("hybrid_primary_weight", 0.7)),
+        hybrid_secondary_weight=float(retrieval_tbl.get("hybrid_secondary_weight", 0.3)),
+        hybrid_rrf_k=int(retrieval_tbl.get("hybrid_rrf_k", 60)),
+        hybrid_bm25_k1=float(retrieval_tbl.get("hybrid_bm25_k1", 1.5)),
+        hybrid_bm25_b=float(retrieval_tbl.get("hybrid_bm25_b", 0.75)),
+    )
 
     # Rerank
     rerank = Rerank(
