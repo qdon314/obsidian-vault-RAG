@@ -78,6 +78,8 @@ class Embeddings:
     dummy_dim: int = 128
     cache_embeddings: bool = False
     cache_db_path: Path | None = None  # path to SQLite cache DB
+    timeout: float = 30.0
+    max_retries: int = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +99,8 @@ class LLM:
     model: str = "gpt-4.1-mini"
     temperature: float = 0.2
     max_tokens: int = 1024
+    timeout: float = 60.0
+    max_retries: int = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,6 +220,8 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         dummy_dim=int(emb_tbl.get("dummy_dim", 128)),
         cache_embeddings=bool(emb_tbl.get("cache_embeddings", True)),
         cache_db_path=expand(cache_db_path_raw) if isinstance(cache_db_path_raw, str) else None,
+        timeout=float(emb_tbl.get("timeout", 30.0)),
+        max_retries=int(emb_tbl.get("max_retries", 3)),
     )
 
     # Vectorstore
@@ -237,6 +243,8 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         model=str(llm_tbl.get("model", "gpt-4.1-mini")),
         temperature=float(llm_tbl.get("temperature", 0.2)),
         max_tokens=int(llm_tbl.get("max_tokens", 1024)),
+        timeout=float(llm_tbl.get("timeout", 60.0)),
+        max_retries=int(llm_tbl.get("max_retries", 3)),
     )
 
     # Retrieval
