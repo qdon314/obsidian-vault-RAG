@@ -1,16 +1,23 @@
 ---
-description: Start a task with the repo session contract and pick the right mode.
+description: Start an execution task with the repo session contract (defaults to implementation).
 arguments:
   - task
 mode: implementation
 ---
 
-Session contract for this repo:
+Session contract for this repo.
 
-Mode selection:
+Default mode: **Implementation Executor**.
+This command is for work where direction is already clear.
+
+If the task requires planning, design, or spec-writing, stop and use:
+- `/plan` for implementation plans/designs
+- `/spec` for work item specs/tickets
+- `/review` to critique a plan or spec
+
+Mode selection (override only if needed):
 - Architecture questions or refactors → Architecture / Systems Review
 - Failures, regressions, or unclear behavior → Debug / Forensics
-- Clear, agreed execution → Implementation Executor
 - Metrics, evals, judges, retrieval quality → Evaluation / Signal Analysis
 - Docs only → Documentation / Explanation
 
@@ -30,7 +37,7 @@ Git:
 
 Now:
 1) Restate the task in 1–2 sentences.
-2) Choose the best mode explicitly (switch if needed).
+2) Confirm or switch the mode explicitly.
 3) Proceed according to that mode.
 
 Current task (may be empty): $ARGUMENTS

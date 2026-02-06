@@ -9,6 +9,7 @@ This mode edits docs only. Keep it grounded and consistent.
 
 ## Style conventions
 - Prefer **mermaid** for diagrams (flows, architecture).
+ - mermaid code blocks must be wrapped in ```mermaid
 - Keep “How to run” sections aligned with repo commands:
   - prefer `make <target>` and `./scripts/py` / `./scripts/pip`
 
