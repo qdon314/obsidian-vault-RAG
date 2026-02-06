@@ -266,17 +266,64 @@ Retrieval settings.
 
 ```toml
 [retrieval]
+backend = "vector"           # "vector" | "hybrid"
 top_k = 8
+
+# Hybrid search settings (only when backend = "hybrid")
+[retrieval.hybrid]
+primary_weight = 0.7         # Weight for vector results
+secondary_weight = 0.3       # Weight for BM25 results
+rrf_k = 60                   # RRF fusion constant
+bm25_k1 = 1.5               # BM25 term frequency saturation
+bm25_b = 0.75               # BM25 length normalization
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `backend` | string | `"vector"` | `"vector"` or `"hybrid"` |
 | `top_k` | int | `8` | Initial candidates to retrieve |
+
+**Hybrid Sub-section:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `primary_weight` | float | `0.7` | Weight for vector (primary) results in RRF fusion |
+| `secondary_weight` | float | `0.3` | Weight for BM25 (secondary) results in RRF fusion |
+| `rrf_k` | int | `60` | RRF constant (higher = more rank smoothing) |
+| `bm25_k1` | float | `1.5` | BM25 term frequency saturation parameter |
+| `bm25_b` | float | `0.75` | BM25 length normalization parameter |
+
+**Backend Comparison:**
+
+| Backend | Description | Speed | Recall | Use Case |
+|---------|-------------|-------|--------|----------|
+| `vector` | Pure vector similarity | Fastest | Good | General use, default |
+| `hybrid` | Vector + BM25 with RRF | Fast | Better | Rare terms, acronyms, proper nouns |
+
+**Hybrid Search:**
+
+Hybrid search combines vector similarity with BM25 keyword search using Reciprocal Rank Fusion (RRF):
+
+```
+RRF Score = Σ(weight / (k + rank))
+```
+
+Where:
+- `weight` is `primary_weight` or `secondary_weight`
+- `k` is the RRF constant (default 60)
+- `rank` is the position in each result list (1-indexed)
+
+**BM25 Parameters:**
+
+- `k1` (1.5): Controls term frequency saturation. Higher values allow more term frequency influence.
+- `b` (0.75): Controls length normalization. 0 = no normalization, 1 = full normalization.
 
 **Guidance:**
 - Higher `top_k` → More candidates for reranking
 - Typical range: 5-20
 - Consider corpus size and diversity
+- Use `hybrid` when queries contain rare terms, acronyms, or proper nouns
+- BM25 retriever is built in-memory from loaded chunks (no separate index file)
 
 ---
 

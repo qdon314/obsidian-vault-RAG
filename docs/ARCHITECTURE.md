@@ -95,7 +95,7 @@ graph TB
     end
 
     subgraph "Query Pipeline"
-        Retriever[VectorRetriever]
+        Retriever[Retriever]
         Reranker[Reranker]
         ContextBuilder[ContextBuilder]
         Generator[Generator]
@@ -341,7 +341,9 @@ graph TB
 | `DummyEmbedder` | `Embedder` | Random vectors for testing |
 | `JsonlVectorStore` | `VectorStore` | JSONL-persisted, in-memory search |
 | `InMemoryVectorStore` | `VectorStore` | Pure in-memory (no persistence) |
-| `VectorRetriever` | `Retriever` | Composes Embedder + VectorStore |
+| `BM25Retriever` | `Retriever` | Keyword based search |
+| `VectorRetriever` | `Retriever` | Pure vector similarity search |
+| `HybridRetriever` | `Retriever` | Vector + keyword search with RRF fusion |
 | `HeuristicReranker` | `Reranker` | Lexical overlap boost + diversity |
 | `NoOpReranker` | `Reranker` | Pass-through (baseline) |
 | `SimpleContextBuilder` | `ContextBuilder` | Token budget + deduplication |

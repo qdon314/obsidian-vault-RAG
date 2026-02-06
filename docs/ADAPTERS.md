@@ -396,7 +396,7 @@ pip install -e ".[qdrant]"
 
 **Location:** `src/rag/adapters/retrieval/vector_retriever.py`
 
-Composes an Embedder and VectorStore for retrieval.
+Composes an Embedder and VectorStore for pure vector similarity retrieval.
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -416,6 +416,160 @@ from rag.adapters.retrieval.vector_retriever import VectorRetriever
 
 retriever = VectorRetriever(embedder=embedder, store=store)
 candidates = retriever.retrieve("What is X?", top_k=10)
+```
+
+### BM25Retriever
+
+**Location:** `src/rag/adapters/retrieval/bm25_retriever.py`
+
+Pure-Python BM25 keyword retriever with no external dependencies. Provides lexical matching for exact term retrieval.
+
+```python
+@dataclass
+class BM25Retriever:
+    k1: float = 1.5          # Term frequency saturation parameter
+    b: float = 0.75          # Length normalization parameter
+```
+
+**Algorithm:**
+
+BM25 scores documents based on term frequency and inverse document frequency:
+
+```
+score = Σ(idf(t) * (f(t,d) * (k1 + 1)) / (f(t,d) + k1 * (1 - b + b * |d|/avgdl)))
+```
+
+Where:
+- `f(t,d)` = frequency of term t in document d
+- `|d|` = document length (in tokens)
+- `avgdl` = average document length
+- `idf(t)` = inverse document frequency of term t
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `index(chunks: list[Chunk])` | Build BM25 index from chunks |
+| `retrieve(query, top_k, where)` | Score and rank chunks by BM25 |
+
+**Example:**
+```python
+from rag.adapters.retrieval.bm25_retriever import BM25Retriever
+
+bm25 = BM25Retriever(k1=1.5, b=0.75)
+bm25.index(chunks)  # Build index from loaded chunks
+candidates = bm25.retrieve("RAG architecture", top_k=10)
+```
+
+**Parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `k1` | 1.5 | Term frequency saturation (higher = more saturation) |
+| `b` | 0.75 | Length normalization (0-1, higher = more normalization) |
+
+**Tokenization:**
+
+Simple lowercase split tokenization. No stemming or stopword removal (intentionally simple to avoid dependencies).
+
+**When to Use:**
+
+| Use Case | Recommendation |
+|----------|----------------|
+| Exact term matching | ✓ Ideal |
+| Acronyms | ✓ Ideal |
+| Rare technical terms | ✓ Ideal |
+| Semantic/conceptual queries | ✗ Use VectorRetriever |
+| General natural language | △ Okay, but vector is usually better |
+
+### HybridRetriever
+
+**Location:** `src/rag/adapters/retrieval/hybrid_retriever.py`
+
+Combines two retrievers (typically vector + BM25) using Reciprocal Rank Fusion (RRF). No external dependencies.
+
+```python
+@dataclass(frozen=True, slots=True)
+class HybridRetriever:
+    primary: Retriever       # Usually VectorRetriever
+    secondary: Retriever     # Usually BM25Retriever
+    primary_weight: float = 0.7
+    secondary_weight: float = 0.3
+    rrf_k: int = 60
+```
+
+**Workflow:**
+1. Retrieve candidates from primary retriever (top_k * 2)
+2. Retrieve candidates from secondary retriever (top_k * 2)
+3. Fuse results using RRF: `score = Σ(weight / (k + rank))`
+4. Return top-k fused candidates
+
+**RRF Formula:**
+
+```
+RRF Score = Σ(weight / (k + rank))
+```
+
+Where:
+- `weight` is `primary_weight` or `secondary_weight`
+- `k` is the RRF constant (default 60)
+- `rank` is the position in each result list (1-indexed)
+
+Items appearing in both result lists receive higher fused scores.
+
+**Parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `primary` | required | Primary retriever (usually vector) |
+| `secondary` | required | Secondary retriever (usually BM25) |
+| `primary_weight` | 0.7 | Weight for primary results |
+| `secondary_weight` | 0.3 | Weight for secondary results |
+| `rrf_k` | 60 | RRF constant (higher = more rank smoothing) |
+
+**Example:**
+```python
+from rag.adapters.retrieval.hybrid_retriever import HybridRetriever
+from rag.adapters.retrieval.vector_retriever import VectorRetriever
+from rag.adapters.retrieval.bm25_retriever import BM25Retriever
+
+# Build BM25 index
+bm25 = BM25Retriever()
+bm25.index(chunks)
+
+# Create hybrid retriever
+hybrid = HybridRetriever(
+    primary=VectorRetriever(embedder=embedder, store=store),
+    secondary=bm25,
+    primary_weight=0.7,
+    secondary_weight=0.3,
+)
+candidates = hybrid.retrieve("RAG architecture", top_k=10)
+```
+
+**When to Use Hybrid:**
+
+| Query Type | Vector Only | Hybrid |
+|------------|-------------|--------|
+| Semantic/conceptual | ✓ Good | ✓ Good |
+| Rare terms | ✗ Poor | ✓ Good |
+| Acronyms | ✗ Poor | ✓ Good |
+| Proper nouns | △ Okay | ✓ Good |
+| Keyword-heavy | △ Okay | ✓ Good |
+
+**Configuration:**
+
+```toml
+[retrieval]
+backend = "hybrid"           # "vector" | "hybrid"
+top_k = 8
+
+[retrieval.hybrid]
+primary_weight = 0.7
+secondary_weight = 0.3
+rrf_k = 60
+bm25_k1 = 1.5
+bm25_b = 0.75
 ```
 
 ---
