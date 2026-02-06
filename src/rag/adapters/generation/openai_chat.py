@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # Requires: pip install openai
 from openai import OpenAI
@@ -18,6 +18,20 @@ class OpenAIChatGenerator:
     api_key: str
     model: str = "gpt-4o-mini"
     temperature: float = 0.2
+    timeout: float = 60.0
+    max_retries: int = 3
+    _client: OpenAI = field(init=False, repr=False, compare=False, hash=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "_client",
+            OpenAI(
+                api_key=self.api_key,
+                timeout=self.timeout,
+                max_retries=self.max_retries,
+            ),
+        )
 
     @property
     def model_name(self) -> str:
@@ -30,15 +44,13 @@ class OpenAIChatGenerator:
         *,
         metadata: Mapping[str, object] | None = None,
     ) -> Answer:
-        client = OpenAI(api_key=self.api_key)
-
         system = (
             "You are a precise assistant. Use only the provided CONTEXT. "
             "If the answer cannot be found in the CONTEXT, say you don't know."
         )
         user = f"{context.rendered_context}\nQUESTION:\n{query}\n\nAnswer clearly and cite chunk numbers like [1], [2] where relevant."
 
-        resp = client.chat.completions.create(
+        resp = self._client.chat.completions.create(
             model=self.model,
             temperature=self.temperature,
             messages=[
