@@ -14,32 +14,19 @@ keywords = [
   "llm",
   "retrieval",
   "embeddings",
-  "obsidian",
-  "chroma"
+  "obsidian"
 ]
 
 dependencies = [
-  "llama-index",
-  "chromadb",
   "python-dotenv",
-  "rich",
   "dataclasses-json>=0.6.0",
-  "torch",
-
-  # LlamaIndex integrations
-  "llama-index-vector-stores-chroma",
-  "llama-index-embeddings-huggingface"
+  "numpy>=1.26.0",
+  "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]
-ollama = [
-  "llama-index-llms-ollama"
-]
-
-openai = [
-  "openai",
-  "llama-index-llms-openai"
-]
+# Kept for backward compatibility with existing install commands.
+openai = []
 
 ui = [
   "streamlit>=1.30.0",
@@ -55,6 +42,7 @@ aws = [
 ]
 
 proposition = [
+  "torch",
   "transformers",
   "sentencepiece",
   "llama-cpp-python",
@@ -119,6 +107,4 @@ skip-magic-trailing-comma = false
 [tool.mypy]
 mypy_path = ["src"]
 explicit_package_bases = true
-
-
 

@@ -3,9 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-
 from rag.adapters.chunking.proposition._parsing import _extract_json_list, _parse_json_list_loose
 
 
@@ -67,6 +64,17 @@ class T5Propositionizer:
         - This should happen ONCE per process (e.g. in your container),
           not once per document.
         """
+        try:
+            import torch
+            from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+        except ImportError as exc:
+            raise RuntimeError(
+                "T5Propositionizer requires optional dependencies. "
+                "Install with: ./scripts/pip install -e '.[proposition]'"
+            ) from exc
+
+        self._torch = torch
+
         # ----------------------------
         # Device selection
         # ----------------------------
@@ -147,7 +155,7 @@ class T5Propositionizer:
             # ----------------------------
             # inference_mode() is slightly faster than no_grad()
             # and disables version counter updates.
-            with torch.inference_mode():
+            with self._torch.inference_mode():
                 gen = self.model.generate(
                     **toks,
                     max_new_tokens=self.max_new_tokens,
