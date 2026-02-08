@@ -144,9 +144,7 @@ class TestRRFTopK:
         assert len(results) == 2
 
     def test_empty_secondary_uses_primary_only(self) -> None:
-        primary = StubRetriever(
-            results=[make_candidate(chunk=_CHUNK_A, score=0.9)]
-        )
+        primary = StubRetriever(results=[make_candidate(chunk=_CHUNK_A, score=0.9)])
         secondary = StubRetriever(results=[])
         hybrid = HybridRetriever(primary=primary, secondary=secondary)
 
@@ -182,7 +180,9 @@ class TestHybridRecallOnKeywordQueries:
 
         # Corpus with a rare acronym "ALARA" that vector search (stub) misses
         corpus = [
-            make_chunk(chunk_id="c1", doc_id="d1", text="Radiation safety follows ALARA principles"),
+            make_chunk(
+                chunk_id="c1", doc_id="d1", text="Radiation safety follows ALARA principles"
+            ),
             make_chunk(chunk_id="c2", doc_id="d1", text="Dose limits are set by regulatory bodies"),
             make_chunk(chunk_id="c3", doc_id="d2", text="Shielding materials reduce exposure"),
         ]

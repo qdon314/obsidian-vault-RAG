@@ -48,16 +48,13 @@ def load_eval_run(run_dir: Path) -> EvalRun:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate eval verdict and release gate decision")
     parser.add_argument(
-        "--current", 
-        type=Path, 
-        required=False,
-        default=Path("eval/runs/latest"), 
-        help="Current eval run directory")
-    parser.add_argument(
-        "--baseline",
+        "--current",
         type=Path,
-        default=None,
-        help="Baseline eval run directory")
+        required=False,
+        default=Path("eval/runs/latest"),
+        help="Current eval run directory",
+    )
+    parser.add_argument("--baseline", type=Path, default=None, help="Baseline eval run directory")
     parser.add_argument(
         "--output",
         type=Path,

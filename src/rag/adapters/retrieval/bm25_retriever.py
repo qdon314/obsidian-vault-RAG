@@ -67,10 +67,7 @@ class BM25Retriever:
             if s > 0:
                 scored.append((i, s))
         scored.sort(key=lambda x: x[1], reverse=True)
-        return [
-            Candidate(chunk=self._chunks[i], score=score)
-            for i, score in scored[:top_k]
-        ]
+        return [Candidate(chunk=self._chunks[i], score=score) for i, score in scored[:top_k]]
 
     # ------------------------------------------------------------------
     # Internals
@@ -96,10 +93,7 @@ class BM25Retriever:
         for tokens in self._tokenized:
             for term in set(tokens):
                 df[term] = df.get(term, 0) + 1
-        return {
-            term: math.log((n - freq + 0.5) / (freq + 0.5) + 1.0)
-            for term, freq in df.items()
-        }
+        return {term: math.log((n - freq + 0.5) / (freq + 0.5) + 1.0) for term, freq in df.items()}
 
     def _score(self, query_tokens: list[str], doc_tokens: list[str]) -> float:
         dl = len(doc_tokens)

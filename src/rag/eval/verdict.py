@@ -127,9 +127,7 @@ def compute_verdict(
             current=_safe_value(overall.recall_at_k.get(10)),
             threshold=thresholds.min_recall_at_10,
             baseline=(
-                _safe_value(baseline_overall.recall_at_k.get(10))
-                if baseline_overall
-                else None
+                _safe_value(baseline_overall.recall_at_k.get(10)) if baseline_overall else None
             ),
         ),
         # ndcg@10 check (always present)
@@ -138,7 +136,9 @@ def compute_verdict(
             passed=_safe_value(overall.ndcg_at_k.get(10)) >= thresholds.min_ndcg_at_10,
             current=_safe_value(overall.ndcg_at_k.get(10)),
             threshold=thresholds.min_ndcg_at_10,
-            baseline=(_safe_value(baseline_overall.ndcg_at_k.get(10)) if baseline_overall else None),
+            baseline=(
+                _safe_value(baseline_overall.ndcg_at_k.get(10)) if baseline_overall else None
+            ),
         ),
         # mrr check (always present)
         ThresholdCheck(
@@ -360,7 +360,9 @@ def verdict_from_dict(payload: dict[str, Any]) -> Verdict:
         baseline_run_id=(
             str(payload["baseline_run_id"]) if payload.get("baseline_run_id") is not None else None
         ),
-        dataset_name=str(payload["dataset_name"]) if payload.get("dataset_name") is not None else None,
+        dataset_name=str(payload["dataset_name"])
+        if payload.get("dataset_name") is not None
+        else None,
         created_at=datetime.fromisoformat(str(payload["created_at"])),
     )
 

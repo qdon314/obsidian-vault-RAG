@@ -57,7 +57,4 @@ class HybridRetriever:
             lookup.setdefault(cid, cand)
 
         ranked_ids = sorted(scores, key=scores.__getitem__, reverse=True)[:top_k]
-        return [
-            dataclasses.replace(lookup[cid], score=scores[cid])
-            for cid in ranked_ids
-        ]
+        return [dataclasses.replace(lookup[cid], score=scores[cid]) for cid in ranked_ids]

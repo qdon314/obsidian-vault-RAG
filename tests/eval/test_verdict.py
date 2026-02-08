@@ -52,7 +52,7 @@ def _make_run(
 ) -> EvalRun:
     """Build a synthetic EvalRun for threshold/regression scenarios."""
     results = tuple(
-        _make_result(f"q{i+1}", label)
+        _make_result(f"q{i + 1}", label)
         for i, label in enumerate(labels or [OutcomeLabel.SUCCESS_GROUNDED] * 5)
     )
     return EvalRun(
@@ -110,7 +110,9 @@ def test_verdict_block_on_low_recall() -> None:
     current = _make_run(run_id="current", recall10=0.20, ndcg10=0.70, mrr=0.60)
     verdict = compute_verdict(current, None, VerdictThresholds(min_recall_at_10=0.60))
     assert verdict.decision == Decision.BLOCK
-    assert any((check.name.startswith("recall@10")) and (not check.passed) for check in verdict.checks)
+    assert any(
+        (check.name.startswith("recall@10")) and (not check.passed) for check in verdict.checks
+    )
 
 
 def test_verdict_block_on_regression() -> None:
@@ -210,9 +212,7 @@ def test_render_json_roundtrips() -> None:
 
 def test_verdict_skips_checks_for_absent_data() -> None:
     """Retrieval-only runs with no answer_quality/latency should omit those checks."""
-    results = tuple(
-        _make_result(f"q{i+1}", None) for i in range(5)
-    )
+    results = tuple(_make_result(f"q{i + 1}", None) for i in range(5))
     current = EvalRun(
         meta=EvalRunMeta(
             run_id="retrieval-only",

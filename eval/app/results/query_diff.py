@@ -67,8 +67,7 @@ def compute_retrieval_diff(
     """
     if result_a.qid != result_b.qid:
         raise ValueError(
-            f"Cannot diff results for different queries: "
-            f"{result_a.qid} vs {result_b.qid}"
+            f"Cannot diff results for different queries: {result_a.qid} vs {result_b.qid}"
         )
 
     ids_a = result_a.retrieval_result.retrieved_chunk_ids[:k]
@@ -79,13 +78,10 @@ def compute_retrieval_diff(
 
     # Union of relevant chunks from both results (should be identical, but be safe)
     relevant = (
-        result_a.retrieval_result.relevant_chunk_ids
-        | result_b.retrieval_result.relevant_chunk_ids
+        result_a.retrieval_result.relevant_chunk_ids | result_b.retrieval_result.relevant_chunk_ids
     )
 
-    all_chunk_ids = list(
-        dict.fromkeys(list(ids_a) + list(ids_b))
-    )  # preserve order, deduplicate
+    all_chunk_ids = list(dict.fromkeys(list(ids_a) + list(ids_b)))  # preserve order, deduplicate
 
     rows: list[ChunkDiffRow] = []
     for cid in all_chunk_ids:

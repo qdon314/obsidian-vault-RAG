@@ -45,7 +45,9 @@ class VerdictThresholds:
             min_evidence_bounded_rate=float(
                 mapping.get("min_evidence_bounded_rate", defaults.min_evidence_bounded_rate)
             ),
-            max_latency_p95_ms=float(mapping.get("max_latency_p95_ms", defaults.max_latency_p95_ms)),
+            max_latency_p95_ms=float(
+                mapping.get("max_latency_p95_ms", defaults.max_latency_p95_ms)
+            ),
             max_unsafe_miss_rate=float(
                 mapping.get("max_unsafe_miss_rate", defaults.max_unsafe_miss_rate)
             ),
