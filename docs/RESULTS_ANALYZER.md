@@ -351,22 +351,31 @@ Color coding:
 
 #### Query Changes Tab
 
-Detailed lists of improved and regressed queries:
+Drill-down diagnostics for improved and regressed queries, sorted by natural ID order.
 
-**Improved Queries Section**:
-Lists queries where recall improved by > 5%, showing:
-- Query ID
-- Query text (truncated)
-- Recall change (e.g., "0.40 -> 0.80")
+**Summary Row** (per query):
+Each query is an expandable row showing:
+- Query ID, truncated text, query type, difficulty
+- Recall delta (e.g., "Recall: 0.40 → 0.80 (+0.40)")
 
-<!-- SCREENSHOT: Improved queries list with recall changes -->
-![Improved Queries](screenshots/comparison-improved-queries.png)
+<!-- SCREENSHOT: Query changes list with expandable summary rows -->
+![Query Changes Summary](screenshots/comparison-query-changes-list.png)
 
-**Regressed Queries Section**:
-Lists queries where recall dropped by > 5%, with same format
+**Detail View** (expanded):
+Expanding a query reveals three sections:
 
-<!-- SCREENSHOT: Regressed queries list -->
-![Regressed Queries](screenshots/comparison-regressed-queries.png)
+1. **Query Header**: Full query text, type, difficulty, unanswerable flag
+2. **Retrieval Diff Table**: Unified table of all chunks from either run showing:
+   - Chunk ID, relevance (ground truth), rank in Run A, rank in Run B
+   - Status: TP lost, TP gained, FP lost, FP gained, Moved up/down, Unchanged
+   - Sorted by diagnostic priority (TP lost first)
+3. **Answer Diff** (when both runs have answers): Side-by-side answer text with quality score, correctness, and hallucination severity deltas
+
+<!-- SCREENSHOT: Expanded query detail with retrieval diff table -->
+![Query Detail View](screenshots/comparison-query-detail.png)
+
+<!-- SCREENSHOT: Answer diff with quality metrics and deltas -->
+![Answer Diff](screenshots/comparison-answer-diff.png)
 
 ---
 
