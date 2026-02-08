@@ -22,11 +22,13 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from eval.app.results.adapters.filesystem_loader import FilesystemRunLoader
 from eval.app.results.adapters.repository import InMemoryRunRepository
 from eval.app.results.domain.models import LoadedRun, RunSummary
+from eval.app.results.query_diff import compute_retrieval_diff, natural_sort_key
 from eval.app.results.services.comparison_service import ComparisonService
 from eval.app.results.services.filter_service import FilterService
 from eval.app.results.services.trend_service import TrendService
@@ -43,6 +45,7 @@ from eval.app.results.ui.metrics_table import render_metrics_table
 from eval.app.results.ui.query_explorer import render_query_explorer
 from eval.app.results.ui.run_selector import render_run_info_card, render_run_selector
 from eval.app.results.ui.trend_chart import render_multi_metric_trend, render_trend_chart
+from rag.eval.models import EvalResult
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -616,53 +619,192 @@ def render_comparison_view(
         render_delta_table(comparison)
 
     with tab_queries:
-        _render_query_changes(comparison, services["filter"])
+        _render_query_changes(comparison)
 
 
-def _render_query_changes(comparison, filter_service: FilterService) -> None:
-    """Render detailed query-level changes."""
-    if comparison.improved_queries:
-        st.subheader(f"Improved Queries ({len(comparison.improved_queries)})")
-        with st.expander("Show improved queries", expanded=True):
-            for qid in comparison.improved_queries[:20]:  # Limit display
-                result = next((r for r in comparison.run_b.results if r.qid == qid), None)
-                if result:
-                    recall_a = _get_recall(comparison.run_a, qid)
-                    recall_b = filter_service.compute_recall(result)
-                    st.success(
-                        f"**{qid}**: {result.query[:80]}... "
-                        f"(Recall: {recall_a:.2f} -> {recall_b:.2f})"
-                    )
-            if len(comparison.improved_queries) > 20:
-                st.caption(f"...and {len(comparison.improved_queries) - 20} more")
+def _render_query_changes(comparison) -> None:
+    """Render detailed query-level changes with drill-down diagnostics."""
+    # Build lookup dicts once to avoid O(n) scans per query
+    results_a: dict[str, EvalResult] = {r.qid: r for r in comparison.run_a.results}
+    results_b: dict[str, EvalResult] = {r.qid: r for r in comparison.run_b.results}
+
+    sorted_improved = sorted(comparison.improved_queries, key=natural_sort_key)
+    sorted_regressed = sorted(comparison.regressed_queries, key=natural_sort_key)
+
+    _render_query_category(
+        "Improved",
+        sorted_improved,
+        results_a,
+        results_b,
+    )
+    _render_query_category(
+        "Regressed",
+        sorted_regressed,
+        results_a,
+        results_b,
+    )
+
+
+def _render_query_category(
+    label: str,
+    qids: list[str],
+    results_a: dict[str, EvalResult],
+    results_b: dict[str, EvalResult],
+) -> None:
+    """Render a category (improved/regressed) of changed queries."""
+    if not qids:
+        st.info(f"No queries {label.lower()} significantly")
+        return
+
+    st.subheader(f"{label} Queries ({len(qids)})")
+
+    for qid in qids[:20]:
+        result_a = results_a.get(qid)
+        result_b = results_b.get(qid)
+        if not result_a or not result_b:
+            continue
+
+        recall_a = _compute_recall(result_a)
+        recall_b = _compute_recall(result_b)
+
+        # Summary line for expander label
+        query_type = result_b.query_type.value if result_b.query_type else "—"
+        difficulty = result_b.difficulty.value if result_b.difficulty else "—"
+        delta = recall_b - recall_a
+        sign = "+" if delta >= 0 else ""
+        summary = (
+            f"[{qid}] {result_b.query[:60]}... | "
+            f"{query_type} · {difficulty} | "
+            f"Recall: {recall_a:.2f} → {recall_b:.2f} ({sign}{delta:.2f})"
+        )
+
+        with st.expander(summary, expanded=False):
+            _render_query_detail(result_a, result_b)
+
+    if len(qids) > 20:
+        st.caption(f"...and {len(qids) - 20} more")
+
+
+def _render_query_detail(result_a: EvalResult, result_b: EvalResult) -> None:
+    """Render drill-down detail for a single changed query."""
+    # --- Query header ---
+    st.markdown(f"**Query:** {result_b.query}")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f"**Type:** {result_b.query_type.value if result_b.query_type else '—'}")
+    with col2:
+        st.markdown(f"**Difficulty:** {result_b.difficulty.value if result_b.difficulty else '—'}")
+    with col3:
+        st.markdown(f"**Unanswerable:** {'Yes' if result_b.is_unanswerable else 'No'}")
+
+    st.divider()
+
+    # --- Retrieval diff table ---
+    st.markdown("**Retrieval Diff**")
+    diff_rows = compute_retrieval_diff(result_a, result_b)
+
+    if diff_rows:
+        df = pd.DataFrame(
+            [
+                {
+                    "Chunk ID": r.chunk_id,
+                    "Relevant": "Yes" if r.relevant else "No",
+                    "Rank A": r.rank_a if r.rank_a is not None else "—",
+                    "Rank B": r.rank_b if r.rank_b is not None else "—",
+                    "Status": r.status,
+                }
+                for r in diff_rows
+            ]
+        )
+        st.dataframe(df, use_container_width=True, hide_index=True)
     else:
-        st.info("No queries improved significantly")
+        st.caption("No chunks retrieved in either run")
 
-    if comparison.regressed_queries:
-        st.subheader(f"Regressed Queries ({len(comparison.regressed_queries)})")
-        with st.expander("Show regressed queries", expanded=True):
-            for qid in comparison.regressed_queries[:20]:
-                result = next((r for r in comparison.run_b.results if r.qid == qid), None)
-                if result:
-                    recall_a = _get_recall(comparison.run_a, qid)
-                    recall_b = filter_service.compute_recall(result)
-                    st.error(
-                        f"**{qid}**: {result.query[:80]}... "
-                        f"(Recall: {recall_a:.2f} -> {recall_b:.2f})"
-                    )
-            if len(comparison.regressed_queries) > 20:
-                st.caption(f"...and {len(comparison.regressed_queries) - 20} more")
-    else:
-        st.info("No queries regressed significantly")
+    # --- Answer diff (conditional) ---
+    if result_a.answer and result_b.answer:
+        st.divider()
+        st.markdown("**Answer Diff**")
+
+        col_a, col_b = st.columns(2)
+        qid = result_a.qid
+
+        with col_a:
+            st.markdown("*Run A*")
+            st.text_area(
+                "Answer A",
+                value=result_a.answer.text,
+                height=150,
+                disabled=True,
+                key=f"ans_a_{qid}",
+                label_visibility="collapsed",
+            )
+            _render_answer_metrics(result_a, prefix=f"a_{qid}")
+
+        with col_b:
+            st.markdown("*Run B*")
+            st.text_area(
+                "Answer B",
+                value=result_b.answer.text,
+                height=150,
+                disabled=True,
+                key=f"ans_b_{qid}",
+                label_visibility="collapsed",
+            )
+            _render_answer_metrics(result_b, prefix=f"b_{qid}", baseline=result_a)
 
 
-def _get_recall(run: LoadedRun, qid: str) -> float:
-    """Get recall@10 for a specific query in a run."""
-    result = next((r for r in run.results if r.qid == qid), None)
-    if not result:
-        return 0.0
+def _render_answer_metrics(
+    result: EvalResult,
+    *,
+    prefix: str,
+    baseline: EvalResult | None = None,
+) -> None:
+    """Render answer quality metrics, optionally with deltas against a baseline."""
+    m = result.answer_metrics
+    if not m:
+        st.caption("No answer metrics")
+        return
 
-    retrieved = set(result.retrieval_result.retrieved_chunk_ids[:10])
+    bm = baseline.answer_metrics if baseline else None
+
+    quality_delta = None
+    correctness_delta = None
+    halluc_delta = None
+
+    if bm:
+        if m.quality_score is not None and bm.quality_score is not None:
+            quality_delta = f"{m.quality_score - bm.quality_score:.2f}"
+        if m.correctness is not None and bm.correctness is not None:
+            correctness_delta = f"{m.correctness - bm.correctness:.1f}"
+        if m.hallucination_severity is not None and bm.hallucination_severity is not None:
+            halluc_delta = f"{m.hallucination_severity - bm.hallucination_severity:.1f}"
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric(
+            "Quality",
+            f"{m.quality_score:.2f}" if m.quality_score is not None else "—",
+            delta=quality_delta,
+        )
+    with c2:
+        st.metric(
+            "Correctness",
+            f"{m.correctness:.1f}/5" if m.correctness is not None else "—",
+            delta=correctness_delta,
+        )
+    with c3:
+        st.metric(
+            "Hallucination",
+            f"{m.hallucination_severity:.1f}/5" if m.hallucination_severity is not None else "—",
+            delta=halluc_delta,
+            delta_color="inverse",  # lower hallucination is better
+        )
+
+
+def _compute_recall(result: EvalResult, k: int = 10) -> float:
+    """Compute recall@k for a single result."""
+    retrieved = set(result.retrieval_result.retrieved_chunk_ids[:k])
     relevant = result.retrieval_result.relevant_chunk_ids
     if not relevant:
         return 0.0
@@ -761,8 +903,6 @@ def render_trending_view(
 
 def _render_trend_summary_table(trend) -> None:
     """Render summary table for trending analysis."""
-    import pandas as pd
-
     data = []
     for run in trend.runs:
         row = {
