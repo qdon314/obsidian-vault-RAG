@@ -218,8 +218,9 @@ config.py
 .vscode/settings.json
 config.py
 
-# Experimental Project State Script
+# Eval Artifacts
 eval/runs/*
+eval/verdicts/*
 
 # Internal Docs
 docs/plans/
