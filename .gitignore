@@ -219,5 +219,9 @@ config.py
 config.py
 
 # Experimental Project State Script
-scripts/project_state/*
 eval/runs/*
+
+# Internal Docs
+docs/plans/
+docs/specs/
+docs/notes/
