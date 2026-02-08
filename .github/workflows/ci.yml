@@ -42,3 +42,53 @@ jobs:
 
       - name: Test
         run: python -m pytest -q
+
+  # Release gate: run eval + verdict and block merges on BLOCK decision.
+  eval-gate:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,openai,qdrant,aws]"
+
+      - name: Run evaluation
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python eval/scripts/run_eval.py \
+            --queries eval/datasets/curated_queries.jsonl \
+            --run-generation --use-llm-judge \
+            --run-name "ci-${{ github.sha }}"
+
+      - name: Verdict
+        run: |
+          # --fail-on-block exits non-zero when decision is BLOCK.
+          python eval/scripts/verdict.py \
+            --current eval/runs/latest/ \
+            --baseline eval/runs/baseline/ \
+            --output eval/verdicts \
+            --fail-on-block
+
+      - name: Upload verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-verdict
+          path: eval/verdicts/

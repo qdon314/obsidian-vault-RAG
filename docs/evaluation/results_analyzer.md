@@ -101,7 +101,7 @@ graph TD
 The application uses a sidebar for navigation and view mode selection, with the main content area displaying the selected analysis view.
 
 <!-- SCREENSHOT: Full application layout showing sidebar and main content area -->
-![Application Layout](screenshots/results-analyzer-layout.png)
+![Application Layout](../screenshots/results-analyzer-layout.png)
 
 ### Sidebar Controls
 
@@ -113,7 +113,7 @@ The sidebar provides:
 4. **Runs Directory Info**: Shows the configured runs directory path
 
 <!-- SCREENSHOT: Sidebar with view mode selection and controls -->
-![Sidebar Controls](screenshots/results-analyzer-sidebar.png)
+![Sidebar Controls](../screenshots/results-analyzer-sidebar.png)
 
 ---
 
@@ -128,7 +128,7 @@ Provides comprehensive analysis of a single evaluation run with five tabs:
 Select a run from the dropdown to analyze. Runs are displayed with their timestamp, Recall@10 score, and generator model name.
 
 <!-- SCREENSHOT: Run selector dropdown showing available runs -->
-![Run Selector](screenshots/single-run-selector.png)
+![Run Selector](../screenshots/single-run-selector.png)
 
 #### Run Configuration Expander
 
@@ -140,7 +140,7 @@ Shows detailed run configuration including:
 - Custom notes
 
 <!-- SCREENSHOT: Expanded run configuration panel -->
-![Run Configuration](screenshots/single-run-config.png)
+![Run Configuration](../screenshots/single-run-config.png)
 
 #### Metrics Tab
 
@@ -159,10 +159,10 @@ Plus global metrics (MRR, MAP, Avg Retrieved) and breakdowns by:
 - Difficulty Level (easy, medium, hard)
 
 <!-- SCREENSHOT: Metrics tab showing overall retrieval metrics table -->
-![Metrics Table](screenshots/single-run-metrics.png)
+![Metrics Table](../screenshots/single-run-metrics.png)
 
 <!-- SCREENSHOT: Metrics by query type expandable sections -->
-![Metrics by Type](screenshots/single-run-metrics-by-type.png)
+![Metrics by Type](../screenshots/single-run-metrics-by-type.png)
 
 **Answer Quality Metrics** (if generation was enabled):
 - Average/Median Quality Score
@@ -180,12 +180,12 @@ Interactive Plotly visualizations:
 1. **Retrieval Metrics by K**: Grouped bar chart comparing Recall, Precision, and NDCG at different K values
 
 <!-- SCREENSHOT: Bar chart showing Recall, Precision, NDCG by K value -->
-![Retrieval Metrics Chart](screenshots/single-run-charts-metrics.png)
+![Retrieval Metrics Chart](../screenshots/single-run-charts-metrics.png)
 
 2. **Recall@10 by Query Type**: Bar chart breaking down recall performance by query category
 
 <!-- SCREENSHOT: Bar chart showing Recall@10 broken down by query type -->
-![Recall by Query Type Chart](screenshots/single-run-charts-by-type.png)
+![Recall by Query Type Chart](../screenshots/single-run-charts-by-type.png)
 
 #### Query Explorer Tab
 
@@ -198,7 +198,7 @@ Interactive filtering and exploration of individual query results:
 - Text search across query strings
 
 <!-- SCREENSHOT: Query explorer filter controls row -->
-![Query Explorer Filters](screenshots/query-explorer-filters.png)
+![Query Explorer Filters](../screenshots/query-explorer-filters.png)
 
 **Results Table**:
 | Status | QID | Query | Type | Difficulty | Recall@10 | Latency |
@@ -206,7 +206,7 @@ Interactive filtering and exploration of individual query results:
 | Pass/Fail | ... | ... | ... | ... | 0.xx | xxxms |
 
 <!-- SCREENSHOT: Query explorer results table with status indicators -->
-![Query Explorer Table](screenshots/query-explorer-table.png)
+![Query Explorer Table](../screenshots/query-explorer-table.png)
 
 **Query Detail View**:
 Select a query to see:
@@ -221,10 +221,10 @@ Select a query to see:
 - Full pipeline trace (if available)
 
 <!-- SCREENSHOT: Query detail view showing retrieval breakdown -->
-![Query Detail View](screenshots/query-explorer-detail.png)
+![Query Detail View](../screenshots/query-explorer-detail.png)
 
 <!-- SCREENSHOT: Query detail showing matched/missed/extra chunks -->
-![Query Chunks Analysis](screenshots/query-explorer-chunks.png)
+![Query Chunks Analysis](../screenshots/query-explorer-chunks.png)
 
 **Groundedness Claims** (if LLM judge was enabled):
 
@@ -240,7 +240,7 @@ When the groundedness judge runs, it extracts individual claims from the generat
 Unsupported claims are auto-expanded for easier debugging of hallucinations.
 
 <!-- SCREENSHOT: Groundedness claims section showing supported and unsupported claims -->
-![Groundedness Claims](screenshots/query-explorer-claims.png)
+![Groundedness Claims](../screenshots/query-explorer-claims.png)
 
 #### Traces Tab
 
@@ -260,10 +260,10 @@ Browse and search pipeline execution traces:
 - Raw trace data JSON viewer
 
 <!-- SCREENSHOT: Trace viewer showing pipeline stages -->
-![Trace Viewer](screenshots/trace-viewer.png)
+![Trace Viewer](../screenshots/trace-viewer.png)
 
 <!-- SCREENSHOT: Expanded retrieval stage showing candidates -->
-![Trace Retrieval Stage](screenshots/trace-viewer-retrieval.png)
+![Trace Retrieval Stage](../screenshots/trace-viewer-retrieval.png)
 
 #### Raw Data Tab
 
@@ -278,7 +278,7 @@ View the raw `metrics.json` contents organized by section:
 Includes a download button for the complete JSON file.
 
 <!-- SCREENSHOT: Raw data tab with expandable JSON sections -->
-![Raw Data Tab](screenshots/single-run-raw-data.png)
+![Raw Data Tab](../screenshots/single-run-raw-data.png)
 
 ---
 
@@ -293,7 +293,7 @@ Two column layout for selecting:
 - **Run B (Comparison)**: The experimental/newer run
 
 <!-- SCREENSHOT: Two-column run selection for comparison view -->
-![Comparison Run Selection](screenshots/comparison-run-selection.png)
+![Comparison Run Selection](../screenshots/comparison-run-selection.png)
 
 #### Summary Metrics
 
@@ -304,7 +304,7 @@ Four key metrics displayed with delta indicators:
 - Quality Score with change from baseline (if available)
 
 <!-- SCREENSHOT: Summary metrics row with delta indicators -->
-![Comparison Summary Metrics](screenshots/comparison-summary-metrics.png)
+![Comparison Summary Metrics](../screenshots/comparison-summary-metrics.png)
 
 #### Query-Level Changes Summary
 
@@ -314,21 +314,21 @@ Three metrics showing query-level impact:
 - Unchanged Queries
 
 <!-- SCREENSHOT: Query changes summary showing improved/regressed/unchanged counts -->
-![Query Changes Summary](screenshots/comparison-query-changes-summary.png)
+![Query Changes Summary](../screenshots/comparison-query-changes-summary.png)
 
 #### Charts Tab
 
 **Recall@K Comparison**: Side-by-side bar chart comparing Run A and Run B recall at each K value
 
 <!-- SCREENSHOT: Recall@K comparison bar chart -->
-![Recall Comparison Chart](screenshots/comparison-chart-recall.png)
+![Recall Comparison Chart](../screenshots/comparison-chart-recall.png)
 
 **NDCG@K Comparison**: Side-by-side bar chart comparing NDCG scores
 
 **Global Metrics Comparison**: Bar chart comparing MRR and MAP between runs
 
 <!-- SCREENSHOT: Global metrics comparison chart -->
-![Global Metrics Comparison](screenshots/comparison-chart-global.png)
+![Global Metrics Comparison](../screenshots/comparison-chart-global.png)
 
 #### Delta Table Tab
 
@@ -347,7 +347,7 @@ Color coding:
 - **Same**: Change within threshold (1% for metrics, 10ms for latency)
 
 <!-- SCREENSHOT: Delta table showing all metric comparisons -->
-![Delta Table](screenshots/comparison-delta-table.png)
+![Delta Table](../screenshots/comparison-delta-table.png)
 
 #### Query Changes Tab
 
@@ -359,7 +359,7 @@ Each query is an expandable row showing:
 - Recall delta (e.g., "Recall: 0.40 → 0.80 (+0.40)")
 
 <!-- SCREENSHOT: Query changes list with expandable summary rows -->
-![Query Changes Summary](screenshots/comparison-query-changes-list.png)
+![Query Changes Summary](../screenshots/comparison-query-changes-list.png)
 
 **Detail View** (expanded):
 Expanding a query reveals three sections:
@@ -372,10 +372,10 @@ Expanding a query reveals three sections:
 3. **Answer Diff** (when both runs have answers): Side-by-side answer text with quality score, correctness, and hallucination severity deltas
 
 <!-- SCREENSHOT: Expanded query detail with retrieval diff table -->
-![Query Detail View](screenshots/comparison-query-detail.png)
+![Query Detail View](../screenshots/comparison-query-detail.png)
 
 <!-- SCREENSHOT: Answer diff with quality metrics and deltas -->
-![Answer Diff](screenshots/comparison-answer-diff.png)
+![Answer Diff](../screenshots/comparison-answer-diff.png)
 
 ---
 
@@ -388,7 +388,7 @@ Analyze performance trends across multiple evaluation runs over time.
 Multi-select dropdown to choose 2+ runs for trend analysis. Runs are automatically sorted by timestamp.
 
 <!-- SCREENSHOT: Multi-select run picker for trending -->
-![Trending Run Selection](screenshots/trending-run-selection.png)
+![Trending Run Selection](../screenshots/trending-run-selection.png)
 
 #### Metric Selector
 
@@ -399,7 +399,7 @@ Dropdown to select the metric to visualize:
 - Latency
 
 <!-- SCREENSHOT: Metric and K value selectors -->
-![Trending Metric Selector](screenshots/trending-metric-selector.png)
+![Trending Metric Selector](../screenshots/trending-metric-selector.png)
 
 #### Single Metric Trend Chart
 
@@ -409,14 +409,14 @@ Line chart showing the selected metric over time with:
 - Hover tooltips with exact values
 
 <!-- SCREENSHOT: Single metric trend line chart -->
-![Single Metric Trend](screenshots/trending-single-metric.png)
+![Single Metric Trend](../screenshots/trending-single-metric.png)
 
 #### Multi-Metric Trend Chart
 
 Combined line chart showing Recall, Precision, and NDCG (all at the selected K value) on the same axes for easy comparison.
 
 <!-- SCREENSHOT: Multi-metric trend chart with three lines -->
-![Multi-Metric Trend](screenshots/trending-multi-metric.png)
+![Multi-Metric Trend](../screenshots/trending-multi-metric.png)
 
 #### Run Summary Table
 
@@ -427,7 +427,7 @@ Tabular summary of all selected runs:
 | YYYY-MM-DD HH:MM | run_name | 0.xxx | 0.xxx | 0.xxx | N | 0.xxx | xxx |
 
 <!-- SCREENSHOT: Run summary table in trending view -->
-![Trending Summary Table](screenshots/trending-summary-table.png)
+![Trending Summary Table](../screenshots/trending-summary-table.png)
 
 ---
 

@@ -167,8 +167,16 @@ Runs on every push to `main` and every pull request targeting `main`.
 6. Format check: `ruff format --check .`
 7. Type check: `mypy --config-file pyproject.toml src`
 8. Test: `pytest -q`
+9. Eval release gate:
+   - run eval on curated queries
+   - run `eval/scripts/verdict.py --fail-on-block`
+   - upload `eval/verdicts/` artifacts
 
-All tests run against in-memory/dummy backends. No API keys or external services are required.
+The lint/type/test steps run against in-memory/dummy backends and do not require external services.
+The eval gate step does require `OPENAI_API_KEY`.
+
+The eval gate requires a baseline run directory at `eval/runs/baseline/` in the repository.
+See `docs/evaluation/verdict_release_gating.md` for baseline management and local commands.
 
 ### Docker workflow (`docker.yml`)
 
@@ -190,6 +198,7 @@ The image is tagged as `<ecr-registry>/obsidian-rag:<git-sha>` and `<ecr-registr
 |--------|-------------|
 | `AWS_ACCESS_KEY_ID` | IAM access key with ECR push permissions |
 | `AWS_SECRET_ACCESS_KEY` | Corresponding secret key |
+| `OPENAI_API_KEY` | Required by the eval gate job for generation + judge runs |
 
 To set these, go to your GitHub repository **Settings > Secrets and variables > Actions** and add each secret.
 

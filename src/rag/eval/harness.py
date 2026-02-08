@@ -473,6 +473,13 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
     }
     metrics_file.write_text(json.dumps(metrics_payload, indent=2), encoding="utf-8")
 
+    # Maintain a stable "latest" symlink so verdict scripts can use
+    # --current eval/runs/latest/ without knowing the timestamp.
+    latest = output_dir.parent / "latest"
+    if latest.is_symlink() or latest.exists():
+        latest.unlink()
+    latest.symlink_to(output_dir.name)
+
     artifacts = {
         "results_jsonl": str(results_file),
         "metrics_json": str(metrics_file),

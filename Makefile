@@ -1,4 +1,4 @@
-.PHONY: help index index-dummy ask ask-dummy results tail-logs clean-index \
+.PHONY: help index index-dummy ask ask-dummy results verdict tail-logs clean-index \
         test lint fmt typecheck env-check \
         docker-build docker-up docker-down \
         infra-init infra-plan infra-apply infra-destroy \
@@ -13,7 +13,7 @@ endif
 # -----------------------------------------------------
 
 ARTIFACTS_DIR ?= artifacts
-INDEX ?= obsidian_proposition_index
+INDEX ?= obsidian
 CORPUS ?= /Users/quentindonnelly/Documents/Personal & Professional
 QUERY ?= What are the applications of scaled dot-product attention?
 NUM_LOGS ?= 20
@@ -64,6 +64,13 @@ ask-dummy:  ## Ask using DummyEmbedder
 
 results:  ## Launch results analyzer app
 	$(PYTHON) -m streamlit run eval/app/results_analyzer.py
+
+verdict:  ## Generate eval verdict from latest run (requires baseline)
+	# Produces eval/verdicts/verdict.md + verdict.json for human + CI consumption.
+	$(PYTHON) eval/scripts/verdict.py \
+		--current eval/runs/latest \
+		--baseline eval/runs/baseline \
+		--output eval/verdicts
 
 # -------------------------------------------------------------------
 # Logs

@@ -19,6 +19,8 @@ The evaluation system provides tools for:
 | [Running Evaluations](running_evaluations.md) | Using the evaluation harness |
 | [Metrics Reference](metrics.md) | Retrieval and answer quality metrics |
 | [Traces and Logging](traces_and_logging.md) | Observability and debugging |
+| [Results Analyzer](results_analyzer.md) | Streamlit UI for run analysis, comparison, and trending |
+| [Verdict and Release Gating](verdict_release_gating.md) | SHIP/BLOCK decision layer and CI gate |
 
 ## Quick Start
 

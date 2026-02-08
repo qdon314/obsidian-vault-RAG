@@ -10,6 +10,8 @@ The evaluation harness (`src/rag/eval/harness.py`) orchestrates evaluation runs 
 - **Full pipeline evaluation** - Test retrieve → rerank → context → generate
 - **LLM-as-judge evaluation** - Automated answer quality scoring
 
+For release-gating after a run is complete, see [Verdict and Release Gating](verdict_release_gating.md).
+
 ## Prerequisites
 
 1. **Built index** - Run `make index` or `make index-dummy`
@@ -279,6 +281,23 @@ compare_runs(
     Path("experiments/runs/improved_metrics.json"),
 )
 ```
+
+## From Metrics to Release Decision
+
+After generating an eval run, compute a formal SHIP/BLOCK verdict:
+
+```bash
+./scripts/py eval/scripts/verdict.py \
+  --current eval/runs/latest \
+  --baseline eval/runs/baseline \
+  --output eval/verdicts \
+  --fail-on-block
+```
+
+This command writes:
+
+- `eval/verdicts/verdict.md`
+- `eval/verdicts/verdict.json`
 
 ## Common Workflows
 

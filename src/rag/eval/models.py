@@ -192,6 +192,9 @@ class EvalResult(DataClassJsonMixin):
         # Parse query type and difficulty
         query_type = parse_enum(QueryType, data.get("query_type"))
         difficulty = parse_enum(Difficulty, data.get("difficulty"))
+        # Persisted results.jsonl rows include outcome_label as a string value.
+        # Parse it back to OutcomeLabel so downstream verdict gating can use it.
+        outcome_label = parse_enum(OutcomeLabel, data.get("outcome_label"))
 
         return cls(
             qid=qid,
@@ -200,6 +203,7 @@ class EvalResult(DataClassJsonMixin):
             answer=answer,
             answer_metrics=answer_metrics,
             groundedness_result=groundedness_result,
+            outcome_label=outcome_label,
             query_type=query_type,
             difficulty=difficulty,
             is_unanswerable=data.get("is_unanswerable", False),

@@ -77,6 +77,7 @@ Comprehensive evaluation documentation:
 - [Running Evaluations](evaluation/running_evaluations.md) - Using the eval harness
 - [Metrics Reference](evaluation/metrics.md) - Retrieval and answer metrics
 - [Traces and Logging](evaluation/traces_and_logging.md) - Observability and debugging
+- [Results Analyzer](evaluation/results_analyzer.md) - Interactive run analysis UI
 
 ---
 
@@ -93,6 +94,19 @@ src/rag/
 ├── eval/             # Evaluation framework
 └── settings.py       # Configuration loading
 ```
+
+### Work Item Specs
+
+Implementation-ready specifications for upcoming features:
+
+| Spec | Description | Priority |
+|------|-------------|----------|
+| [Async OpenAI Embedder](specs/01-async-openai-embedder.md) | Async embedding with batching and connection pooling | P0 |
+| [Resilience Patterns](specs/02-resilience-patterns.md) | Retry, circuit breaker, and timeout handling | P0 |
+| [Judge Calibration](specs/03-judge-calibration.md) | Fix evaluation judge scoring | P0 |
+| [Prometheus Metrics](specs/04-prometheus-metrics.md) | Metrics endpoint and health checks | P1 |
+| [Hybrid Search](specs/05-hybrid-search.md) | Vector + keyword search with RRF | P1 |
+| [Load Testing](specs/06-load-testing.md) | Locust load tests and benchmarks | P1 |
 
 ### Key Commands
 
