@@ -68,6 +68,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,openai,qdrant,aws]"
 
+      - name: Debug secrets availability
+        run: |
+          echo "Checking if OPENAI_API_KEY is accessible..."
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "ERROR: secrets.OPENAI_API_KEY is not set or empty"
+            exit 1
+          else
+            echo "SUCCESS: secrets.OPENAI_API_KEY is set (length: ${#OPENAI_API_KEY})"
+          fi
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
       - name: Run evaluation
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

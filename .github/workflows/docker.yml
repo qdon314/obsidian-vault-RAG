@@ -18,6 +18,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug AWS secrets availability
+        run: |
+          echo "Checking AWS credentials..."
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "ERROR: secrets.AWS_ACCESS_KEY_ID is not set or empty"
+          else
+            echo "SUCCESS: secrets.AWS_ACCESS_KEY_ID is set"
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "ERROR: secrets.AWS_SECRET_ACCESS_KEY is not set or empty"
+          else
+            echo "SUCCESS: secrets.AWS_SECRET_ACCESS_KEY is set"
+          fi
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
