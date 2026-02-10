@@ -1,4 +1,5 @@
 .PHONY: help index index-dummy ask ask-dummy results verdict tail-logs clean-index \
+        index-regulatory index-regulatory-dummy normalize-regulatory \
         test lint fmt typecheck env-check \
         docker-build docker-up docker-down \
         infra-init infra-plan infra-apply infra-destroy \
@@ -17,6 +18,9 @@ INDEX ?= obsidian
 CORPUS ?= /Users/quentindonnelly/Documents/Personal & Professional
 QUERY ?= What are the applications of scaled dot-product attention?
 NUM_LOGS ?= 20
+REGULATORY_XML ?= data/ecfr/title-10-part-50.xml
+REGULATORY_VERSION ?= 2026-02-02
+VERDICT_SCOPE ?=
 
 help:  ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -40,6 +44,40 @@ index-dummy:  ## Build index using DummyEmbedder
 
 clean-index:  ## Remove index directory (DANGEROUS)
 	rm -rf $(ARTIFACTS_DIR)/indexes/$(INDEX)
+
+# -------------------------------------------------------------------
+# Regulatory Corpus
+# -------------------------------------------------------------------
+
+index-regulatory:  ## Build regulatory index from eCFR XML
+	$(PYTHON) scripts/ingest_regulatory.py \
+		--xml-source "$(REGULATORY_XML)" \
+		--part 50 \
+		--instrument-version "$(REGULATORY_VERSION)" \
+		--source-revision "ecfr-$(REGULATORY_VERSION)" \
+		--effective-date "$(REGULATORY_VERSION)" \
+		--index-name regulatory \
+		--artifacts-dir $(ARTIFACTS_DIR)
+
+index-regulatory-dummy:  ## Build regulatory index with DummyEmbedder
+	$(PYTHON) scripts/ingest_regulatory.py \
+		--xml-source "$(REGULATORY_XML)" \
+		--part 50 \
+		--instrument-version "$(REGULATORY_VERSION)" \
+		--source-revision "ecfr-$(REGULATORY_VERSION)" \
+		--effective-date "$(REGULATORY_VERSION)" \
+		--index-name regulatory \
+		--artifacts-dir $(ARTIFACTS_DIR) \
+		--use-dummy-embeddings
+
+normalize-regulatory:  ## Normalize eCFR XML to canonical markdown (no indexing)
+	$(PYTHON) scripts/ingest_regulatory.py \
+		--xml-source "$(REGULATORY_XML)" \
+		--part 50 \
+		--instrument-version "$(REGULATORY_VERSION)" \
+		--source-revision "ecfr-$(REGULATORY_VERSION)" \
+		--effective-date "$(REGULATORY_VERSION)" \
+		--skip-index
 
 # -------------------------------------------------------------------
 # Querying
@@ -70,7 +108,8 @@ verdict:  ## Generate eval verdict from latest run (requires baseline)
 	$(PYTHON) eval/scripts/verdict.py \
 		--current eval/runs/latest \
 		--baseline eval/runs/baseline \
-		--output eval/verdicts
+		--output eval/verdicts \
+		$(if $(VERDICT_SCOPE),--scope $(VERDICT_SCOPE),)
 
 # -------------------------------------------------------------------
 # Logs
