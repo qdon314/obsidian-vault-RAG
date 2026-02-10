@@ -93,7 +93,7 @@ A pointer to a source used in the final answer.
 class Citation:
     chunk_id: str
     doc_id: str
-    uri: str
+    uri: str | None = None
     quote: str | None = None           # Small excerpt used/displayed
     section_heading: str | None = None
     section_path: str | None = None
@@ -119,17 +119,16 @@ class ContextPack:
 
 ### Answer
 
-Final model output (or abstention).
+Final model output.
 
 ```python
 @dataclass(frozen=True, slots=True)
 class Answer:
     query: str
-    text: str
-    citations: Sequence[Citation] = field(default_factory=tuple)
-    abstained: bool = False
+    text: str = ""
+    citations: list[Citation] = field(default_factory=list)
     confidence: float | None = None
-    metadata: Mapping[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
 ### QueryRunResult
@@ -141,6 +140,7 @@ Result of a full pipeline execution.
 class QueryRunResult:
     trace_id: str
     answer: Answer
+    context_pack: ContextPack
     retrieved_chunk_ids: tuple[str, ...]
     reranked_chunk_ids: tuple[str, ...]
     packed_chunk_ids: tuple[str, ...]
@@ -287,7 +287,7 @@ Vector = list[float]
 **Returns:**
 - List of vectors (same order as input texts)
 
-**Implementations:** `OpenAIEmbedder`, `DummyEmbedder`, `SqliteCacheEmbedder`
+**Implementations:** `OpenAIEmbedder`, `DummyEmbedder`, `CachedEmbedder`
 
 ---
 
@@ -311,12 +311,15 @@ class VectorStore(Protocol):
         *,
         query_vector: Vector,
         top_k: int,
-        filters: Where = None,
+        where: Where = None,
         metadata: Mapping[str, object] | None = None
     ) -> list[Candidate]:
         ...
 
     def count(self) -> int:
+        ...
+
+    def all_chunks(self) -> list[Chunk]:
         ...
 
     def save(self) -> None:
@@ -698,7 +701,7 @@ def run_query(
     top_k: int,
     keep_k: int | None,
     token_budget: int,
-    filters: Mapping[str, object] | None = None,
+    where: Where = None,
     metadata: Mapping[str, object] | None = None,
 ) -> QueryRunResult:
 ```
@@ -711,7 +714,7 @@ def run_query(
 5. **Logging**: Record QueryTrace
 
 **Returns:**
-- `QueryRunResult` with trace_id, answer, chunk IDs, and latency
+- `QueryRunResult` with trace_id, answer, context_pack, chunk IDs, and latency
 
 ### index_document
 
@@ -744,7 +747,7 @@ def rag_answer(
     generator: Generator,
     top_k: int = 10,
     token_budget: int = 1800,
-    filters: Where = None,
+    where: Where = None,
     metadata: Mapping[str, object] | None = None,
 ) -> Answer:
 ```

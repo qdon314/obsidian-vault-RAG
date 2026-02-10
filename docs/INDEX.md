@@ -73,7 +73,6 @@ Concrete implementation details:
 ### [Evaluation System](evaluation/README.md)
 
 Comprehensive evaluation documentation:
-- [Query Generation](evaluation/query_generation.md) - Creating eval queries with the UI
 - [Running Evaluations](evaluation/running_evaluations.md) - Using the eval harness
 - [Metrics Reference](evaluation/metrics.md) - Retrieval and answer metrics
 - [Traces and Logging](evaluation/traces_and_logging.md) - Observability and debugging
@@ -101,27 +100,26 @@ Implementation-ready specifications for upcoming features:
 
 | Spec | Description | Priority |
 |------|-------------|----------|
-| [Async OpenAI Embedder](specs/01-async-openai-embedder.md) | Async embedding with batching and connection pooling | P0 |
-| [Resilience Patterns](specs/02-resilience-patterns.md) | Retry, circuit breaker, and timeout handling | P0 |
-| [Judge Calibration](specs/03-judge-calibration.md) | Fix evaluation judge scoring | P0 |
-| [Prometheus Metrics](specs/04-prometheus-metrics.md) | Metrics endpoint and health checks | P1 |
-| [Hybrid Search](specs/05-hybrid-search.md) | Vector + keyword search with RRF | P1 |
-| [Load Testing](specs/06-load-testing.md) | Locust load tests and benchmarks | P1 |
+| [Regulatory Corpus Ingestion](specs/04-regulatory-corpus-ingestion.md) | Regulatory XML ingestion and normalization | P0 |
+| [Dependency Cleanup](specs/05-dependency-cleanup.md) | Remove stale deps and simplify runtime requirements | P1 |
+| [Query Changes Enhancement](specs/06-query-changes-enhancement.md) | Better per-query run diff and diagnostics | P1 |
+| [Production Regulatory RAG](specs/production-regulatory-rag.md) | Production hardening plan for regulatory workflow | P1 |
+| [Agentic Growth System](specs/AGENTIC_GROWTH_SYSTEM_SPEC.md) | Long-horizon capability growth framework | P2 |
 
 ### Key Commands
 
 ```bash
 # Build an index
-python scripts/build_index.py --corpus ~/vault --index-name my_index
+./scripts/py scripts/build_index.py --corpus ~/vault --index-name my_index
 
 # Query the system
-python scripts/ask.py --index my_index --q "What is X?"
+./scripts/py scripts/ask.py --index my_index --q "What is X?"
 
 # Run evaluation
-python -m experiments.run_eval --queries eval_queries.jsonl
+./scripts/py eval/scripts/run_eval.py --queries eval/datasets/curated_queries.jsonl
 
-# Query curation UI
-streamlit run experiments/streamlit_query_curator.py
+# Results analyzer UI
+make results
 ```
 
 ### Configuration Quick Start
@@ -147,5 +145,5 @@ keep_k = 4
 
 ## Additional Resources
 
-- [FOCUS.md](FOCUS.md) - Current development focus
-- [KNOWN_ISSUES.md](KNOWN_ISSUES.md) - Known issues and limitations
+- [README](../README.md) - Project overview and quick start
+- [AGENTS.md](../AGENTS.md) - Repository command discipline and agent guidance

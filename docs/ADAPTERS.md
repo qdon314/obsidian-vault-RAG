@@ -87,7 +87,7 @@ chunks = chunker.chunk(doc)
 
 ### ObsidianPropositionChunker
 
-**Location:** `src/rag/adapters/chunking/proposition.py`
+**Location:** `src/rag/adapters/chunking/proposition/chunker.py`
 
 Proposition-based chunker that decomposes documents into atomic, self-contained sentences using a seq2seq model.  Based on the [Dense X Retrieval](https://arxiv.org/abs/2312.06648) approach.
 
@@ -124,12 +124,10 @@ Proposition chunks carry extra metadata for downstream expansion:
 
 **Example:**
 ```python
-from rag.adapters.chunking.proposition import (
-    ObsidianPropositionChunker,
-    Propositionizer,
-)
+from rag.adapters.chunking.proposition.backends import T5Propositionizer
+from rag.adapters.chunking.proposition.chunker import ObsidianPropositionChunker
 
-propositionizer = Propositionizer()  # loads HF model
+propositionizer = T5Propositionizer()  # loads HF model
 chunker = ObsidianPropositionChunker(propositionizer=propositionizer)
 chunks = chunker.chunk(doc)
 # Each chunk.text is a single self-contained proposition
@@ -164,7 +162,6 @@ class OpenAIEmbedder:
 |-------|------------|----------|
 | `text-embedding-3-large` | 3072 | Highest quality |
 | `text-embedding-3-small` | 1536 | Good balance of quality/cost |
-| `text-embedding-ada-002` | 1536 | Legacy model |
 
 **Example:**
 ```python
@@ -202,7 +199,7 @@ embedder = DummyEmbedder(dim=128)
 vectors = embedder.embed_texts(["test text"])  # Returns random vectors
 ```
 
-### SqliteCacheEmbedder
+### CachedEmbedder
 
 **Location:** `src/rag/adapters/embedding/sqlite_cache.py`
 
@@ -215,13 +212,15 @@ Caching wrapper that stores embeddings in SQLite.
 
 **Example:**
 ```python
-from rag.adapters.embedding.sqlite_cache import SqliteCacheEmbedder
+from pathlib import Path
+
+from rag.adapters.embedding.sqlite_cache import CachedEmbedder
 from rag.adapters.embedding.openai_embedder import OpenAIEmbedder
 
 base_embedder = OpenAIEmbedder(api_key="sk-...")
-cached_embedder = SqliteCacheEmbedder(
+cached_embedder = CachedEmbedder(
     embedder=base_embedder,
-    cache_path="./cache/embeddings.db"
+    db_path=Path("./cache/embeddings.db")
 )
 ```
 
@@ -385,7 +384,7 @@ results = store.search(
 
 **Installation:**
 ```bash
-pip install -e ".[qdrant]"
+./scripts/pip install -e ".[qdrant]"
 ```
 
 ---
@@ -779,14 +778,6 @@ QUESTION:
 Answer clearly and cite chunk numbers like [1], [2] where relevant.
 ```
 
-**Abstention Detection:**
-The generator detects abstention by checking for phrases like:
-- "i don't know"
-- "i do not know"
-- "not enough information"
-- "cannot determine"
-- "no information"
-
 **Example:**
 ```python
 from rag.adapters.generation.openai_chat import OpenAIChatGenerator
@@ -884,7 +875,7 @@ class JsonlQueryLogger:
 
 **Output Location:**
 ```
-artifacts/logs/queries.jsonl
+artifacts/logs/traces.jsonl
 ```
 
 **Example Log Entry:**
@@ -1048,6 +1039,6 @@ The `Container` automatically selects adapters based on settings:
 
 **Override via CLI:**
 ```bash
-python scripts/build_index.py --use-dummy-embeddings
-python scripts/ask.py --rerank-backend noop
+./scripts/py scripts/build_index.py --use-dummy-embeddings
+./scripts/py scripts/ask.py --index my_index --q "What is X?" --use-dummy-embeddings
 ```

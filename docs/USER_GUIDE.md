@@ -1,475 +1,162 @@
 # User Guide
 
-A complete guide to using the Obsidian Vault RAG system, from setup to advanced usage.
+Practical guide to build an index, ask questions, run evaluations, and inspect results.
 
-## Table of Contents
+## Prerequisites
 
-- [Getting Started](#getting-started)
-- [Building an Index](#building-an-index)
-- [Querying the System](#querying-the-system)
-- [Evaluation](#evaluation)
-- [Query Curation UI](#query-curation-ui)
-- [Troubleshooting](#troubleshooting)
+- Python 3.11+
+- Local virtual environment at `.venv`
+- `OPENAI_API_KEY` when using OpenAI embeddings/generation
 
----
+## Setup
 
-## Getting Started
-
-### Prerequisites
-
-- Python >= 3.11
-- Conda (recommended)
-- OpenAI API key (for production embeddings and generation)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/obsidian-vault-RAG.git
-   cd obsidian-vault-RAG
-   ```
-
-2. **Create a virtual environment:**
-   ```bash
-   python3.11 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-3. **Install the package:**
-   ```bash
-   # For OpenAI support (recommended)
-   pip install -e ".[openai]"
-
-   # For local models (Ollama)
-   pip install -e ".[ollama]"
-
-   # For the Streamlit UI
-   pip install -e ".[ui]"
-   ```
-
-4. **Configure API keys:**
-
-   Create a `.env` file in the project root:
-   ```bash
-   OPENAI_API_KEY='sk-your-api-key-here'
-   ```
-
-### Quick Start
+1. Create and activate the virtual environment.
 
 ```bash
-# Build an index from your vault
-python scripts/build_index.py --corpus ~/obsidian-vault --index-name my_index
-
-# Ask a question
-python scripts/ask.py --index my_index --q "What are the main concepts?"
+python3.11 -m venv .venv
+source .venv/bin/activate
 ```
 
----
-
-## Building an Index
-
-### Basic Usage
-
-Build an index from your document corpus:
+2. Install dependencies using repo wrappers.
 
 ```bash
-python scripts/build_index.py \
+./scripts/pip install -e ".[dev,openai]"
+```
+
+3. Set your API key.
+
+```bash
+export OPENAI_API_KEY='sk-your-api-key-here'
+```
+
+## Build an Index
+
+Use `make` (recommended):
+
+```bash
+make index
+```
+
+Or run directly with the pinned interpreter:
+
+```bash
+./scripts/py scripts/build_index.py \
   --corpus ~/obsidian-vault \
   --index-name my_index
 ```
 
-### Using Dummy Embeddings
-
-For testing without API costs:
+Dummy embeddings (no API cost):
 
 ```bash
-python scripts/build_index.py \
-  --corpus ~/obsidian-vault \
-  --index-name test_index \
-  --use-dummy-embeddings
+make index-dummy
 ```
 
-### Custom Chunk Size
-
-Adjust chunking parameters:
+### Common Index Overrides
 
 ```bash
-python scripts/build_index.py \
+./scripts/py scripts/build_index.py \
   --corpus ~/obsidian-vault \
   --index-name my_index \
-  --chunk-size 1000 \
-  --chunk-overlap 150
+  --target-chars 3500 \
+  --hard-max-chars 4800 \
+  --overlap-blocks 1 \
+  --no-heading-preamble
 ```
 
-### Index Location
+## Ask Questions
 
-By default, indexes are stored in:
-```
-artifacts/indexes/{index-name}/
-└── chunks.jsonl
-```
-
-### Make Commands
-
-For convenience, use the Makefile:
+Use `make`:
 
 ```bash
-make help          # Show available commands
-make index         # Build index with OpenAI embeddings
-make index-dummy   # Build index with dummy embeddings
-make clean-index   # Remove index (dangerous!)
+make ask QUERY="What are the main concepts?"
 ```
 
----
-
-## Querying the System
-
-### Basic Query
+Or:
 
 ```bash
-python scripts/ask.py \
+./scripts/py scripts/ask.py \
   --index my_index \
-  --q "What is the main topic?"
+  --q "What are the main concepts?" \
+  --top-k 10 \
+  --token-budget 1800
 ```
 
-### Adjusting Retrieval
+## Run Evaluations
+
+Run an eval set:
 
 ```bash
-python scripts/ask.py \
-  --index my_index \
-  --q "What is X?" \
-  --top-k 10 \      # Retrieve more candidates
-  --keep-k 5        # Keep top 5 after reranking
-```
-
-### Disabling Reranking
-
-```bash
-python scripts/ask.py \
-  --index my_index \
-  --q "What is X?" \
-  --rerank-backend noop
-```
-
-### Make Commands
-
-```bash
-make ask QUERY="What is the main topic?"
-```
-
-### Understanding Output
-
-The system outputs:
-1. **Answer**: Generated response with citations like [1], [2]
-2. **Citations**: Source files and excerpts used
-3. **Trace ID**: Unique identifier for debugging
-
-Example output:
-```
-Answer:
-The main topic is about building RAG systems [1]. Key concepts include
-retrieval, chunking, and embedding [2].
-
-Citations:
-[1] /docs/intro.md (lines 10-50)
-[2] /docs/concepts.md (lines 1-80)
-
-Trace ID: abc123def456
-```
-
----
-
-## Evaluation
-
-### Running Evaluations
-
-Execute the evaluation harness:
-
-```bash
-python -m experiments.run_eval \
-  --queries experiments/eval_queries.jsonl \
+./scripts/py eval/scripts/run_eval.py \
+  --queries eval/datasets/curated_queries.jsonl \
+  --index artifacts/indexes/obsidian \
   --run-generation \
   --use-llm-judge \
   --top-k 10 \
   --keep-k 4
 ```
 
-### Evaluation Options
+Run outputs are written under `eval/runs/run_YYYY_MM_DDTHH-MM/`.
 
-| Flag | Description |
-|------|-------------|
-| `--queries` | Path to evaluation queries JSONL file |
-| `--run-generation` | Enable answer generation (not just retrieval) |
-| `--use-llm-judge` | Use LLM-as-judge for answer quality |
-| `--top-k N` | Number of candidates to retrieve |
-| `--keep-k N` | Number to keep after reranking |
-
-### Retrieval Metrics
-
-The evaluation reports:
-
-| Metric | Description |
-|--------|-------------|
-| **Recall@k** | Fraction of relevant chunks in top-k |
-| **Precision@k** | Fraction of top-k that are relevant |
-| **Hit Rate@k** | Queries with at least one relevant in top-k |
-| **MRR** | Mean Reciprocal Rank (position of first relevant) |
-| **MAP** | Mean Average Precision |
-| **NDCG@k** | Normalized Discounted Cumulative Gain |
-
-### Answer Quality Metrics
-
-When using `--use-llm-judge`:
-
-| Metric | Scale | Description |
-|--------|-------|-------------|
-| Correctness | 0-5 | Factual accuracy |
-| Completeness | 0-5 | Covers all relevant info |
-| Relevance | 0-5 | Answers the actual question |
-| Hallucination | 0-5 | Lower is better |
-
-### Evaluation Output
-
-Results are saved to:
-```
-artifacts/eval/
-├── run_{run_id}/
-│   ├── results.jsonl
-│   ├── aggregates.json
-│   └── meta.json
-```
-
----
-
-## Query Curation UI
-
-The Streamlit-based query curation tool helps create evaluation datasets.
-
-### Starting the UI
+Generate a release verdict:
 
 ```bash
-pip install -e ".[ui]"  # Install streamlit dependency
-streamlit run experiments/streamlit_query_curator.py
+make verdict
 ```
 
-### Features
+## Analyze Evaluation Results
 
-1. **Chunk Browser**
-   - Document tree navigation
-   - Searchable chunk list
-   - Preview chunk content
+Launch the results analyzer:
 
-2. **Query Creation**
-   - Multi-chunk selection for ground truth
-   - LLM-generated query suggestions
-   - Full EvalQuery field editing
+```bash
+make results
+```
 
-3. **Review Mode**
-   - View existing queries
-   - Filter by type/difficulty
-   - Edit or delete queries
+Equivalent pinned command:
 
-### Workflow
+```bash
+./scripts/py -m streamlit run eval/app/results_analyzer.py
+```
 
-1. **Select Chunks**: Browse and select relevant chunks
-2. **Generate Suggestions**: Use LLM to suggest queries
-3. **Customize Query**: Edit type, difficulty, expected answer
-4. **Save**: Add to evaluation dataset
+## Logs and Traces
 
----
+Query traces are written to:
+
+- `artifacts/logs/traces.jsonl` for normal CLI runs
+- `eval/runs/<run>/traces.jsonl` for eval runs
+
+View recent traces:
+
+```bash
+tail -f artifacts/logs/traces.jsonl | jq .
+```
 
 ## Troubleshooting
 
-### Common Issues
-
-#### "OPENAI_API_KEY is required but not set"
+### `OPENAI_API_KEY is required but not set`
 
 ```bash
-# Set the environment variable
 export OPENAI_API_KEY='sk-your-key'
-
-# Or create a .env file
-echo "OPENAI_API_KEY='sk-your-key'" > .env
 ```
 
-#### "Missing config file: settings.toml"
+### `Missing config file: settings.toml`
 
-```bash
-# Copy the example settings
-cp settings.example.toml settings.toml
-```
+Ensure you are running commands from the repository root and `settings.toml` exists.
 
-#### "Invalid JSON on chunks.jsonl"
+### `No manifest.json` warning during ask
 
-The index file may be corrupted. Rebuild the index:
-```bash
-make clean-index
-make index
-```
+This means index compatibility checks were skipped for that index directory. Rebuild the index with `scripts/build_index.py` to regenerate a manifest.
 
-#### Empty Results
+### No results from retrieval
 
-1. Check that the index was built successfully
-2. Verify the index path matches what you're querying
-3. Try increasing `top_k`
-4. Check query relevance to indexed content
+- Confirm the index name/path matches what you built
+- Increase `--top-k`
+- Check corpus contents were ingested
 
-#### High Latency
+## Command Discipline
 
-1. Consider using `--use-dummy-embeddings` for testing
-2. Reduce `top_k` and `keep_k`
-3. Enable embedding cache (SQLite)
+For local repo workflows:
 
-### Inspecting Logs
+- Use `make <target>` when available
+- Otherwise use `./scripts/py ...` and `./scripts/pip ...`
 
-View query logs for debugging:
-
-```bash
-make tail-logs
-
-# Or manually
-tail -f artifacts/logs/queries.jsonl | jq .
-```
-
-### Log Fields
-
-| Field | Description |
-|-------|-------------|
-| `trace_id` | Unique query identifier |
-| `query` | Original query text |
-| `top_k` | Retrieval count |
-| `retrieved` | All retrieved candidates |
-| `reranked` | Post-reranking candidates |
-| `packed_chunk_ids` | Chunks sent to LLM |
-| `latency_ms` | Total execution time |
-| `metadata.timing_ms` | Per-stage timing |
-
-### Getting Help
-
-1. Check this documentation
-2. Review the [README](../README.md)
-3. Open an issue on GitHub
-
----
-
-## Advanced Usage
-
-### Programmatic Usage
-
-```python
-from rag.app.container import build_container, ContainerOverrides
-from rag.app.query_runner import run_query
-from rag.settings import load_settings
-
-# Load settings and build container
-settings = load_settings()
-container = build_container(cfg=settings)
-
-# Run a query
-result = run_query(
-    "What is the main concept?",
-    retriever=container.retriever,
-    reranker=container.reranker,
-    context_builder=container.context_builder,
-    generator=container.generator,
-    logger=container.logger,
-    top_k=8,
-    keep_k=4,
-    token_budget=1500
-)
-
-print(result.answer.text)
-print(f"Latency: {result.latency_ms}ms")
-```
-
-### Custom Adapters
-
-To use custom adapters:
-
-```python
-from rag.app.container import build_container, ContainerOverrides
-
-# Use dummy embeddings
-container = build_container(
-    overrides=ContainerOverrides(
-        embedder_backend="dummy",
-        dummy_embed_dim=256
-    )
-)
-
-# Use in-memory store
-container = build_container(
-    overrides=ContainerOverrides(
-        store_backend="memory"
-    )
-)
-```
-
-### Filter Queries
-
-Filter by metadata during retrieval:
-
-```python
-from rag.domain.filters import Eq, And, Prefix
-
-# Filter by source
-filter = Eq(field="source", value="filesystem")
-
-# Filter by path prefix
-filter = Prefix(field="uri", prefix="/docs/")
-
-# Combine filters
-filter = And(clauses=[
-    Eq(field="source", value="filesystem"),
-    Prefix(field="uri", prefix="/docs/")
-])
-
-# Use in retrieval
-candidates = retriever.retrieve("query", top_k=10, where=filter)
-```
-
-### Batch Processing
-
-Process multiple queries:
-
-```python
-queries = ["What is X?", "How does Y work?", "Explain Z"]
-
-results = []
-for query in queries:
-    result = run_query(
-        query,
-        retriever=container.retriever,
-        # ... other args
-    )
-    results.append(result)
-```
-
----
-
-## Best Practices
-
-### Chunking
-
-- **800-1200 characters**: Good balance of context and precision
-- **10-15% overlap**: Preserves cross-boundary context
-- Test different sizes for your corpus
-
-### Retrieval
-
-- **top_k 8-15**: Retrieve enough candidates for reranking
-- **keep_k 3-5**: Focus on best matches for generation
-- Enable reranking for better precision
-
-### Evaluation
-
-- Create queries at multiple difficulty levels
-- Include negative examples (unanswerable queries)
-- Use diverse query types (factual, comparison, procedural)
-- Review retrieval metrics before answer quality
-
-### Performance
-
-- Use SQLite embedding cache for repeated texts
-- Build indexes once, query many times
-- Consider dummy embeddings for development
+Do not run `python`, `pip`, `pytest`, `ruff`, or `streamlit` directly for local development commands in this repo.

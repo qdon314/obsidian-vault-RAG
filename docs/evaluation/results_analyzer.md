@@ -14,7 +14,7 @@ The Results Analyzer provides interactive visualization and exploration of evalu
 
 ```bash
 # Launch the application
-streamlit run eval/app/results_analyzer.py
+./scripts/py -m streamlit run eval/app/results_analyzer.py
 
 # Or via Makefile
 make results
@@ -240,7 +240,7 @@ When the groundedness judge runs, it extracts individual claims from the generat
 Unsupported claims are auto-expanded for easier debugging of hallucinations.
 
 <!-- SCREENSHOT: Groundedness claims section showing supported and unsupported claims -->
-![Groundedness Claims](../screenshots/query-explorer-claims.png)
+![Groundedness Claims](../screenshots/query-explorer-chunks.png)
 
 #### Traces Tab
 
@@ -359,7 +359,7 @@ Each query is an expandable row showing:
 - Recall delta (e.g., "Recall: 0.40 → 0.80 (+0.40)")
 
 <!-- SCREENSHOT: Query changes list with expandable summary rows -->
-![Query Changes Summary](../screenshots/comparison-query-changes-list.png)
+![Query Changes Summary](../screenshots/comparison-query-changes-summary.png)
 
 **Detail View** (expanded):
 Expanding a query reveals three sections:
@@ -372,10 +372,7 @@ Expanding a query reveals three sections:
 3. **Answer Diff** (when both runs have answers): Side-by-side answer text with quality score, correctness, and hallucination severity deltas
 
 <!-- SCREENSHOT: Expanded query detail with retrieval diff table -->
-![Query Detail View](../screenshots/comparison-query-detail.png)
-
-<!-- SCREENSHOT: Answer diff with quality metrics and deltas -->
-![Answer Diff](../screenshots/comparison-answer-diff.png)
+![Query Detail View](../screenshots/query-explorer-detail.png)
 
 ---
 
@@ -507,7 +504,6 @@ class QueryTrace:
     # Generation
     model: str | None
     answer_text: str | None
-    answer_abstained: bool | None
     citations: tuple[dict[str, Any], ...] | None
 
     latency_ms: int | None
@@ -753,7 +749,7 @@ Required packages:
 
 Install with:
 ```bash
-pip install -e ".[ui]"
+./scripts/pip install -e ".[ui]"
 ```
 
 ---
@@ -827,7 +823,7 @@ Traces are optional and only generated when:
 ### Charts Not Rendering
 
 If charts don't appear:
-1. Verify Plotly is installed: `pip install plotly`
+1. Verify Plotly is installed in the repo environment: `./scripts/pip install plotly`
 2. Check browser console for JavaScript errors
 3. Try refreshing the page
 

@@ -138,7 +138,7 @@ sequenceDiagram
     participant Embedder as OpenAIEmbedder
     participant Store as JsonlVectorStore
 
-    User->>CLI: python build_index.py --corpus ~/vault
+    User->>CLI: ./scripts/py scripts/build_index.py --corpus ~/vault
     CLI->>Ingestor: ingest(vault_path)
 
     loop For each file
@@ -176,7 +176,7 @@ sequenceDiagram
     participant Generator as OpenAIChatGenerator
     participant Logger as JsonlQueryLogger
 
-    User->>CLI: python ask.py --q "What is X?"
+    User->>CLI: ./scripts/py scripts/ask.py --index my_index --q "What is X?"
     CLI->>Runner: run_query(query, ...)
 
     Runner->>Retriever: retrieve(query, top_k=8)
@@ -197,7 +197,7 @@ sequenceDiagram
     Generator-->>Runner: Answer
 
     Runner->>Logger: log(QueryTrace)
-    Logger-->>Runner: Appended to queries.jsonl
+    Logger-->>Runner: Appended to traces.jsonl
 
     Runner-->>CLI: QueryRunResult
     CLI-->>User: Answer + Citations
@@ -288,7 +288,7 @@ graph TB
     Cand["<strong>Candidates</strong><br/>- chunk: Chunk<br/>- score: float (similarity)<br/>- rerank_score: float | None"]
     Reranked["Reranked Candidates (keep_k=4)"]
     Context["<strong>ContextPack</strong><br/>- query<br/>- chunks: List[Chunk]<br/>- rendered_context: str<br/>- citations: List[Citation]<br/>- token_budget"]
-    Ans["<strong>Answer</strong><br/>- query<br/>- text (generated response)<br/>- citations<br/>- abstained: bool<br/>- confidence"]
+    Ans["<strong>Answer</strong><br/>- query<br/>- text (generated response)<br/>- citations<br/>- confidence"]
 
     Query -- "Embedding" --> QVec
     QVec -- "Vector Search (top_k=8)" --> Cand
@@ -310,7 +310,7 @@ graph TB
 | `Candidate` | Retrieved chunk + retrieval/rerank scores |
 | `Citation` | Source pointer for answer attribution |
 | `ContextPack` | Final evidence bundle for generator |
-| `Answer` | LLM output with citations and abstention flag |
+| `Answer` | LLM output with citations and optional confidence metadata |
 | `QueryTrace` | Complete observability record for debugging/evaluation |
 
 ### Ports (Interfaces)

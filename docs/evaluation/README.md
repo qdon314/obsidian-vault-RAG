@@ -1,144 +1,60 @@
 # Evaluation System
 
-This directory contains comprehensive documentation for the RAG evaluation framework.
+This directory documents how to evaluate retrieval and generation quality for the RAG pipeline.
 
-## Overview
+## What It Covers
 
-The evaluation system provides tools for:
+- Query dataset format (`EvalQuery` JSONL)
+- Running evaluations (`eval/scripts/run_eval.py`)
+- Metrics definitions and interpretation
+- Trace/log inspection
+- Results analysis UI
+- Verdict-based release gating
 
-1. **Query Curation** - Creating and managing ground-truth evaluation datasets
-2. **Retrieval Evaluation** - Measuring how well the retriever finds relevant chunks
-3. **End-to-End Evaluation** - Testing the full pipeline from query to generated answer
-4. **Answer Quality Assessment** - LLM-as-judge scoring for generated answers
-
-## Documentation
+## Documents
 
 | Document | Description |
 |----------|-------------|
-| [Query Generation] | ~~Creating evaluation queries with the Streamlit UI~~ **Unconsumed right now**|
-| [Running Evaluations](running_evaluations.md) | Using the evaluation harness |
+| [Running Evaluations](running_evaluations.md) | End-to-end eval workflow and CLI usage |
 | [Metrics Reference](metrics.md) | Retrieval and answer quality metrics |
-| [Traces and Logging](traces_and_logging.md) | Observability and debugging |
-| [Results Analyzer](results_analyzer.md) | Streamlit UI for run analysis, comparison, and trending |
+| [Traces and Logging](traces_and_logging.md) | Query trace schema and debugging workflow |
+| [Results Analyzer](results_analyzer.md) | Streamlit UI for run analysis/comparison/trending |
 | [Verdict and Release Gating](verdict_release_gating.md) | SHIP/BLOCK decision layer and CI gate |
 
 ## Quick Start
 
-### 1. Build an Index
+1. Build an index.
 
 ```bash
-make index  # or make index-dummy for testing
+make index
 ```
 
-### 2. Create Evaluation Queries
-
-Launch the query curation UI:
+2. Run an evaluation.
 
 ```bash
-make eval
+./scripts/py eval/scripts/run_eval.py \
+  --queries eval/datasets/curated_queries.jsonl \
+  --index artifacts/indexes/obsidian \
+  --run-generation \
+  --use-llm-judge
 ```
 
-Browse chunks, optionally generate query suggestions with LLM, and save queries with ground-truth chunk IDs.
+3. Analyze results.
 
-### 3. Run Evaluation
-
-```python
-from pathlib import Path
-from src.rag.eval.harness import load_eval_queries, run_full_eval
-from src.rag.app.container import build_container
-
-# Load queries and container
-queries = load_eval_queries(Path("experiments/queries.jsonl"))
-container = build_container()
-
-# Run evaluation
-run = run_full_eval(
-    eval_queries=queries,
-    container=container,
-    top_k=10,
-    run_generation=True,
-    use_llm_judge=True,
-)
-
-# Access results
-print(f"Overall Recall@10: {run.aggregates.overall['recall@10']:.2%}")
+```bash
+make results
 ```
 
-## Architecture
+4. Produce a release verdict.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Evaluation System                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
-│  │   Query      │    │  Eval        │    │   Metrics    │   │
-│  │   Dataset    │───▶│  Harness     │───▶│   & Reports  │   │
-│  │              │    │              │    │              │   │
-│  └──────────────┘    └──────────────┘    └──────────────┘   │
-│         │                   │                   │           │
-│         ▼                   ▼                   ▼           │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
-│  │  EvalQuery   │    │  Container   │    │  EvalRun     │   │
-│  │  Dataset     │    │  (Pipeline)  │    │  Artifacts   │   │
-│  │  (.jsonl)    │    │              │    │  (.json)     │   │
-│  └──────────────┘    └──────────────┘    └──────────────┘   │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+```bash
+make verdict
 ```
 
-## Key Concepts
+## Key Locations
 
-### EvalQuery
-
-The fundamental unit of evaluation. Contains:
-
-- **Query text** - The question to ask
-- **Relevant chunk IDs** - Ground truth for retrieval evaluation
-- **Expected answer** - Reference answer for generation evaluation
-- **Metadata** - Query type, difficulty, tags, optional retrieval filter
-
-### EvalDataset
-
-A collection of EvalQuery objects with filtering and statistics:
-
-```python
-dataset = EvalDataset(queries)
-hard_queries = dataset.filter_by_difficulty(Difficulty.hard)
-factual_queries = dataset.filter_by_type(QueryType.factual)
-print(dataset.stats())
-```
-
-### EvalRun
-
-Complete evaluation run output including:
-
-- Per-query results with retrieval and answer metrics
-- Aggregated metrics overall and by query type/difficulty
-- Execution metadata (models used, timing, configuration)
-
-## File Locations
-
-```
-src/rag/eval/
-├── schema.py      # EvalQuery, EvalDataset, QueryType, Difficulty
-├── metrics.py     # Retrieval metric calculations
-└── harness.py     # Evaluation orchestration
-
-eval/app/
-├── main.py        # Streamlit entry point
-├── state.py       # Session state management
-├── wizard.py      # Create/Review tabs
-└── components/    # UI components
-
-src/rag/adapters/
-├── query_suggestion/    # LLM query generation
-├── eval_persistence/    # JSONL storage
-└── chunk_loading/       # Chunk loading for UI
-```
-
-## See Also
-
-- [CLAUDE.md](../../CLAUDE.md) - Build commands and project overview
-- [Architecture](../ARCHITECTURE.md) - System design
-- [API Reference](../API_REFERENCE.md) - Domain models and ports
+- Eval script: `eval/scripts/run_eval.py`
+- Eval harness: `src/rag/eval/harness.py`
+- Eval schema/models: `src/rag/eval/schema.py`, `src/rag/eval/models.py`
+- Default dataset: `eval/datasets/curated_queries.jsonl`
+- Run outputs: `eval/runs/run_YYYY_MM_DDTHH-MM/`

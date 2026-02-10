@@ -158,6 +158,8 @@ The double underscore is required because single underscores appear within field
 
 Runs on every push to `main` and every pull request targeting `main`.
 
+Note: local development in this repository should use `make` / `./scripts/py` / `./scripts/pip`. The raw `pip`/`python` commands below describe CI runner internals only.
+
 **Steps:**
 1. Checkout code
 2. Set up Python 3.11
