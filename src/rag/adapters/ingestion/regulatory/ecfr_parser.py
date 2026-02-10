@@ -14,8 +14,11 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
-# Matches a leading subsection prefix like ``(a) ``, ``(1) ``, ``(iv) ``.
-_SUBSECTION_RE = re.compile(r"^\(([a-z]|[0-9]+|[ivxlc]+|[A-Z])\)\s")
+# Matches one or more leading subsection markers like ``(a)(1)(i)``.
+_SUBSECTION_CHAIN_RE = re.compile(
+    r"^\s*((?:\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)\s*)+)"
+)
+_SUBSECTION_TOKEN_RE = re.compile(r"\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)")
 
 # Maps subsection prefix values to nesting levels.
 # Level 1 = lowercase letter (a-z), Level 2 = digit, Level 3 = roman numeral,
@@ -51,6 +54,7 @@ class ParsedParagraph:
     text: str  # full paragraph text with whitespace normalized
     level: int  # nesting depth (0 = no subsection prefix)
     prefix: str | None  # the raw prefix value, e.g. "a", "1", "iv"
+    subsection_tokens: tuple[str, ...] = ()  # full leading chain, e.g. ("a", "1", "i")
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,13 +67,25 @@ class ParsedSection:
     paragraphs: tuple[ParsedParagraph, ...] = ()
 
 
-def _classify_paragraph(text: str) -> tuple[int, str | None]:
-    """Determine the subsection nesting level and prefix for a paragraph."""
-    match = _SUBSECTION_RE.match(text)
+def _token_level(token: str) -> int:
+    """Map one subsection token to its CFR nesting level."""
+    if token in _LEVEL_MAP:
+        return _LEVEL_MAP[token]
+    return _LEVEL_MAP.get(token.lower(), 0)
+
+
+def _classify_paragraph(text: str) -> tuple[int, str | None, tuple[str, ...]]:
+    """Determine subsection level, prefix, and token chain for a paragraph."""
+    match = _SUBSECTION_CHAIN_RE.match(text)
     if not match:
-        return 0, None
-    prefix = match.group(1)
-    return _LEVEL_MAP.get(prefix, 0), prefix
+        return 0, None, ()
+
+    tokens = tuple(_SUBSECTION_TOKEN_RE.findall(match.group(1)))
+    if not tokens:
+        return 0, None, ()
+
+    prefix = tokens[-1]
+    return _token_level(prefix), prefix, tokens
 
 
 def _extract_text(elem: ET.Element) -> str:
@@ -148,8 +164,15 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
                 text = _extract_text(child)
                 if not text:
                     continue
-                level, prefix = _classify_paragraph(text)
-                paragraphs.append(ParsedParagraph(text=text, level=level, prefix=prefix))
+                level, prefix, subsection_tokens = _classify_paragraph(text)
+                paragraphs.append(
+                    ParsedParagraph(
+                        text=text,
+                        level=level,
+                        prefix=prefix,
+                        subsection_tokens=subsection_tokens,
+                    )
+                )
 
             sections.append(
                 ParsedSection(
