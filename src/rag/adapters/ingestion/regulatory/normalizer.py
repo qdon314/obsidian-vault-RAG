@@ -26,6 +26,9 @@ from rag.adapters.ingestion.regulatory.cross_references import (
 from rag.adapters.ingestion.regulatory.ecfr_parser import ParsedSection
 
 _SUBSECTION_PREFIX_RE = re.compile(r"^\([a-zA-Z0-9ivxlcdmIVXLCDM]+\)\s*")
+_SUBSECTION_CHAIN_PREFIX_RE = re.compile(
+    r"^\s*(?:\([a-zA-Z0-9ivxlcdmIVXLCDM]+\)\s*)+"
+)
 # Maps ``ParsedParagraph.level`` → markdown heading prefix.
 _HEADING_LEVEL = {1: "##", 2: "###", 3: "####", 4: "#####"}
 
@@ -43,8 +46,21 @@ class NormalizationConfig:
 
 
 def _strip_prefix(text: str) -> str:
-    """Remove a leading subsection marker like ``(a) `` from paragraph text."""
-    return _SUBSECTION_PREFIX_RE.sub("", text)
+    """Remove leading subsection marker chains like ``(a)(1)(i) `` from text."""
+    return _SUBSECTION_CHAIN_PREFIX_RE.sub("", text)
+
+
+def _subsection_level(token: str) -> int:
+    """Map subsection token to CFR level."""
+    if token in "abcdefghijklmnopqrstuvwxyz":
+        return 1
+    if token.isdigit():
+        return 2
+    if token.lower() in {"i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"}:
+        return 3
+    if token in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+        return 4
+    return 0
 
 
 def _build_frontmatter(
@@ -121,9 +137,32 @@ def normalize_section_to_markdown(section: ParsedSection, config: NormalizationC
     lines.append(f"# {citation_key} — {section.title}")
     lines.append("")
 
+    subsection_stack: list[str] = []
+
     for paragraph, parsed in zip(rewritten, section.paragraphs, strict=True):
         if parsed.level > 0 and parsed.prefix is not None:
-            lines.append(f"{_HEADING_LEVEL.get(parsed.level, '##')} ({parsed.prefix})")
+            tokens = list(parsed.subsection_tokens)
+            if not tokens:
+                tokens = [parsed.prefix]
+
+            if len(tokens) > 1:
+                first_level = _subsection_level(tokens[0])
+                if first_level <= 1:
+                    prefix_stack: list[str] = []
+                else:
+                    prefix_stack = subsection_stack[: max(first_level - 1, 0)]
+                subsection_stack = prefix_stack + tokens
+            else:
+                token = tokens[0]
+                token_level = _subsection_level(token)
+                if token_level <= 0:
+                    token_level = parsed.level
+                subsection_stack = subsection_stack[: max(token_level - 1, 0)]
+                subsection_stack.append(token)
+
+            heading_level = parsed.level if parsed.level > 0 else max(len(subsection_stack), 1)
+            heading_marker = "".join(f"({token})" for token in subsection_stack)
+            lines.append(f"{_HEADING_LEVEL.get(heading_level, '##')} {heading_marker}")
             lines.append("")
             body = _strip_prefix(paragraph).strip()
             if body:
