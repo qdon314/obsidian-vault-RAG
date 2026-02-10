@@ -84,6 +84,33 @@ class EvalQuery(DataClassJsonMixin):
         metadata=config(encoder=set_encoder, decoder=set_decoder),
     )
 
+    # Tiered relevance (optional).
+    # When unset, the harness falls back to legacy relevant_* fields.
+    critical_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    supporting_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    context_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    critical_citations: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    supporting_citations: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    context_doc_citations: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+
     # Optional: expected answer for answer quality evaluation
     expected_answer: str | None = None
     expected_answer_alternatives: list[str] = field(default_factory=list)

@@ -43,6 +43,18 @@ class RetrievalResult(DataClassJsonMixin):
         default_factory=set,
         metadata=config(encoder=set_encoder, decoder=set_decoder),
     )
+    critical_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    supporting_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    context_chunk_ids: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
 
     @classmethod
     def from_qid_dict(cls, qid: str, data: dict[str, Any]) -> RetrievalResult:
@@ -51,6 +63,9 @@ class RetrievalResult(DataClassJsonMixin):
             qid=qid,
             retrieved_chunk_ids=tuple(data.get("retrieved_chunk_ids", [])),
             relevant_chunk_ids=set(data.get("relevant_chunk_ids", [])),
+            critical_chunk_ids=set(data.get("critical_chunk_ids", [])),
+            supporting_chunk_ids=set(data.get("supporting_chunk_ids", [])),
+            context_chunk_ids=set(data.get("context_chunk_ids", [])),
         )
 
 
@@ -76,6 +91,9 @@ class RetrievalSummary(DataClassJsonMixin):
     precision_at_k: dict[int, float] = field(default_factory=dict)
     hit_rate_at_k: dict[int, float] = field(default_factory=dict)
     ndcg_at_k: dict[int, float] = field(default_factory=dict)
+    critical_recall_at_k: dict[int, float] = field(default_factory=dict)
+    weighted_recall_at_k: dict[int, float] = field(default_factory=dict)
+    critical_hit_rate_at_k: dict[int, float] = field(default_factory=dict)
 
     # Global ranking metrics
     mrr: float = 0.0
@@ -99,6 +117,12 @@ class RetrievalSummary(DataClassJsonMixin):
             out[f"hit_rate@{k}"] = float(v)
         for k, v in self.ndcg_at_k.items():
             out[f"ndcg@{k}"] = float(v)
+        for k, v in self.critical_recall_at_k.items():
+            out[f"critical_recall@{k}"] = float(v)
+        for k, v in self.weighted_recall_at_k.items():
+            out[f"weighted_recall@{k}"] = float(v)
+        for k, v in self.critical_hit_rate_at_k.items():
+            out[f"critical_hit_rate@{k}"] = float(v)
         return out
 
     @classmethod
@@ -113,6 +137,9 @@ class RetrievalSummary(DataClassJsonMixin):
             precision_at_k=_parse_flattened_metrics(data, "precision"),
             hit_rate_at_k=_parse_flattened_metrics(data, "hit_rate"),
             ndcg_at_k=_parse_flattened_metrics(data, "ndcg"),
+            critical_recall_at_k=_parse_flattened_metrics(data, "critical_recall"),
+            weighted_recall_at_k=_parse_flattened_metrics(data, "weighted_recall"),
+            critical_hit_rate_at_k=_parse_flattened_metrics(data, "critical_hit_rate"),
             mrr=float(data.get("mrr", 0.0)),
             map=float(data.get("map", 0.0)),
         )

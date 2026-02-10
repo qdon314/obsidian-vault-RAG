@@ -125,6 +125,17 @@ def average_precision(retrieved: Sequence[str], relevant: set[str]) -> float:
             precisions.append(hits / i)
     return sum(precisions) / len(relevant) if precisions else 0.0
 
+def mean_average_precision(results: Iterable[RetrievalResult]) -> float:
+    """
+    TODO: Incorporate into eval metrics summary.
+    Compute Mean Average Precision (MAP) over multiple queries.
+    Args:
+        results: Iterable of RetrievalResult objects.
+    Returns:
+        Mean Average Precision value.
+    """
+    aps = [average_precision(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results]
+    return sum(aps) / len(aps) if aps else 0.0
 
 def ndcg_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
     """
@@ -163,6 +174,56 @@ def ndcg_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
     return dcg / idcg if idcg > 0 else 0.0
 
 
+def critical_recall_at_k(retrieved: Sequence[str], critical: set[str], k: int) -> float:
+    """Compute recall@k against only critical chunks."""
+    if not critical:
+        return 0.0
+    topk = retrieved[:k]
+    hits = sum(1 for cid in topk if cid in critical)
+    return hits / float(len(critical))
+
+
+def critical_hit_rate_at_k(retrieved: Sequence[str], critical: set[str], k: int) -> float:
+    """Compute hit rate@k for critical chunks only."""
+    if not critical:
+        return 0.0
+    topk = retrieved[:k]
+    return 1.0 if any(cid in critical for cid in topk) else 0.0
+
+
+def weighted_recall_at_k(
+    retrieved: Sequence[str],
+    *,
+    critical: set[str],
+    supporting: set[str],
+    context: set[str],
+    k: int,
+    critical_weight: float = 1.0,
+    supporting_weight: float = 0.5,
+    context_weight: float = 0.2,
+) -> float:
+    """
+    Compute weighted recall@k using tiered relevance weights.
+
+    Returns 0.0 when no weighted relevant chunks are defined.
+    """
+    topk = set(retrieved[:k])
+    total_weight = (
+        len(critical) * critical_weight
+        + len(supporting) * supporting_weight
+        + len(context) * context_weight
+    )
+    if total_weight == 0.0:
+        return 0.0
+
+    hit_weight = (
+        len(topk & critical) * critical_weight
+        + len(topk & supporting) * supporting_weight
+        + len(topk & context) * context_weight
+    )
+    return hit_weight / total_weight
+
+
 def summarize(
     results: Iterable[RetrievalResult], *, ks: Sequence[int] = (5, 10)
 ) -> RetrievalSummary:
@@ -175,6 +236,9 @@ def summarize(
             precision_at_k=dict.fromkeys(ks, 0.0),
             hit_rate_at_k=dict.fromkeys(ks, 0.0),
             ndcg_at_k=dict.fromkeys(ks, 0.0),
+            critical_recall_at_k=dict.fromkeys(ks, 0.0),
+            weighted_recall_at_k=dict.fromkeys(ks, 0.0),
+            critical_hit_rate_at_k=dict.fromkeys(ks, 0.0),
             mrr=0.0,
             map=0.0,
         )
@@ -186,6 +250,9 @@ def summarize(
     precision_at_k_res = {}
     hit_rate_at_k_res = {}
     ndcg_at_k_res = {}
+    critical_recall_at_k_res = {}
+    weighted_recall_at_k_res = {}
+    critical_hit_rate_at_k_res = {}
 
     for k in ks:
         recall_at_k_res[k] = (
@@ -200,6 +267,30 @@ def summarize(
         ndcg_at_k_res[k] = (
             sum(ndcg_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
         )
+        critical_recall_at_k_res[k] = (
+            sum(critical_recall_at_k(r.retrieved_chunk_ids, r.critical_chunk_ids, k) for r in results)
+            / n
+        )
+        weighted_recall_at_k_res[k] = (
+            sum(
+                weighted_recall_at_k(
+                    r.retrieved_chunk_ids,
+                    critical=r.critical_chunk_ids,
+                    supporting=r.supporting_chunk_ids,
+                    context=r.context_chunk_ids,
+                    k=k,
+                )
+                for r in results
+            )
+            / n
+        )
+        critical_hit_rate_at_k_res[k] = (
+            sum(
+                critical_hit_rate_at_k(r.retrieved_chunk_ids, r.critical_chunk_ids, k)
+                for r in results
+            )
+            / n
+        )
 
     mrr_score = sum(mrr(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results) / n
     map_score = (
@@ -213,6 +304,9 @@ def summarize(
         precision_at_k=precision_at_k_res,
         hit_rate_at_k=hit_rate_at_k_res,
         ndcg_at_k=ndcg_at_k_res,
+        critical_recall_at_k=critical_recall_at_k_res,
+        weighted_recall_at_k=weighted_recall_at_k_res,
+        critical_hit_rate_at_k=critical_hit_rate_at_k_res,
         mrr=mrr_score,
         map=map_score,
     )
