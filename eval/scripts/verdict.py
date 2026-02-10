@@ -68,6 +68,12 @@ def main() -> None:
         help="Settings TOML path containing [eval.verdict] thresholds",
     )
     parser.add_argument(
+        "--scope",
+        type=str,
+        default=None,
+        help="Optional verdict threshold scope under [eval.verdict.<scope>]",
+    )
+    parser.add_argument(
         "--fail-on-block",
         action="store_true",
         help="Exit with code 1 when verdict decision is BLOCK",
@@ -75,7 +81,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Thresholds are loaded from [eval.verdict], with safe defaults if absent.
-    thresholds = load_verdict_thresholds(args.settings)
+    thresholds = load_verdict_thresholds(args.settings, scope=args.scope)
     current_run = load_eval_run(args.current)
     baseline_run = load_eval_run(args.baseline) if args.baseline else None
 

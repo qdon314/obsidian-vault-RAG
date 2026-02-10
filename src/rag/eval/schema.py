@@ -75,6 +75,14 @@ class EvalQuery(DataClassJsonMixin):
         default_factory=set,
         metadata=config(encoder=set_encoder, decoder=set_decoder),
     )
+    relevant_citations: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
+    relevant_doc_citations: set[str] = field(
+        default_factory=set,
+        metadata=config(encoder=set_encoder, decoder=set_decoder),
+    )
 
     # Optional: expected answer for answer quality evaluation
     expected_answer: str | None = None
