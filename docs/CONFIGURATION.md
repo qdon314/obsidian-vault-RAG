@@ -1,20 +1,21 @@
 # Configuration Reference
 
-Complete reference for all configuration options in the RAG system.
+Complete reference for configuration in the RAG system.
 
 ## Table of Contents
 
 - [Configuration File](#configuration-file)
+- [Configuration Precedence](#configuration-precedence)
 - [Environment Variables](#environment-variables)
 - [Settings Sections](#settings-sections)
+- [Eval Verdict Thresholds](#eval-verdict-thresholds)
 - [CLI Overrides](#cli-overrides)
-- [Configuration Examples](#configuration-examples)
 
 ---
 
 ## Configuration File
 
-The primary configuration file is `settings.toml` in the project root.
+Primary config file: `settings.toml` in the project root.
 
 ```toml
 # settings.toml - Canonical configuration for the RAG system
@@ -23,70 +24,50 @@ The primary configuration file is `settings.toml` in the project root.
 # CLI overrides settings via ContainerOverrides.
 ```
 
-### Configuration Precedence
+## Configuration Precedence
 
-1. **settings.toml** - Default values
-2. **Environment variables** - Secrets (API keys)
-3. **CLI arguments** - One-off overrides
+1. `settings.toml` defaults
+2. Environment overrides (`OPENAI_API_KEY`, plus mapped env overrides)
+3. CLI flags (single-run overrides)
 
 ---
 
 ## Environment Variables
 
-### Required
-
 | Variable | Description | Required When |
 |----------|-------------|---------------|
-| `OPENAI_API_KEY` | OpenAI API key | Using OpenAI embeddings or generation |
+| `OPENAI_API_KEY` | OpenAI API key | `embeddings.backend="openai"` or `llm.backend="openai"` |
 
-### Setting Environment Variables
+Example:
 
-**Option 1: .env file** (recommended)
-```bash
-# Create .env in project root
-OPENAI_API_KEY='sk-your-api-key-here'
-```
-
-**Option 2: Shell export**
 ```bash
 export OPENAI_API_KEY='sk-your-api-key-here'
-```
-
-**Option 3: Inline**
-```bash
-OPENAI_API_KEY='sk-...' python scripts/ask.py --q "query"
 ```
 
 ---
 
 ## Settings Sections
 
-### [paths]
-
-File system paths for the system.
+### `[paths]`
 
 ```toml
 [paths]
-vault_dir = "~/obsidian-vault"           # Document corpus location
-artifacts_dir = "artifacts"               # Output directory
-index_dir = "artifacts/indexes/default"   # Default index location
+vault_dir = "/Users/quentindonnelly/Documents/Personal & Professional"
+artifacts_dir = "artifacts"
+queries_file = "eval/datasets/curated_queries.jsonl"
+index_dir = "artifacts/indexes/obsidian"
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `vault_dir` | path | `~/obsidian-vault` | Path to document corpus |
-| `artifacts_dir` | path | `artifacts` | Directory for outputs (logs, indexes) |
-| `index_dir` | path | `artifacts/indexes/default` | Default index directory |
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
+| `vault_dir` | path | required | Corpus root |
+| `artifacts_dir` | path | `artifacts` | Output root |
+| `queries_file` | path | `eval/datasets/curated_queries.jsonl` | Eval/query dataset path |
+| `index_dir` | path | `artifacts/indexes/obsidian` | Default index location |
 
-**Notes:**
-- Paths support `~` expansion (home directory)
-- Paths support environment variable expansion (`$HOME`)
+`~` and env vars in paths are expanded at load time.
 
----
-
-### [ingestion]
-
-Document ingestion settings.
+### `[ingestion]`
 
 ```toml
 [ingestion]
@@ -97,270 +78,143 @@ expand_embeds = true
 max_embed_depth = 4
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `recursive` | bool | `true` | Recursively walk subdirectories |
-| `skip_hidden` | bool | `true` | Skip files/dirs starting with `.` |
-| `allowed_extensions` | list | `[".md", ".txt"]` | File extensions to process |
-| `expand_embeds` | bool | `true` | Expand Obsidian transclusions (`![[...]]`) |
-| `max_embed_depth` | int | `4` | Max recursion depth for transclusions |
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
+| `recursive` | bool | `true` | Recurse subdirectories |
+| `skip_hidden` | bool | `true` | Skip hidden files/directories |
+| `allowed_extensions` | list[string] | `[".md", ".txt"]` | File extensions to ingest |
+| `expand_embeds` | bool | `true` | Expand Obsidian `![[...]]` embeds |
+| `max_embed_depth` | int | `4` | Max recursive embed expansion depth |
 
-**Obsidian Transclusions:**
-
-When `expand_embeds = true`, embedded content like:
-```markdown
-![[other-note]]
-```
-Will be expanded inline (up to `max_embed_depth` levels).
-
----
-
-### [chunking]
-
-Text chunking settings.
+### `[chunking]`
 
 ```toml
 [chunking]
-backend = "fixed"
+backend = "obsidian_structural" # "fixed" | "obsidian_structural" | "obsidian_proposition"
 chunk_size = 800
 overlap = 120
+target_chars = 4000
+hard_max_chars = 5200
+overlap_blocks = 1
+include_heading_preamble = true
+proposition_batch_size = 2
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `backend` | string | `"fixed"` | Chunking strategy (currently only "fixed") |
-| `chunk_size` | int | `800` | Characters per chunk |
-| `overlap` | int | `120` | Character overlap between chunks |
+| Option | Type | Default in `settings.toml` | Used By |
+|--------|------|-----------------------------|---------|
+| `backend` | string | `"obsidian_structural"` | All chunking |
+| `chunk_size` | int | `800` | `fixed` |
+| `overlap` | int | `120` | `fixed` |
+| `target_chars` | int | `4000` | `obsidian_structural` |
+| `hard_max_chars` | int | `5200` | `obsidian_structural` |
+| `overlap_blocks` | int | `1` | `obsidian_structural` |
+| `include_heading_preamble` | bool | `true` | `obsidian_structural` |
+| `proposition_batch_size` | int | `2` | `obsidian_proposition` |
 
-**Recommendations:**
-| Corpus Type | chunk_size | overlap |
-|-------------|------------|---------|
-| Dense technical docs | 600-800 | 100-120 |
-| General notes | 800-1000 | 120-150 |
-| Long-form articles | 1000-1200 | 150-200 |
+Note: loader fallback default for `proposition_batch_size` is `8` when omitted.
 
----
-
-### [context]
-
-Context building settings.
+### `[context]`
 
 ```toml
 [context]
 max_chunks = 5
 dedupe = true
 include_scores = false
-# min_score = 0.5            # Optional threshold
+# min_score = 0.5
 token_budget = 1500
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `max_chunks` | int | `5` | Maximum chunks in context |
-| `dedupe` | bool | `true` | Remove near-duplicate chunks |
-| `include_scores` | bool | `false` | Show scores in rendered context |
-| `min_score` | float | `None` | Optional similarity threshold |
-| `token_budget` | int | `1500` | Maximum tokens for context |
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
+| `max_chunks` | int | `5` | Max chunks passed to generation |
+| `dedupe` | bool | `true` | Remove near-duplicates |
+| `include_scores` | bool | `false` | Include retrieval scores in rendered context |
+| `min_score` | float \| null | unset | Optional score threshold |
+| `token_budget` | int | `1500` | Context token budget |
 
-**Token Budget:**
-
-The token budget limits context size to fit LLM context windows:
-- GPT-4: 8K-128K tokens available
-- Recommended: Leave room for system prompt + response
-- Default 1500 tokens ≈ 6000 characters
-
----
-
-### [embeddings]
-
-Embedding model settings.
+### `[embeddings]`
 
 ```toml
 [embeddings]
-backend = "openai"
+backend = "openai"         # "openai" | "dummy"
 model = "text-embedding-3-large"
+timeout = 30.0
+max_retries = 3
+cache_embeddings = true
+cache_db_path = "artifacts/cache/embeddings/embedding_cache.db"
 dummy_dim = 128
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `backend` | string | `"openai"` | `"openai"` or `"dummy"` |
-| `model` | string | `"text-embedding-3-large"` | OpenAI model name |
-| `dummy_dim` | int | `128` | Vector dimension for dummy embedder |
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
+| `backend` | string | `"openai"` | Provider backend |
+| `model` | string | `"text-embedding-3-large"` | Model name |
+| `timeout` | float | `30.0` | Request timeout (seconds) |
+| `max_retries` | int | `3` | Retry attempts |
+| `cache_embeddings` | bool | `true` | Enable SQLite embedding cache |
+| `cache_db_path` | path | `artifacts/cache/embeddings/embedding_cache.db` | Cache DB location |
+| `dummy_dim` | int | `128` | Only for `backend="dummy"` |
 
-**OpenAI Models:**
-
-| Model | Dimensions | Cost | Quality |
-|-------|------------|------|---------|
-| `text-embedding-3-large` | 3072 | Higher | Best |
-| `text-embedding-3-small` | 1536 | Lower | Good |
-| `text-embedding-ada-002` | 1536 | Medium | Legacy |
-
-**Dummy Embedder:**
-
-Use `backend = "dummy"` for:
-- Testing without API costs
-- Development environments
-- CI/CD pipelines
-
----
-
-### [vectorstore]
-
-Vector storage settings.
+### `[vectorstore]`
 
 ```toml
 [vectorstore]
 backend = "jsonl"         # "memory" | "jsonl" | "qdrant"
 jsonl_dir = "artifacts/indexes/obsidian_index"
-
-# Qdrant-specific settings (only when backend = "qdrant")
-# qdrant_collection = "chunks"
-# qdrant_url = "http://localhost:6333"  # for remote Qdrant server
-# qdrant_path = "artifacts/qdrant"      # for local disk persistence
-# qdrant_api_key = "..."                # for Qdrant Cloud
+qdrant_collection = "obsidian"
+# qdrant_url = "http://localhost:6333"
+qdrant_path = "artifacts/indexes"
+# qdrant_api_key = "..."
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `backend` | string | `"memory"` | `"memory"`, `"jsonl"`, or `"qdrant"` |
-| `jsonl_dir` | path | `None` | Directory for JSONL files |
-| `qdrant_collection` | string | `"chunks"` | Qdrant collection name |
-| `qdrant_url` | string | `None` | Qdrant server URL (remote mode) |
-| `qdrant_path` | path | `None` | Local disk path for Qdrant |
-| `qdrant_api_key` | string | `None` | API key for Qdrant Cloud |
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
+| `backend` | string | `"jsonl"` | Store backend |
+| `jsonl_dir` | path | `artifacts/indexes/obsidian_index` | Used by `jsonl` backend |
+| `qdrant_collection` | string | `"obsidian"` | Used by `qdrant` backend |
+| `qdrant_url` | string \| null | unset | Remote Qdrant URL |
+| `qdrant_path` | path | `artifacts/indexes` | Local Qdrant persistence path |
+| `qdrant_api_key` | string \| null | unset | Qdrant Cloud key |
 
-**Backend Comparison:**
-
-| Backend | Persistence | Speed | Use Case |
-|---------|-------------|-------|----------|
-| `memory` | No | Fast | Testing, experiments |
-| `jsonl` | Yes | Good | Small-medium corpora, human-readable |
-| `qdrant` | Yes | Best | Large corpora, production scale |
-
-**JSONL Files:**
-```
-{jsonl_dir}/
-└── chunks.jsonl    # Chunk data + vectors
-```
-
-**Qdrant Deployment Modes:**
-
-| Mode | Configuration | Description |
-|------|---------------|-------------|
-| In-memory | No `url` or `path` | Fast testing, non-persistent |
-| Local disk | Set `path` | Persistent local storage |
-| Remote server | Set `url` | Connect to Qdrant server |
-| Qdrant Cloud | Set `url` + `api_key` | Managed cloud service |
-
-**Qdrant Installation:**
-```bash
-pip install -e ".[qdrant]"
-```
-
----
-
-### [retrieval]
-
-Retrieval settings.
+### `[retrieval]`
 
 ```toml
 [retrieval]
-backend = "vector"           # "vector" | "hybrid"
+backend = "vector"            # "vector" | "hybrid"
 top_k = 8
-
-# Hybrid search settings (only when backend = "hybrid")
-[retrieval.hybrid]
-primary_weight = 0.7         # Weight for vector results
-secondary_weight = 0.3       # Weight for BM25 results
-rrf_k = 60                   # RRF fusion constant
-bm25_k1 = 1.5               # BM25 term frequency saturation
-bm25_b = 0.75               # BM25 length normalization
+hybrid_primary_weight = 0.7
+hybrid_secondary_weight = 0.3
+hybrid_rrf_k = 60
+hybrid_bm25_k1 = 1.5
+hybrid_bm25_b = 0.75
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `backend` | string | `"vector"` | `"vector"` or `"hybrid"` |
-| `top_k` | int | `8` | Initial candidates to retrieve |
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
+| `backend` | string | `"vector"` | Retrieval mode |
+| `top_k` | int | `8` | Candidate count before rerank |
+| `hybrid_primary_weight` | float | `0.7` | Vector component weight |
+| `hybrid_secondary_weight` | float | `0.3` | BM25 component weight |
+| `hybrid_rrf_k` | int | `60` | RRF fusion constant |
+| `hybrid_bm25_k1` | float | `1.5` | BM25 `k1` |
+| `hybrid_bm25_b` | float | `0.75` | BM25 `b` |
 
-**Hybrid Sub-section:**
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `primary_weight` | float | `0.7` | Weight for vector (primary) results in RRF fusion |
-| `secondary_weight` | float | `0.3` | Weight for BM25 (secondary) results in RRF fusion |
-| `rrf_k` | int | `60` | RRF constant (higher = more rank smoothing) |
-| `bm25_k1` | float | `1.5` | BM25 term frequency saturation parameter |
-| `bm25_b` | float | `0.75` | BM25 length normalization parameter |
-
-**Backend Comparison:**
-
-| Backend | Description | Speed | Recall | Use Case |
-|---------|-------------|-------|--------|----------|
-| `vector` | Pure vector similarity | Fastest | Good | General use, default |
-| `hybrid` | Vector + BM25 with RRF | Fast | Better | Rare terms, acronyms, proper nouns |
-
-**Hybrid Search:**
-
-Hybrid search combines vector similarity with BM25 keyword search using Reciprocal Rank Fusion (RRF):
-
-```
-RRF Score = Σ(weight / (k + rank))
-```
-
-Where:
-- `weight` is `primary_weight` or `secondary_weight`
-- `k` is the RRF constant (default 60)
-- `rank` is the position in each result list (1-indexed)
-
-**BM25 Parameters:**
-
-- `k1` (1.5): Controls term frequency saturation. Higher values allow more term frequency influence.
-- `b` (0.75): Controls length normalization. 0 = no normalization, 1 = full normalization.
-
-**Guidance:**
-- Higher `top_k` → More candidates for reranking
-- Typical range: 5-20
-- Consider corpus size and diversity
-- Use `hybrid` when queries contain rare terms, acronyms, or proper nouns
-- BM25 retriever is built in-memory from loaded chunks (no separate index file)
-
----
-
-### [rerank]
-
-Reranking settings.
+### `[rerank]`
 
 ```toml
 [rerank]
 enabled = true
-backend = "heuristic"
+backend = "heuristic"      # "heuristic" | "noop"
 keep_k = 4
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
 | `enabled` | bool | `true` | Enable reranking |
-| `backend` | string | `"heuristic"` | `"heuristic"` or `"noop"` |
-| `keep_k` | int | `4` | Candidates to keep after reranking |
+| `backend` | string | `"heuristic"` | Reranker implementation |
+| `keep_k` | int | `4` | Final candidate count |
 
-**Backend Comparison:**
-
-| Backend | Description | Speed | Quality |
-|---------|-------------|-------|---------|
-| `heuristic` | Lexical overlap + diversity | Fast | Improved |
-| `noop` | Pass-through (vector only) | Fastest | Baseline |
-
-**Reranking Pipeline:**
-```
-Retrieve top_k=8 → Rerank → Keep top keep_k=4 → Context
-```
-
----
-
-### [llm]
-
-Language model settings.
+### `[llm]`
 
 ```toml
 [llm]
@@ -368,279 +222,93 @@ backend = "openai"
 model = "gpt-4.1-mini"
 temperature = 0.2
 max_tokens = 1024
+timeout = 60.0
+max_retries = 3
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `backend` | string | `"openai"` | LLM provider (currently only "openai") |
-| `model` | string | `"gpt-4.1-mini"` | Model name |
-| `temperature` | float | `0.2` | Generation temperature (0-1) |
-| `max_tokens` | int | `1024` | Maximum response tokens |
+| Option | Type | Default in `settings.toml` | Notes |
+|--------|------|-----------------------------|-------|
+| `backend` | string | `"openai"` | Current provider |
+| `model` | string | `"gpt-4.1-mini"` | Chat model |
+| `temperature` | float | `0.2` | Sampling temperature |
+| `max_tokens` | int | `1024` | Max completion tokens |
+| `timeout` | float | `60.0` | Request timeout (seconds) |
+| `max_retries` | int | `3` | Retry attempts |
 
-**Temperature Guidance:**
-| Temperature | Behavior | Use Case |
-|-------------|----------|----------|
-| 0.0-0.2 | Deterministic, focused | Factual QA |
-| 0.3-0.5 | Balanced | General use |
-| 0.6-1.0 | Creative, varied | Creative tasks |
+---
 
-**Recommended Models:**
-| Model | Speed | Quality | Cost |
-|-------|-------|---------|------|
-| `gpt-4o-mini` | Fast | Good | Low |
-| `gpt-4o` | Medium | Better | Medium |
-| `gpt-4-turbo` | Slower | Best | High |
+## Eval Verdict Thresholds
+
+`[eval.verdict]` configures release-gating thresholds for eval verdicts.
+
+```toml
+[eval.verdict]
+min_recall_at_10 = 0.60
+min_ndcg_at_10 = 0.50
+min_mrr = 0.40
+max_avg_hallucination_severity = 2.5
+min_evidence_bounded_rate = 0.70
+max_latency_p95_ms = 5000.0
+max_unsafe_miss_rate = 0.10
+max_abstain_bad_rate = 0.10
+max_recall_regression = 0.05
+max_quality_regression = 0.10
+max_latency_regression_ms = 1000.0
+```
+
+| Option | Type | Meaning |
+|--------|------|---------|
+| `min_recall_at_10` | float | Minimum Recall@10 |
+| `min_ndcg_at_10` | float | Minimum nDCG@10 |
+| `min_mrr` | float | Minimum MRR |
+| `max_avg_hallucination_severity` | float | Maximum average hallucination severity |
+| `min_evidence_bounded_rate` | float | Minimum evidence-bounded response rate |
+| `max_latency_p95_ms` | float | Maximum p95 latency in ms |
+| `max_unsafe_miss_rate` | float | Maximum unsafe miss rate |
+| `max_abstain_bad_rate` | float | Maximum bad abstention rate |
+| `max_recall_regression` | float | Max allowed recall regression |
+| `max_quality_regression` | float | Max allowed quality regression |
+| `max_latency_regression_ms` | float | Max allowed latency regression in ms |
+
+Scoped overrides are supported by nested tables such as `[eval.verdict.regulatory]`; scoped values merge on top of base verdict thresholds.
 
 ---
 
 ## CLI Overrides
 
-Command-line flags override settings for a single run.
+Use pinned interpreter wrappers from `AGENTS.md`.
 
-### build_index.py
-
-```bash
-python scripts/build_index.py \
-  --corpus PATH \           # Override paths.vault_dir
-  --index-name NAME \       # Index directory name
-  --use-dummy-embeddings \  # Use dummy embedder
-  --chunk-size N \          # Override chunking.chunk_size
-  --chunk-overlap N         # Override chunking.overlap
-```
-
-### ask.py
+### Build Index
 
 ```bash
-python scripts/ask.py \
-  --index NAME \            # Index to query
-  --q "QUERY" \             # Query text
-  --top-k N \               # Override retrieval.top_k
-  --keep-k N \              # Override rerank.keep_k
-  --rerank-backend TYPE \   # Override rerank.backend
-  --token-budget N          # Override context.token_budget
+./scripts/py scripts/build_index.py \
+  --corpus /path/to/corpus \
+  --index-name my-index \
+  --chunk-size 800 \
+  --overlap 120
 ```
 
----
+Common build overrides:
+- `--chunk-size`, `--overlap` for fixed chunking
+- `--target-chars`, `--hard-max-chars`, `--overlap-blocks`, `--no-heading-preamble` for structural chunking
+- `--use-dummy-embeddings`, `--embed-dim`
+- `--cache-embeddings` / `--no-cache-embeddings`
+- `--extensions`, `--max-docs`, `--embed-batch-size`, `--no-parallel`
 
-## Configuration Examples
+### Ask
 
-### Development Configuration
-
-```toml
-# settings.toml for development
-[paths]
-vault_dir = "./test_vault"
-artifacts_dir = "artifacts"
-
-[embeddings]
-backend = "dummy"
-dummy_dim = 128
-
-[vectorstore]
-backend = "memory"
-
-[rerank]
-enabled = false
+```bash
+./scripts/py scripts/ask.py \
+  --index my-index \
+  --q "your question" \
+  --top-k 8 \
+  --token-budget 1500
 ```
 
-### Production Configuration
+Common ask overrides:
+- `--top-k`, `--token-budget`
+- `--use-dummy-embeddings`, `--embed-dim`
+- `--cache-embeddings` / `--no-cache-embeddings`
+- `--skip-validation`
 
-```toml
-# settings.toml for production
-[paths]
-vault_dir = "/data/obsidian-vault"
-artifacts_dir = "/data/artifacts"
-index_dir = "/data/indexes/production"
-
-[chunking]
-chunk_size = 800
-overlap = 120
-
-[embeddings]
-backend = "openai"
-model = "text-embedding-3-large"
-
-[vectorstore]
-backend = "jsonl"
-jsonl_dir = "/data/indexes/production"
-
-[retrieval]
-top_k = 10
-
-[rerank]
-enabled = true
-backend = "heuristic"
-keep_k = 5
-
-[context]
-max_chunks = 6
-token_budget = 2000
-
-[llm]
-model = "gpt-4o-mini"
-temperature = 0.2
-```
-
-### High-Quality Configuration
-
-```toml
-# settings.toml for maximum quality
-[chunking]
-chunk_size = 600
-overlap = 100
-
-[embeddings]
-model = "text-embedding-3-large"
-
-[retrieval]
-top_k = 15
-
-[rerank]
-enabled = true
-keep_k = 6
-
-[context]
-max_chunks = 8
-token_budget = 3000
-
-[llm]
-model = "gpt-4o"
-temperature = 0.1
-```
-
-### Fast/Cheap Configuration
-
-```toml
-# settings.toml for speed/cost optimization
-[chunking]
-chunk_size = 1000
-overlap = 100
-
-[embeddings]
-model = "text-embedding-3-small"
-
-[retrieval]
-top_k = 5
-
-[rerank]
-enabled = false
-
-[context]
-max_chunks = 3
-token_budget = 1000
-
-[llm]
-model = "gpt-4o-mini"
-temperature = 0.2
-```
-
-### Qdrant Local Configuration
-
-```toml
-# settings.toml for Qdrant with local disk persistence
-[paths]
-vault_dir = "~/obsidian-vault"
-artifacts_dir = "artifacts"
-
-[embeddings]
-backend = "openai"
-model = "text-embedding-3-large"
-
-[vectorstore]
-backend = "qdrant"
-qdrant_collection = "obsidian_chunks"
-qdrant_path = "artifacts/qdrant"
-
-[retrieval]
-top_k = 10
-
-[rerank]
-enabled = true
-backend = "heuristic"
-keep_k = 5
-```
-
-### Qdrant Cloud Configuration
-
-```toml
-# settings.toml for Qdrant Cloud (production)
-[paths]
-vault_dir = "/data/obsidian-vault"
-artifacts_dir = "/data/artifacts"
-
-[embeddings]
-backend = "openai"
-model = "text-embedding-3-large"
-
-[vectorstore]
-backend = "qdrant"
-qdrant_collection = "production_chunks"
-qdrant_url = "https://your-cluster-id.qdrant.io"
-qdrant_api_key = "your-api-key"  # Or use environment variable
-
-[retrieval]
-top_k = 15
-
-[rerank]
-enabled = true
-backend = "heuristic"
-keep_k = 6
-
-[context]
-max_chunks = 8
-token_budget = 3000
-
-[llm]
-model = "gpt-4o"
-temperature = 0.1
-```
-
----
-
-## Validation
-
-Settings are validated at load time. Common validation errors:
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `Missing config file` | settings.toml not found | Create settings.toml |
-| `OPENAI_API_KEY is required` | Missing API key | Set env variable or use dummy |
-| `[section] must be a table` | Invalid TOML syntax | Check TOML formatting |
-| `jsonl_dir is required` | Missing JSONL path | Set vectorstore.jsonl_dir |
-
----
-
-## Settings Loading
-
-Settings are loaded via `rag.settings.load_settings()`:
-
-```python
-from rag.settings import load_settings, Settings
-
-# Load from default path
-settings = load_settings()
-
-# Load from custom path
-settings = load_settings("custom_settings.toml")
-
-# Access settings
-print(settings.chunking.chunk_size)  # 800
-print(settings.embeddings.model)     # text-embedding-3-large
-```
-
-### Settings Structure
-
-```python
-@dataclass(frozen=True, slots=True)
-class Settings:
-    paths: Paths
-    ingestion: Ingestion
-    chunking: Chunking
-    context: Context
-    embeddings: Embeddings
-    vectorstore: VectorStore
-    llm: LLM
-    retrieval: Retrieval
-    rerank: Rerank
-    secrets: Secrets  # Loaded from environment
-```
+Note: `ask.py` uses `settings.rerank.keep_k` for reranking and defaults `token_budget` to `1800` if `--token-budget` is not provided.
