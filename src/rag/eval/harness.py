@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
@@ -71,6 +72,117 @@ def load_eval_queries(path: Path) -> list[EvalQuery]:
                 continue
             queries.append(EvalQuery.from_dict(json.loads(line)))
     return queries
+
+
+def _store_chunks_for_eval(container: Container) -> list[Chunk]:
+    try:
+        return container.store.all_chunks()
+    except NotImplementedError:
+        return []
+
+
+def _build_citation_chunk_indexes(
+    chunks: Sequence[Chunk],
+) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    citation_to_ids: dict[str, set[str]] = defaultdict(set)
+    citation_key_to_ids: dict[str, set[str]] = defaultdict(set)
+
+    for chunk in chunks:
+        metadata = chunk.metadata
+        citation = metadata.get("citation")
+        if isinstance(citation, str) and citation.strip():
+            citation_to_ids[citation.strip()].add(chunk.chunk_id)
+
+        citation_key = metadata.get("citation_key")
+        if isinstance(citation_key, str) and citation_key.strip():
+            citation_key_to_ids[citation_key.strip()].add(chunk.chunk_id)
+
+    return dict(citation_to_ids), dict(citation_key_to_ids)
+
+
+def _resolve_relevant_chunk_ids(
+    query: EvalQuery,
+    *,
+    citation_to_ids: dict[str, set[str]],
+    citation_key_to_ids: dict[str, set[str]],
+) -> set[str]:
+    resolved: set[str] = set(query.relevant_chunk_ids)
+
+    unresolved_citations: list[str] = []
+    for citation in query.relevant_citations:
+        chunk_ids = citation_to_ids.get(citation) or citation_key_to_ids.get(citation)
+        if chunk_ids:
+            resolved.update(chunk_ids)
+        else:
+            unresolved_citations.append(citation)
+
+    unresolved_doc_citations: list[str] = []
+    for citation_key in query.relevant_doc_citations:
+        chunk_ids = citation_key_to_ids.get(citation_key)
+        if chunk_ids:
+            resolved.update(chunk_ids)
+        else:
+            unresolved_doc_citations.append(citation_key)
+
+    if unresolved_citations:
+        logger.warning(
+            "Unresolved relevant_citations for %s: %s",
+            query.qid,
+            ", ".join(sorted(unresolved_citations)),
+        )
+    if unresolved_doc_citations:
+        logger.warning(
+            "Unresolved relevant_doc_citations for %s: %s",
+            query.qid,
+            ", ".join(sorted(unresolved_doc_citations)),
+        )
+
+    return resolved
+
+
+def _copy_attrs_if_present(
+    dest: dict[str, Any],
+    source: Any,
+    *,
+    attr_to_key: dict[str, str],
+) -> None:
+    for attr, key in attr_to_key.items():
+        if hasattr(source, attr):
+            dest[key] = getattr(source, attr)
+
+
+def _build_retrieval_meta_extra(retriever: Retriever, *, score_ids: str) -> dict[str, Any]:
+    extra: dict[str, Any] = {
+        "score_ids": score_ids,
+        "retriever_class": type(retriever).__name__,
+        "retrieval_backend": "vector",
+    }
+
+    if not (hasattr(retriever, "primary") and hasattr(retriever, "secondary")):
+        return extra
+
+    extra["retrieval_backend"] = "hybrid"
+    _copy_attrs_if_present(
+        extra,
+        retriever,
+        attr_to_key={
+            "primary_weight": "hybrid_primary_weight",
+            "secondary_weight": "hybrid_secondary_weight",
+            "rrf_k": "hybrid_rrf_k",
+        },
+    )
+
+    secondary = getattr(retriever, "secondary")  # noqa: B009
+    extra["hybrid_secondary_class"] = type(secondary).__name__
+    _copy_attrs_if_present(
+        extra,
+        secondary,
+        attr_to_key={
+            "k1": "hybrid_bm25_k1",
+            "b": "hybrid_bm25_b",
+        },
+    )
+    return extra
 
 
 def run_retrieval_eval(
@@ -190,6 +302,8 @@ def run_full_eval(
     run_name: str | None = None,
 ) -> EvalRun:
     container.store.load()
+    store_chunks = _store_chunks_for_eval(container)
+    citation_to_ids, citation_key_to_ids = _build_citation_chunk_indexes(store_chunks)
 
     # Validate index if directory provided
     manifest: IndexManifest | None = None
@@ -209,6 +323,11 @@ def run_full_eval(
     results: list[EvalResult] = []
 
     for q in eval_queries:
+        relevant_ids = _resolve_relevant_chunk_ids(
+            q,
+            citation_to_ids=citation_to_ids,
+            citation_key_to_ids=citation_key_to_ids,
+        )
         query_filter = q.get_filter()
 
         # --- Retrieval only ---
@@ -218,7 +337,7 @@ def run_full_eval(
             retrieval_result = RetrievalResult(
                 qid=q.qid,
                 retrieved_chunk_ids=tuple(retrieved_ids),
-                relevant_chunk_ids=q.relevant_chunk_ids,
+                relevant_chunk_ids=relevant_ids,
             )
             results.append(
                 EvalResult(
@@ -262,7 +381,7 @@ def run_full_eval(
         retrieval_result = RetrievalResult(
             qid=q.qid,
             retrieved_chunk_ids=chosen_ids,
-            relevant_chunk_ids=q.relevant_chunk_ids,
+            relevant_chunk_ids=relevant_ids,
         )
 
         answer_metrics, groundedness_result, gold_result = evaluate_answer_quality(
@@ -299,6 +418,9 @@ def run_full_eval(
 
     aggregates = aggregate_results(results)
 
+    # Capture retrieval configuration so run artifacts explain scoring context.
+    extra = _build_retrieval_meta_extra(container.retriever, score_ids=score_ids)
+
     meta = EvalRunMeta(
         run_id=run_id,
         started_at=started_at,
@@ -315,6 +437,7 @@ def run_full_eval(
         run_name=run_name,
         gold_judge_version=GOLD_JUDGE_VERSION if use_llm_judge else None,
         groundedness_judge_version=GROUNDEDNESS_JUDGE_VERSION if use_llm_judge else None,
+        extra=extra,
         index_name=manifest.index_name if manifest else None,
         index_build_id=manifest.build_id if manifest else None,
     )
@@ -476,7 +599,11 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
     # Maintain a stable "latest" symlink so verdict scripts can use
     # --current eval/runs/latest/ without knowing the timestamp.
     latest = output_dir.parent / "latest"
-    if latest.is_symlink() or latest.exists():
+    if latest.is_symlink():
+        latest.unlink()
+    elif latest.is_dir():
+        shutil.rmtree(latest)
+    elif latest.exists():
         latest.unlink()
     latest.symlink_to(output_dir.name)
 

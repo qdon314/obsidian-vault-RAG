@@ -31,6 +31,17 @@ def _stable_doc_id(uri: str, text_hash: str) -> str:
     return sha256(f"{uri}|{text_hash}".encode()).hexdigest()
 
 
+def _flatten_frontmatter(md_meta: Mapping[str, Any]) -> dict[str, Any]:
+    frontmatter = md_meta.get("frontmatter")
+    if not isinstance(frontmatter, Mapping):
+        return {}
+    flattened: dict[str, Any] = {}
+    for key, value in frontmatter.items():
+        if isinstance(key, str):
+            flattened[key] = value
+    return flattened
+
+
 def _walk_files(root: Path) -> list[Path]:
     """Recursively collect files, skipping hidden directories."""
     result: list[Path] = []
@@ -189,6 +200,7 @@ class FilesystemIngestor:
                 "size_bytes": size,
                 "content_hash": text_hash,
                 **md_meta,
+                **_flatten_frontmatter(md_meta),
             }
 
             docs.append(
