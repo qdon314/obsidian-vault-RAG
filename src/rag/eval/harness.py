@@ -17,7 +17,7 @@ import shutil
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
-from dataclasses import asdict, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -100,44 +100,80 @@ def _build_citation_chunk_indexes(
     return dict(citation_to_ids), dict(citation_key_to_ids)
 
 
-def _resolve_relevant_chunk_ids(
+@dataclass(frozen=True, slots=True)
+class ResolvedRelevance:
+    critical_chunk_ids: set[str]
+    supporting_chunk_ids: set[str]
+    context_chunk_ids: set[str]
+
+    @property
+    def all_chunk_ids(self) -> set[str]:
+        return self.critical_chunk_ids | self.supporting_chunk_ids | self.context_chunk_ids
+
+
+def _resolve_relevance_tiers(
     query: EvalQuery,
     *,
     citation_to_ids: dict[str, set[str]],
     citation_key_to_ids: dict[str, set[str]],
-) -> set[str]:
-    resolved: set[str] = set(query.relevant_chunk_ids)
+) -> ResolvedRelevance:
+    # Legacy relevant_chunk_ids / relevant_citations map to critical relevance.
+    critical_ids: set[str] = set(query.relevant_chunk_ids) | set(query.critical_chunk_ids)
+    supporting_ids: set[str] = set(query.supporting_chunk_ids)
+    context_ids: set[str] = set(query.context_chunk_ids)
 
-    unresolved_citations: list[str] = []
-    for citation in query.relevant_citations:
+    unresolved_critical_citations: list[str] = []
+    for citation in query.relevant_citations | query.critical_citations:
         chunk_ids = citation_to_ids.get(citation) or citation_key_to_ids.get(citation)
         if chunk_ids:
-            resolved.update(chunk_ids)
+            critical_ids.update(chunk_ids)
         else:
-            unresolved_citations.append(citation)
+            unresolved_critical_citations.append(citation)
 
-    unresolved_doc_citations: list[str] = []
-    for citation_key in query.relevant_doc_citations:
+    unresolved_supporting_citations: list[str] = []
+    for citation in query.supporting_citations:
+        chunk_ids = citation_to_ids.get(citation) or citation_key_to_ids.get(citation)
+        if chunk_ids:
+            supporting_ids.update(chunk_ids)
+        else:
+            unresolved_supporting_citations.append(citation)
+
+    unresolved_context_doc_citations: list[str] = []
+    for citation_key in query.relevant_doc_citations | query.context_doc_citations:
         chunk_ids = citation_key_to_ids.get(citation_key)
         if chunk_ids:
-            resolved.update(chunk_ids)
+            context_ids.update(chunk_ids)
         else:
-            unresolved_doc_citations.append(citation_key)
+            unresolved_context_doc_citations.append(citation_key)
 
-    if unresolved_citations:
+    if unresolved_critical_citations:
         logger.warning(
-            "Unresolved relevant_citations for %s: %s",
+            "Unresolved critical citations for %s: %s",
             query.qid,
-            ", ".join(sorted(unresolved_citations)),
+            ", ".join(sorted(unresolved_critical_citations)),
         )
-    if unresolved_doc_citations:
+    if unresolved_supporting_citations:
         logger.warning(
-            "Unresolved relevant_doc_citations for %s: %s",
+            "Unresolved supporting citations for %s: %s",
             query.qid,
-            ", ".join(sorted(unresolved_doc_citations)),
+            ", ".join(sorted(unresolved_supporting_citations)),
+        )
+    if unresolved_context_doc_citations:
+        logger.warning(
+            "Unresolved context doc citations for %s: %s",
+            query.qid,
+            ", ".join(sorted(unresolved_context_doc_citations)),
         )
 
-    return resolved
+    # Enforce strict tier precedence: critical > supporting > context.
+    supporting_ids -= critical_ids
+    context_ids -= critical_ids | supporting_ids
+
+    return ResolvedRelevance(
+        critical_chunk_ids=critical_ids,
+        supporting_chunk_ids=supporting_ids,
+        context_chunk_ids=context_ids,
+    )
 
 
 def _copy_attrs_if_present(
@@ -196,6 +232,9 @@ def run_retrieval_eval(
         qid=query.qid,
         retrieved_chunk_ids=tuple(retrieved_ids),
         relevant_chunk_ids=query.relevant_chunk_ids,
+        critical_chunk_ids=query.relevant_chunk_ids | query.critical_chunk_ids,
+        supporting_chunk_ids=query.supporting_chunk_ids,
+        context_chunk_ids=query.context_chunk_ids,
     )
 
 
@@ -323,7 +362,7 @@ def run_full_eval(
     results: list[EvalResult] = []
 
     for q in eval_queries:
-        relevant_ids = _resolve_relevant_chunk_ids(
+        relevance = _resolve_relevance_tiers(
             q,
             citation_to_ids=citation_to_ids,
             citation_key_to_ids=citation_key_to_ids,
@@ -337,7 +376,10 @@ def run_full_eval(
             retrieval_result = RetrievalResult(
                 qid=q.qid,
                 retrieved_chunk_ids=tuple(retrieved_ids),
-                relevant_chunk_ids=relevant_ids,
+                relevant_chunk_ids=relevance.all_chunk_ids,
+                critical_chunk_ids=relevance.critical_chunk_ids,
+                supporting_chunk_ids=relevance.supporting_chunk_ids,
+                context_chunk_ids=relevance.context_chunk_ids,
             )
             results.append(
                 EvalResult(
@@ -381,7 +423,10 @@ def run_full_eval(
         retrieval_result = RetrievalResult(
             qid=q.qid,
             retrieved_chunk_ids=chosen_ids,
-            relevant_chunk_ids=relevant_ids,
+            relevant_chunk_ids=relevance.all_chunk_ids,
+            critical_chunk_ids=relevance.critical_chunk_ids,
+            supporting_chunk_ids=relevance.supporting_chunk_ids,
+            context_chunk_ids=relevance.context_chunk_ids,
         )
 
         answer_metrics, groundedness_result, gold_result = evaluate_answer_quality(
@@ -559,6 +604,9 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
                 "retrieval": {
                     "retrieved_chunk_ids": r.retrieval_result.retrieved_chunk_ids,
                     "relevant_chunk_ids": sorted(r.retrieval_result.relevant_chunk_ids),
+                    "critical_chunk_ids": sorted(r.retrieval_result.critical_chunk_ids),
+                    "supporting_chunk_ids": sorted(r.retrieval_result.supporting_chunk_ids),
+                    "context_chunk_ids": sorted(r.retrieval_result.context_chunk_ids),
                 },
             }
             if r.answer is not None:
