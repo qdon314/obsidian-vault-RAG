@@ -320,4 +320,8 @@ def build_citation_manifest(output_dir: Path) -> dict[str, str]:
             continue
         manifest[citation_key.strip()] = path.relative_to(output_dir).as_posix()
 
-    return dict(sorted(manifest.items(), key=lambda item: section_sort_key(item[0].split("§", 1)[1].strip())))
+    return dict(
+        sorted(
+            manifest.items(), key=lambda item: section_sort_key(item[0].split("§", 1)[1].strip())
+        )
+    )

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from rag.adapters.ingestion.filesystem import FilesystemIngestor
+from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
 
 
@@ -240,6 +241,31 @@ class TestFilesystemIngestorDocumentMetadata:
         docs, _ = ingestor.ingest([str(tmp_path)])
 
         assert docs[0].source == "my_vault"
+
+    def test_markdown_frontmatter_flattened_into_metadata(self, tmp_path: Path):
+        """Frontmatter keys are promoted to top-level metadata for downstream chunking/eval."""
+        (tmp_path / "reg.md").write_text(
+            """---
+citation_key: "10 CFR §50.34"
+corpus: regulatory
+cross_references: ["10 CFR §50.36"]
+---
+# 10 CFR §50.34
+Body text.
+""",
+            encoding="utf-8",
+        )
+        ingestor = FilesystemIngestor(
+            text_loader=TextLoader(),
+            markdown_loader=ObsidianMarkdownLoader(vault_dir=tmp_path),
+        )
+
+        docs, _ = ingestor.ingest([str(tmp_path)])
+
+        assert len(docs) == 1
+        assert docs[0].metadata.get("citation_key") == "10 CFR §50.34"
+        assert docs[0].metadata.get("corpus") == "regulatory"
+        assert docs[0].metadata.get("cross_references") == ["10 CFR §50.36"]
 
 
 class TestFilesystemIngestorWithSampleVault:

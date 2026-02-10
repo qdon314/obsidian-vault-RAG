@@ -98,7 +98,9 @@ def normalize_section_to_markdown(section: ParsedSection, config: NormalizationC
     Rewrites CFR references to wikilinks, extracts cross-references for
     frontmatter, and promotes subsection markers to markdown headings.
     """
-    rewritten = [rewrite_cross_references_to_wikilinks(paragraph.text) for paragraph in section.paragraphs]
+    rewritten = [
+        rewrite_cross_references_to_wikilinks(paragraph.text) for paragraph in section.paragraphs
+    ]
     cross_refs: set[str] = set()
     for paragraph in rewritten:
         cross_refs.update(extract_cross_references(paragraph))

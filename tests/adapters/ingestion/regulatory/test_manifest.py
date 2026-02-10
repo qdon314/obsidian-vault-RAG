@@ -13,7 +13,7 @@ def test_build_citation_manifest_maps_citation_key_to_relative_path(tmp_path: Pa
     part_dir = tmp_path / "part-50"
     part_dir.mkdir()
     (part_dir / "50.34.md").write_text(
-        "---\ncitation_key: \"10 CFR §50.34\"\n---\n# Content\n",
+        '---\ncitation_key: "10 CFR §50.34"\n---\n# Content\n',
         encoding="utf-8",
     )
     manifest = build_citation_manifest(tmp_path)

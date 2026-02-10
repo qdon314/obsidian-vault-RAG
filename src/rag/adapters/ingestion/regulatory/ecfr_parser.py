@@ -135,7 +135,15 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
             paragraphs: list[ParsedParagraph] = []
 
             for child in section_elem:
-                if _local_name(child.tag) not in {"P", "P-1", "P-2", "FP", "FP-1", "FP-2", "PSPACE"}:
+                if _local_name(child.tag) not in {
+                    "P",
+                    "P-1",
+                    "P-2",
+                    "FP",
+                    "FP-1",
+                    "FP-2",
+                    "PSPACE",
+                }:
                     continue
                 text = _extract_text(child)
                 if not text:

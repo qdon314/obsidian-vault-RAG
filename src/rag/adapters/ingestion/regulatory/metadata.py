@@ -52,7 +52,9 @@ def _extract_subsection_tokens(section_path: str | None, section_heading: str | 
     return tokens
 
 
-def _build_specific_citation(citation_key: str, section_path: str | None, section_heading: str | None) -> str:
+def _build_specific_citation(
+    citation_key: str, section_path: str | None, section_heading: str | None
+) -> str:
     """Append subsection markers to *citation_key* to form a chunk-specific citation.
 
     If *citation_key* already contains some markers (e.g. from the frontmatter),

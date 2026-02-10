@@ -66,7 +66,10 @@ class VerdictThresholds:
         )
 
 
-def load_verdict_thresholds(path: str | Path = "settings.toml") -> VerdictThresholds:
+def load_verdict_thresholds(
+    path: str | Path = "settings.toml",
+    scope: str | None = None,
+) -> VerdictThresholds:
     config_path = Path(path)
     # Missing config falls back to conservative in-code defaults.
     if not config_path.exists():
@@ -82,5 +85,12 @@ def load_verdict_thresholds(path: str | Path = "settings.toml") -> VerdictThresh
     # Non-table values are treated as absent to avoid runtime failures in CI.
     if not isinstance(verdict_section, dict):
         return VerdictThresholds()
+
+    # Scoped overrides (e.g. [eval.verdict.regulatory]) merge on top of base.
+    if scope and isinstance(verdict_section.get(scope), dict):
+        # Filter out sub-tables from base before merging.
+        base = {k: v for k, v in verdict_section.items() if not isinstance(v, dict)}
+        base.update(verdict_section[scope])
+        return VerdictThresholds.from_mapping(base)
 
     return VerdictThresholds.from_mapping(verdict_section)

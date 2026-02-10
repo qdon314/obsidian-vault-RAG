@@ -540,6 +540,33 @@ class TestObsidianStructuralChunkerMetadata:
         for chunk in chunks:
             assert chunk.metadata.get("chunk_strategy") == "obsidian_structural_v1"
 
+    def test_regulatory_chunks_include_citation_metadata(self) -> None:
+        """Regulatory chunks carry citation metadata after post-chunking enrichment."""
+        from rag.adapters.ingestion.regulatory.enrichment import enrich_regulatory_chunks
+
+        doc = make_document(
+            text="""# 10 CFR §50.34 — Contents of applications; technical information
+## (a)
+Applicant information.
+
+### (1)
+Detailed item.
+""",
+            metadata={
+                "corpus": "regulatory",
+                "citation_key": "10 CFR §50.34",
+                "cross_references": ["10 CFR §50.36"],
+            },
+        )
+        chunker = _make_chunker(target_chars=80, hard_max_chars=120, overlap_blocks=0)
+
+        chunks = enrich_regulatory_chunks(chunker.chunk(doc))
+        subsection = next(ch for ch in chunks if ch.section_heading == "(1)")
+
+        assert subsection.metadata.get("citation_key") == "10 CFR §50.34"
+        assert subsection.metadata.get("citation") == "10 CFR §50.34(a)(1)"
+        assert subsection.metadata.get("cross_references") == ["10 CFR §50.36"]
+
 
 # =============================================================================
 # Stable Chunk IDs
