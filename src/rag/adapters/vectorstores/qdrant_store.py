@@ -139,6 +139,12 @@ class QdrantVectorStore:
         info = self._client.get_collection(self.collection_name)
         return info.points_count or 0
 
+    def all_chunks(self) -> list[Chunk]:
+        raise NotImplementedError(
+            "QdrantVectorStore does not support all_chunks(); "
+            "chunks are stored server-side and not available for bulk retrieval."
+        )
+
     def save(self) -> None:
         """
         Persist to disk (only applicable for local disk mode).

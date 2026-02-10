@@ -33,6 +33,10 @@ class VectorStore(Protocol):
 
     def count(self) -> int: ...
 
+    def all_chunks(self) -> list[Chunk]:
+        """Return all stored chunks. May raise ``NotImplementedError`` for remote backends."""
+        ...
+
     def save(self) -> None:
         """Persist the store to disk, if applicable."""
         ...

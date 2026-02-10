@@ -71,6 +71,9 @@ class InMemoryVectorStore:
     def count(self) -> int:
         return len(self._chunks)
 
+    def all_chunks(self) -> list[Chunk]:
+        return list(self._chunks)
+
     def save(self) -> None:
         """In-memory store has no persistence; no-op."""
         pass
