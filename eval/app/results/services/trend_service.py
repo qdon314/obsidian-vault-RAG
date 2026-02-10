@@ -43,12 +43,24 @@ class TrendService:
         k_values = [1, 3, 5, 10]
 
         recall_series: dict[int, tuple[float, ...]] = {}
+        critical_recall_series: dict[int, tuple[float, ...]] = {}
+        weighted_recall_series: dict[int, tuple[float, ...]] = {}
+        critical_hit_rate_series: dict[int, tuple[float, ...]] = {}
         precision_series: dict[int, tuple[float, ...]] = {}
         ndcg_series: dict[int, tuple[float, ...]] = {}
 
         for k in k_values:
             recall_series[k] = tuple(
                 r.aggregates.overall.recall_at_k.get(k, 0.0) for r in sorted_runs
+            )
+            critical_recall_series[k] = tuple(
+                r.aggregates.overall.critical_recall_at_k.get(k, 0.0) for r in sorted_runs
+            )
+            weighted_recall_series[k] = tuple(
+                r.aggregates.overall.weighted_recall_at_k.get(k, 0.0) for r in sorted_runs
+            )
+            critical_hit_rate_series[k] = tuple(
+                r.aggregates.overall.critical_hit_rate_at_k.get(k, 0.0) for r in sorted_runs
             )
             precision_series[k] = tuple(
                 r.aggregates.overall.precision_at_k.get(k, 0.0) for r in sorted_runs
@@ -79,6 +91,9 @@ class TrendService:
             runs=tuple(sorted_runs),
             timestamps=timestamps,
             recall_series=recall_series,
+            critical_recall_series=critical_recall_series,
+            weighted_recall_series=weighted_recall_series,
+            critical_hit_rate_series=critical_hit_rate_series,
             precision_series=precision_series,
             ndcg_series=ndcg_series,
             mrr_series=mrr_series,
@@ -94,7 +109,8 @@ class TrendService:
 
         Args:
             trend: TrendAnalysis to analyze.
-            metric: Metric name ("recall", "precision", "ndcg", "mrr", "map").
+            metric: Metric name ("recall", "critical_recall", "weighted_recall",
+                "critical_hit_rate", "precision", "ndcg", "mrr", "map").
             k: K value for @k metrics.
 
         Returns:
@@ -102,6 +118,12 @@ class TrendService:
         """
         if metric == "recall":
             series = trend.recall_series.get(k, ())
+        elif metric == "critical_recall":
+            series = trend.critical_recall_series.get(k, ())
+        elif metric == "weighted_recall":
+            series = trend.weighted_recall_series.get(k, ())
+        elif metric == "critical_hit_rate":
+            series = trend.critical_hit_rate_series.get(k, ())
         elif metric == "precision":
             series = trend.precision_series.get(k, ())
         elif metric == "ndcg":
@@ -131,6 +153,12 @@ class TrendService:
         """
         if metric == "recall":
             series = trend.recall_series.get(k, ())
+        elif metric == "critical_recall":
+            series = trend.critical_recall_series.get(k, ())
+        elif metric == "weighted_recall":
+            series = trend.weighted_recall_series.get(k, ())
+        elif metric == "critical_hit_rate":
+            series = trend.critical_hit_rate_series.get(k, ())
         elif metric == "precision":
             series = trend.precision_series.get(k, ())
         elif metric == "ndcg":

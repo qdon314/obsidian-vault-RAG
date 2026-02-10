@@ -45,6 +45,18 @@ class ComparisonService:
 
         # Compute retrieval metric deltas
         recall_delta = self._compute_metric_delta(agg_a.recall_at_k, agg_b.recall_at_k)
+        critical_recall_delta = self._compute_metric_delta(
+            agg_a.critical_recall_at_k,
+            agg_b.critical_recall_at_k,
+        )
+        weighted_recall_delta = self._compute_metric_delta(
+            agg_a.weighted_recall_at_k,
+            agg_b.weighted_recall_at_k,
+        )
+        critical_hit_rate_delta = self._compute_metric_delta(
+            agg_a.critical_hit_rate_at_k,
+            agg_b.critical_hit_rate_at_k,
+        )
         precision_delta = self._compute_metric_delta(agg_a.precision_at_k, agg_b.precision_at_k)
         ndcg_delta = self._compute_metric_delta(agg_a.ndcg_at_k, agg_b.ndcg_at_k)
 
@@ -75,6 +87,9 @@ class ComparisonService:
             run_a=run_a,
             run_b=run_b,
             recall_delta=recall_delta,
+            critical_recall_delta=critical_recall_delta,
+            weighted_recall_delta=weighted_recall_delta,
+            critical_hit_rate_delta=critical_hit_rate_delta,
             precision_delta=precision_delta,
             ndcg_delta=ndcg_delta,
             mrr_delta=mrr_delta,

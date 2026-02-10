@@ -338,6 +338,30 @@ def _render_single_run_charts(loaded_run: LoadedRun) -> None:
             name="NDCG",
         )
     )
+    if agg.critical_recall_at_k:
+        fig.add_trace(
+            go.Bar(
+                x=[f"@{k}" for k in k_values],
+                y=[agg.critical_recall_at_k.get(k, 0) for k in k_values],
+                name="Critical Recall",
+            )
+        )
+    if agg.weighted_recall_at_k:
+        fig.add_trace(
+            go.Bar(
+                x=[f"@{k}" for k in k_values],
+                y=[agg.weighted_recall_at_k.get(k, 0) for k in k_values],
+                name="Weighted Recall",
+            )
+        )
+    if agg.critical_hit_rate_at_k:
+        fig.add_trace(
+            go.Bar(
+                x=[f"@{k}" for k in k_values],
+                y=[agg.critical_hit_rate_at_k.get(k, 0) for k in k_values],
+                name="Critical Hit Rate",
+            )
+        )
 
     fig.update_layout(
         title="Retrieval Metrics by K",
@@ -649,6 +673,16 @@ def render_comparison_view(
         with col2:
             render_comparison_chart(comparison, metric="ndcg")
 
+        if (
+            comparison.run_a.aggregates.overall.critical_recall_at_k
+            or comparison.run_b.aggregates.overall.critical_recall_at_k
+        ):
+            col3, col4 = st.columns(2)
+            with col3:
+                render_comparison_chart(comparison, metric="critical_recall")
+            with col4:
+                render_comparison_chart(comparison, metric="weighted_recall")
+
         render_global_metrics_comparison(comparison)
 
     with tab_deltas:
@@ -895,9 +929,23 @@ def render_trending_view(
     with col1:
         metric_choice = st.selectbox(
             "Metric",
-            options=["recall", "precision", "ndcg", "mrr", "map", "quality", "latency"],
+            options=[
+                "recall",
+                "critical_recall",
+                "weighted_recall",
+                "critical_hit_rate",
+                "precision",
+                "ndcg",
+                "mrr",
+                "map",
+                "quality",
+                "latency",
+            ],
             format_func=lambda m: {
                 "recall": "Recall",
+                "critical_recall": "Critical Recall",
+                "weighted_recall": "Weighted Recall",
+                "critical_hit_rate": "Critical Hit Rate",
                 "precision": "Precision",
                 "ndcg": "NDCG",
                 "mrr": "MRR",
@@ -908,7 +956,14 @@ def render_trending_view(
             key="trend_metric",
         )
 
-        if metric_choice in ["recall", "precision", "ndcg"]:
+        if metric_choice in [
+            "recall",
+            "critical_recall",
+            "weighted_recall",
+            "critical_hit_rate",
+            "precision",
+            "ndcg",
+        ]:
             k_choice = st.selectbox(
                 "K value",
                 options=[1, 3, 5, 10],
@@ -919,7 +974,14 @@ def render_trending_view(
             k_choice = 10
 
     with col2:
-        if metric_choice in ["recall", "precision", "ndcg"]:
+        if metric_choice in [
+            "recall",
+            "critical_recall",
+            "weighted_recall",
+            "critical_hit_rate",
+            "precision",
+            "ndcg",
+        ]:
             render_trend_chart(trend, metric=metric_choice, k=k_choice)
         else:
             render_trend_chart(trend, metric=metric_choice)
@@ -928,7 +990,11 @@ def render_trending_view(
 
     # Multi-metric comparison
     st.subheader("Multi-Metric Trend")
-    render_multi_metric_trend(trend, metrics=["recall", "precision", "ndcg"], k=10)
+    render_multi_metric_trend(
+        trend,
+        metrics=["recall", "critical_recall", "weighted_recall", "ndcg"],
+        k=10,
+    )
 
     st.divider()
 
@@ -945,6 +1011,8 @@ def _render_trend_summary_table(trend) -> None:
             "Timestamp": run.summary.timestamp.strftime("%Y-%m-%d %H:%M"),
             "Run": run.summary.display_name,
             "Recall@10": f"{run.aggregates.overall.recall_at_k.get(10, 0):.3f}",
+            "Critical Recall@10": f"{run.aggregates.overall.critical_recall_at_k.get(10, 0):.3f}",
+            "Weighted Recall@10": f"{run.aggregates.overall.weighted_recall_at_k.get(10, 0):.3f}",
             "NDCG@10": f"{run.aggregates.overall.ndcg_at_k.get(10, 0):.3f}",
             "MRR": f"{run.aggregates.overall.mrr:.3f}",
             "Queries": run.summary.num_queries,

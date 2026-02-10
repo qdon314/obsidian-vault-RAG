@@ -22,7 +22,8 @@ def render_comparison_chart(
 
     Args:
         comparison: RunComparison with two runs to compare.
-        metric: Metric to visualize ("recall", "precision", "ndcg").
+        metric: Metric to visualize ("recall", "critical_recall", "weighted_recall",
+            "critical_hit_rate", "precision", "ndcg", "hit_rate").
     """
     try:
         import plotly.graph_objects as go
@@ -39,6 +40,21 @@ def render_comparison_chart(
         b_data = agg_b.recall_at_k
         title = "Recall@K Comparison"
         y_label = "Recall"
+    elif metric == "critical_recall":
+        a_data = agg_a.critical_recall_at_k
+        b_data = agg_b.critical_recall_at_k
+        title = "Critical Recall@K Comparison"
+        y_label = "Critical Recall"
+    elif metric == "weighted_recall":
+        a_data = agg_a.weighted_recall_at_k
+        b_data = agg_b.weighted_recall_at_k
+        title = "Weighted Recall@K Comparison"
+        y_label = "Weighted Recall"
+    elif metric == "critical_hit_rate":
+        a_data = agg_a.critical_hit_rate_at_k
+        b_data = agg_b.critical_hit_rate_at_k
+        title = "Critical Hit Rate@K Comparison"
+        y_label = "Critical Hit Rate"
     elif metric == "precision":
         a_data = agg_a.precision_at_k
         b_data = agg_b.precision_at_k

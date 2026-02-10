@@ -36,6 +36,25 @@ def render_delta_table(comparison: RunComparison) -> None:
         b_val = agg_b.recall_at_k.get(k, 0)
         data.append(_build_row(f"Recall@{k}", a_val, b_val, delta))
 
+    # Tiered recall deltas
+    for k in sorted(comparison.critical_recall_delta.keys()):
+        delta = comparison.critical_recall_delta[k]
+        a_val = agg_a.critical_recall_at_k.get(k, 0)
+        b_val = agg_b.critical_recall_at_k.get(k, 0)
+        data.append(_build_row(f"Critical Recall@{k}", a_val, b_val, delta))
+
+    for k in sorted(comparison.weighted_recall_delta.keys()):
+        delta = comparison.weighted_recall_delta[k]
+        a_val = agg_a.weighted_recall_at_k.get(k, 0)
+        b_val = agg_b.weighted_recall_at_k.get(k, 0)
+        data.append(_build_row(f"Weighted Recall@{k}", a_val, b_val, delta))
+
+    for k in sorted(comparison.critical_hit_rate_delta.keys()):
+        delta = comparison.critical_hit_rate_delta[k]
+        a_val = agg_a.critical_hit_rate_at_k.get(k, 0)
+        b_val = agg_b.critical_hit_rate_at_k.get(k, 0)
+        data.append(_build_row(f"Critical Hit Rate@{k}", a_val, b_val, delta))
+
     # Precision deltas
     for k in sorted(comparison.precision_delta.keys()):
         delta = comparison.precision_delta[k]
@@ -139,7 +158,7 @@ def render_summary_metrics(comparison: RunComparison) -> None:
 
     Shows the most important metrics with st.metric delta display.
     """
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     agg_b = comparison.run_b.aggregates.overall
 
@@ -154,6 +173,19 @@ def render_summary_metrics(comparison: RunComparison) -> None:
         )
 
     with col2:
+        critical_recall_10 = agg_b.critical_recall_at_k.get(10)
+        if critical_recall_10 is not None:
+            delta = comparison.critical_recall_delta.get(10, 0)
+            st.metric(
+                "Critical Recall@10",
+                f"{critical_recall_10:.3f}",
+                delta=f"{delta:+.3f}",
+                delta_color="normal",
+            )
+        else:
+            st.metric("Critical Recall@10", "N/A")
+
+    with col3:
         ndcg_10 = agg_b.ndcg_at_k.get(10, 0)
         delta = comparison.ndcg_delta.get(10, 0)
         st.metric(
@@ -163,7 +195,7 @@ def render_summary_metrics(comparison: RunComparison) -> None:
             delta_color="normal",
         )
 
-    with col3:
+    with col4:
         st.metric(
             "MRR",
             f"{agg_b.mrr:.3f}",
@@ -171,7 +203,7 @@ def render_summary_metrics(comparison: RunComparison) -> None:
             delta_color="normal",
         )
 
-    with col4:
+    with col5:
         if comparison.quality_delta is not None:
             qa_b = comparison.run_b.aggregates.answer_quality or {}
             quality = qa_b.get("avg_quality_score", 0)

@@ -146,6 +146,9 @@ class RunComparison:
 
     # Metric deltas (b - a, positive means improvement)
     recall_delta: dict[int, float] = field(default_factory=dict)
+    critical_recall_delta: dict[int, float] = field(default_factory=dict)
+    weighted_recall_delta: dict[int, float] = field(default_factory=dict)
+    critical_hit_rate_delta: dict[int, float] = field(default_factory=dict)
     precision_delta: dict[int, float] = field(default_factory=dict)
     ndcg_delta: dict[int, float] = field(default_factory=dict)
     mrr_delta: float = 0.0
@@ -175,6 +178,9 @@ class TrendAnalysis:
 
     # Retrieval metrics series (keyed by k)
     recall_series: dict[int, tuple[float, ...]] = field(default_factory=dict)
+    critical_recall_series: dict[int, tuple[float, ...]] = field(default_factory=dict)
+    weighted_recall_series: dict[int, tuple[float, ...]] = field(default_factory=dict)
+    critical_hit_rate_series: dict[int, tuple[float, ...]] = field(default_factory=dict)
     precision_series: dict[int, tuple[float, ...]] = field(default_factory=dict)
     ndcg_series: dict[int, tuple[float, ...]] = field(default_factory=dict)
 

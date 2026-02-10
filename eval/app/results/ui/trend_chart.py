@@ -23,7 +23,8 @@ def render_trend_chart(
 
     Args:
         trend: TrendAnalysis with time series data.
-        metric: Metric to plot ("recall", "precision", "ndcg", "mrr", "map",
+        metric: Metric to plot ("recall", "critical_recall", "weighted_recall",
+                "critical_hit_rate", "precision", "ndcg", "mrr", "map",
                 "quality", "latency").
         k: K value for @k metrics.
     """
@@ -41,6 +42,18 @@ def render_trend_chart(
         y_values = trend.recall_series.get(k, ())
         title = f"Recall@{k} Trend"
         y_label = "Recall"
+    elif metric == "critical_recall":
+        y_values = trend.critical_recall_series.get(k, ())
+        title = f"Critical Recall@{k} Trend"
+        y_label = "Critical Recall"
+    elif metric == "weighted_recall":
+        y_values = trend.weighted_recall_series.get(k, ())
+        title = f"Weighted Recall@{k} Trend"
+        y_label = "Weighted Recall"
+    elif metric == "critical_hit_rate":
+        y_values = trend.critical_hit_rate_series.get(k, ())
+        title = f"Critical Hit Rate@{k} Trend"
+        y_label = "Critical Hit Rate"
     elif metric == "precision":
         y_values = trend.precision_series.get(k, ())
         title = f"Precision@{k} Trend"
@@ -141,6 +154,15 @@ def render_multi_metric_trend(
         if metric == "recall":
             y_values = trend.recall_series.get(k, ())
             name = f"Recall@{k}"
+        elif metric == "critical_recall":
+            y_values = trend.critical_recall_series.get(k, ())
+            name = f"Critical Recall@{k}"
+        elif metric == "weighted_recall":
+            y_values = trend.weighted_recall_series.get(k, ())
+            name = f"Weighted Recall@{k}"
+        elif metric == "critical_hit_rate":
+            y_values = trend.critical_hit_rate_series.get(k, ())
+            name = f"Critical Hit Rate@{k}"
         elif metric == "precision":
             y_values = trend.precision_series.get(k, ())
             name = f"Precision@{k}"

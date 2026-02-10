@@ -78,6 +78,17 @@ def _render_retrieval_table(
 
     # Build table data
     metrics = ["Recall", "Precision", "Hit Rate", "NDCG"]
+    include_tiered = bool(
+        summary.critical_recall_at_k or summary.weighted_recall_at_k or summary.critical_hit_rate_at_k
+    )
+    if include_tiered:
+        metrics.extend(
+            [
+                "Critical Recall",
+                "Weighted Recall",
+                "Critical Hit Rate",
+            ]
+        )
     data: dict[str, list[str]] = {"Metric": metrics}
 
     for k in k_values:
@@ -87,6 +98,14 @@ def _render_retrieval_table(
             f"{summary.hit_rate_at_k.get(k, 0):.3f}",
             f"{summary.ndcg_at_k.get(k, 0):.3f}",
         ]
+        if include_tiered:
+            col_values.extend(
+                [
+                    f"{summary.critical_recall_at_k.get(k, 0):.3f}",
+                    f"{summary.weighted_recall_at_k.get(k, 0):.3f}",
+                    f"{summary.critical_hit_rate_at_k.get(k, 0):.3f}",
+                ]
+            )
         data[f"@{k}"] = col_values
 
     # Display as dataframe
