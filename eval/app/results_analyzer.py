@@ -219,16 +219,52 @@ def render_single_run_view(
 
         # Additional meta info
         st.markdown("**Run Metadata**")
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown(f"- **Run ID:** `{loaded_run.meta.run_id}`")
-            st.markdown(f"- **Top K:** {loaded_run.meta.top_k}")
-            st.markdown(f"- **Token Budget:** {loaded_run.meta.token_budget}")
+            st.markdown(f"- **Started At:** `{loaded_run.meta.started_at.isoformat()}`")
+            st.markdown(f"- **Run Name:** {loaded_run.meta.run_name or 'n/a'}")
+            st.markdown(f"- **Queries File:** `{loaded_run.meta.queries_path or 'n/a'}`")
+            st.markdown(f"- **Index Name:** `{loaded_run.meta.index_name or 'n/a'}`")
+            st.markdown(f"- **Index Build ID:** `{loaded_run.meta.index_build_id or 'n/a'}`")
         with col2:
+            st.markdown(f"- **Top K:** {loaded_run.meta.top_k}")
+            st.markdown(
+                f"- **Keep K:** {loaded_run.meta.keep_k if loaded_run.meta.keep_k is not None else 'n/a'}"
+            )
+            st.markdown(f"- **Token Budget:** {loaded_run.meta.token_budget}")
+            retrieval_backend = loaded_run.meta.extra.get("retrieval_backend", "n/a")
+            st.markdown(f"- **Retrieval Backend:** `{retrieval_backend}`")
+            st.markdown(f"- **Score IDs:** `{loaded_run.meta.extra.get('score_ids', 'n/a')}`")
+            if retrieval_backend == "hybrid":
+                st.markdown(
+                    "- **Hybrid Knobs:** "
+                    f"`primary={loaded_run.meta.extra.get('hybrid_primary_weight', 'n/a')}`, "
+                    f"`secondary={loaded_run.meta.extra.get('hybrid_secondary_weight', 'n/a')}`, "
+                    f"`rrf_k={loaded_run.meta.extra.get('hybrid_rrf_k', 'n/a')}`, "
+                    f"`bm25_k1={loaded_run.meta.extra.get('hybrid_bm25_k1', 'n/a')}`, "
+                    f"`bm25_b={loaded_run.meta.extra.get('hybrid_bm25_b', 'n/a')}`"
+                )
             st.markdown(f"- **Generation:** {'Yes' if loaded_run.meta.run_generation else 'No'}")
             st.markdown(f"- **LLM Judge:** {'Yes' if loaded_run.meta.use_llm_judge else 'No'}")
+            st.markdown(f"- **Judge Model:** `{loaded_run.meta.judge_model or 'n/a'}`")
+            st.markdown(
+                f"- **Gold Judge Version:** `{loaded_run.meta.gold_judge_version or 'n/a'}`"
+            )
+            st.markdown(
+                f"- **Groundedness Judge Version:** "
+                f"`{loaded_run.meta.groundedness_judge_version or 'n/a'}`"
+            )
+        with col3:
+            st.markdown(f"- **Generator Model:** `{loaded_run.meta.generator_model or 'n/a'}`")
+            st.markdown(f"- **Embedder Model:** `{loaded_run.meta.embedder_model or 'n/a'}`")
+            st.markdown(f"- **Reranker:** `{loaded_run.meta.reranker_name or 'n/a'}`")
             if loaded_run.meta.notes:
                 st.markdown(f"- **Notes:** {loaded_run.meta.notes}")
+
+        if loaded_run.meta.extra:
+            with st.expander("Additional Metadata (meta.extra)", expanded=False):
+                st.json(loaded_run.meta.extra)
 
     # Initialize tab selection in session state if not present
     if "single_run_tab" not in st.session_state:
