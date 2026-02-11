@@ -17,11 +17,64 @@ from rag.domain.models import Candidate, Chunk
 
 Vector = list[float]
 
+# Fields that map directly to named Chunk attributes (not part of metadata).
+# Used when reconstructing a Chunk from a thin Qdrant payload.
+_CHUNK_FIRST_CLASS_FIELDS: frozenset[str] = frozenset({
+    "chunk_id",
+    "doc_id",
+    "text",
+    "chunk_index",
+    "start_char",
+    "end_char",
+    "section_heading",
+    "section_path",
+    "language",
+    "metadata",
+})
+
+
+def _thin_payload(chunk: Chunk) -> dict[str, object]:
+    """Build a thin Qdrant payload: IDs + filterable metadata, no text."""
+    payload: dict[str, object] = {
+        "chunk_id": chunk.chunk_id,
+        "doc_id": chunk.doc_id,
+        "chunk_index": chunk.chunk_index,
+        "section_heading": chunk.section_heading,
+        "section_path": chunk.section_path,
+        "language": chunk.language,
+        "start_char": chunk.start_char,
+        "end_char": chunk.end_char,
+    }
+    # Spread chunk.metadata so filterable fields (tags, citation, etc.) are
+    # available for Qdrant filter queries.
+    payload.update(chunk.metadata)
+    return payload
+
+
+def _chunk_from_thin_payload(payload: dict[str, object]) -> Chunk:
+    """Reconstruct a stub Chunk from a thin payload (empty text)."""
+    metadata = {
+        k: v
+        for k, v in payload.items()
+        if k not in _CHUNK_FIRST_CLASS_FIELDS
+    }
+    return Chunk(
+        chunk_id=str(payload["chunk_id"]),
+        doc_id=str(payload["doc_id"]),
+        text="",
+        chunk_index=int(payload.get("chunk_index", 0)),  # type: ignore[arg-type]
+        start_char=payload.get("start_char"),  # type: ignore[arg-type]
+        end_char=payload.get("end_char"),  # type: ignore[arg-type]
+        section_heading=payload.get("section_heading"),  # type: ignore[arg-type]
+        section_path=payload.get("section_path"),  # type: ignore[arg-type]
+        language=payload.get("language"),  # type: ignore[arg-type]
+        metadata=metadata,
+    )
+
 
 @dataclass(slots=True)
 class QdrantVectorStore:
-    """
-    Qdrant-backed vector store for scalable similarity search.
+    """Qdrant-backed vector store for scalable similarity search.
 
     Supports both local (in-memory or disk) and remote Qdrant instances.
 
@@ -32,6 +85,9 @@ class QdrantVectorStore:
         path: Path for local disk persistence. If None with no url, uses in-memory.
         api_key: API key for Qdrant Cloud.
         distance: Distance metric (COSINE, EUCLID, DOT).
+        thin_payloads: When True, store only IDs + filterable metadata (no text).
+            Requires a ChunkStore + HydratingRetriever for text hydration at
+            query time.
     """
 
     collection_name: str
@@ -40,18 +96,16 @@ class QdrantVectorStore:
     path: str | None = None
     api_key: str | None = None
     distance: Distance = Distance.COSINE
+    thin_payloads: bool = False
     _client: QdrantClient = field(init=False, repr=False)
     _initialized: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:
         if self.url:
-            # Remote Qdrant server
             self._client = QdrantClient(url=self.url, api_key=self.api_key)
         elif self.path:
-            # Local disk persistence
             self._client = QdrantClient(path=self.path)
         else:
-            # In-memory mode
             self._client = QdrantClient(":memory:")
 
     def _ensure_collection(self) -> None:
@@ -87,9 +141,8 @@ class QdrantVectorStore:
 
         points = []
         for chunk, vector in zip(chunks, vectors, strict=False):
-            # Use chunk_id as point ID (hash to UUID for Qdrant compatibility)
             point_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk.chunk_id))
-            payload = chunk.to_dict()
+            payload = _thin_payload(chunk) if self.thin_payloads else chunk.to_dict()
 
             points.append(
                 PointStruct(
@@ -99,7 +152,6 @@ class QdrantVectorStore:
                 )
             )
 
-        # Batch upsert
         self._client.upsert(
             collection_name=self.collection_name,
             points=points,
@@ -129,7 +181,11 @@ class QdrantVectorStore:
         candidates = []
         for hit in response.points:
             if hit.payload:
-                chunk = Chunk.from_dict(hit.payload)
+                # Detect thin vs fat payload by checking for 'text' key
+                if "text" in hit.payload:
+                    chunk = Chunk.from_dict(hit.payload)
+                else:
+                    chunk = _chunk_from_thin_payload(hit.payload)
                 candidates.append(Candidate(chunk=chunk, score=hit.score))
 
         return candidates
@@ -146,23 +202,18 @@ class QdrantVectorStore:
         )
 
     def save(self) -> None:
-        """
-        Persist to disk (only applicable for local disk mode).
+        """Persist to disk (only applicable for local disk mode).
 
         For in-memory mode, this is a no-op.
         For remote mode, data is already persisted on the server.
         """
-        # Qdrant handles persistence automatically in disk mode
-        pass
 
     def load(self) -> None:
-        """
-        Load from disk (only applicable for local disk mode).
+        """Load from disk (only applicable for local disk mode).
 
         For in-memory mode, this is a no-op.
         For remote mode, data is already on the server.
         """
-        # Qdrant loads automatically; just ensure collection exists
         self._ensure_collection()
 
     def delete_collection(self) -> None:
@@ -173,6 +224,5 @@ class QdrantVectorStore:
     def clear(self) -> None:
         """Delete all points in the collection but keep the collection."""
         self._ensure_collection()
-        # Delete and recreate collection
         self.delete_collection()
         self._ensure_collection()
