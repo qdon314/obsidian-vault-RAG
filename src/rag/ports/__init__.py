@@ -2,6 +2,7 @@
 from rag.eval.schema import QuerySuggestion
 
 from .chunk_loader import ChunkLoader
+from .chunk_store import ChunkStore
 from .chunker import Chunker
 from .context_builder import ContextBuilder
 from .embedder import Embedder
@@ -18,6 +19,7 @@ from .vector_store import VectorStore
 
 __all__ = [
     "ChunkLoader",
+    "ChunkStore",
     "Chunker",
     "ContextBuilder",
     "Embedder",
