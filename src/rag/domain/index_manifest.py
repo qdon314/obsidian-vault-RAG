@@ -47,6 +47,7 @@ class IndexManifest:
     """
 
     index_name: str
+    index_id: str
     created_at: str
     git_sha: str
     corpus: str
@@ -76,8 +77,10 @@ class IndexManifest:
         build_duration_s: float = 0.0,
     ) -> IndexManifest:
         """Create a manifest with auto-populated timestamp, git SHA, build_id."""
+        index_id = f"{index_name}_{getattr(chunking, 'backend', 'unknown')}_{getattr(embedding, 'backend', 'unknown')}_{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
         return IndexManifest(
             index_name=index_name,
+            index_id=index_id,
             created_at=datetime.now(UTC).isoformat(),
             git_sha=_get_git_sha(),
             corpus=corpus,

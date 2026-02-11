@@ -60,10 +60,12 @@ class TestIndexManifest:
         data = json.loads(path.read_text())
         assert data["index_name"] == "test"
         assert "git_sha" in data
+        assert data["index_id"].startswith("test_")
 
     def test_from_dict_ignores_extra_keys(self) -> None:
         d = {
             "index_name": "test",
+            "index_id": "test_unknown_unknown_20260101T000000Z",
             "created_at": "2026-01-01T00:00:00",
             "git_sha": "abc123",
             "corpus": "/data",

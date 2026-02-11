@@ -484,6 +484,7 @@ def run_full_eval(
         groundedness_judge_version=GROUNDEDNESS_JUDGE_VERSION if use_llm_judge else None,
         extra=extra,
         index_name=manifest.index_name if manifest else None,
+        index_id=manifest.index_id if manifest else None,
         index_build_id=manifest.build_id if manifest else None,
     )
 

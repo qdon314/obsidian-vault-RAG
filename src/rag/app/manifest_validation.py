@@ -31,7 +31,8 @@ def validate_index(manifest: IndexManifest, embedder: Embedder) -> None:
         )
 
     log.debug(
-        "Index '%s' (build=%s) validated OK",
+        "Index '%s' (id=%s, build=%s) validated OK",
         manifest.index_name,
+        manifest.index_id,
         manifest.build_id,
     )

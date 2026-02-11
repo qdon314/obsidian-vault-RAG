@@ -226,6 +226,7 @@ def render_single_run_view(
             st.markdown(f"- **Run Name:** {loaded_run.meta.run_name or 'n/a'}")
             st.markdown(f"- **Queries File:** `{loaded_run.meta.queries_path or 'n/a'}`")
             st.markdown(f"- **Index Name:** `{loaded_run.meta.index_name or 'n/a'}`")
+            st.markdown(f"- **Index ID:** `{loaded_run.meta.index_id or 'n/a'}`")
             st.markdown(f"- **Index Build ID:** `{loaded_run.meta.index_build_id or 'n/a'}`")
         with col2:
             st.markdown(f"- **Top K:** {loaded_run.meta.top_k}")
