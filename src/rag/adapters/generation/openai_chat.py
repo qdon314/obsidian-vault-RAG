@@ -45,10 +45,22 @@ class OpenAIChatGenerator:
         metadata: Mapping[str, object] | None = None,
     ) -> Answer:
         system = (
-            "You are a precise assistant. Use only the provided CONTEXT. "
-            "If the answer cannot be found in the CONTEXT, say you don't know."
+            "You are a precise assistant answering questions using ONLY the provided CONTEXT.\n\n"
+            "Rules:\n"
+            "- Do not use prior knowledge.\n"
+            "- If the CONTEXT does not explicitly contain the answer, respond exactly with: \"I don't know.\"\n"
+            "- Cite the specific chunk number(s) [n] that directly support each factual claim.\n"
+            "- Do not cite chunks that are not directly used.\n"
+            "- Do not speculate or infer beyond the text.\n"
+            "- If multiple chunks are relevant, prefer the most specific one.\n"
+            "- If the chunks conflict, respond with: \"I don't know.\"\n\n"
+            "Answer concisely."
         )
-        user = f"{context.rendered_context}\nQUESTION:\n{query}\n\nAnswer clearly and cite chunk numbers like [1], [2] where relevant."
+
+        user = (
+            f"{context.rendered_context}\n\n"
+            f"QUESTION:\n{query}\n"
+        )
 
         resp = self._client.chat.completions.create(
             model=self.model,
@@ -58,6 +70,7 @@ class OpenAIChatGenerator:
                 {"role": "user", "content": user},
             ],
         )
+
 
         text = (resp.choices[0].message.content or "").strip()
 
