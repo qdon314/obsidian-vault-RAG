@@ -214,6 +214,27 @@ keep_k = 4
 | `backend` | string | `"heuristic"` | Reranker implementation |
 | `keep_k` | int | `4` | Final candidate count |
 
+### `[chunk_storage]`
+
+```toml
+[chunk_storage]
+backend = "none"              # "none" | "s3"
+# s3_bucket = "my-rag-chunks"
+# s3_prefix = "obsidian"
+# postgres_dsn = "postgresql://user:pass@host:5432/rag"
+# max_s3_workers = 4
+```
+
+| Option | Type | Default | Notes |
+|--------|------|---------|-------|
+| `backend` | string | `"none"` | `"none"` = local mode, `"s3"` = distributed mode |
+| `s3_bucket` | string | - | S3 bucket for JSONL chunk shards |
+| `s3_prefix` | string | `""` | Key prefix inside the bucket |
+| `postgres_dsn` | string | - | Postgres connection string for chunk index |
+| `max_s3_workers` | int | `4` | Max threads for parallel S3 fetches |
+
+When `backend = "s3"`, Qdrant automatically uses thin payloads and a `HydratingRetriever` wraps the retriever for text hydration. Install dependencies with `./scripts/pip install -e ".[distributed]"`.
+
 ### `[llm]`
 
 ```toml

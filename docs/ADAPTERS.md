@@ -13,6 +13,7 @@ Complete documentation for all adapter implementations in the RAG system. Adapte
 - [Generation Adapters](#generation-adapters)
 - [Ingestion Adapters](#ingestion-adapters)
 - [Logging Adapters](#logging-adapters)
+- [Chunk Storage Adapters](#chunk-storage-adapters)
 
 ---
 
@@ -571,6 +572,40 @@ bm25_k1 = 1.5
 bm25_b = 0.75
 ```
 
+### HydratingRetriever
+
+**Location:** `src/rag/adapters/retrieval/hydrating_retriever.py`
+
+Wraps any `Retriever`, transparently hydrating thin chunks (empty text) from a `ChunkStore`. Used in distributed mode where Qdrant stores only IDs + metadata.
+
+```python
+@dataclass(frozen=True, slots=True)
+class HydratingRetriever:
+    retriever: Retriever       # Wrapped retriever (e.g. VectorRetriever)
+    chunk_store: ChunkStore    # Content store (e.g. S3ChunkStore)
+```
+
+**Workflow:**
+1. Delegate to the wrapped retriever's `retrieve()`
+2. Identify candidates with empty `chunk.text`
+3. Batch-fetch full chunks from the `ChunkStore`
+4. Replace stub chunks, preserving scores and order
+
+When all candidates already have text (fat payloads / local mode), the ChunkStore is never called.
+
+**Example:**
+```python
+from rag.adapters.retrieval.hydrating_retriever import HydratingRetriever
+
+hydrating = HydratingRetriever(retriever=vector_retriever, chunk_store=s3_store)
+candidates = hydrating.retrieve("What is X?", top_k=10)
+# Candidates now have full text even if Qdrant had thin payloads
+```
+
+**Configuration:**
+
+Automatically wired by `build_container()` when `chunk_storage.backend = "s3"`. No manual setup needed.
+
 ---
 
 ## Reranking Adapters
@@ -1010,6 +1045,50 @@ complex_filter = And(clauses=[
     ]),
     Not(clause=Eq(field="draft", value=True))
 ])
+```
+
+---
+
+## Chunk Storage Adapters
+
+### S3ChunkStore
+
+**Location:** `src/rag/adapters/chunk_storage/s3_chunk_store.py`
+
+Stores chunk content in S3 JSONL shard files (one per document) with a Postgres index for fast batch lookup.
+
+```python
+@dataclass(frozen=True, slots=True)
+class S3ChunkStore:
+    bucket: str                # S3 bucket name
+    prefix: str                # Key prefix (e.g. "obsidian")
+    postgres_dsn: str          # Postgres connection string
+    max_s3_workers: int = 4    # Parallel S3 fetch threads
+```
+
+**S3 Layout:**
+```
+s3://{bucket}/{prefix}/shards/{doc_id_hash[:4]}/{doc_id_hash}.jsonl
+```
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `get_chunks(chunk_ids)` | Batch fetch: Postgres lookup → group by S3 key → parallel S3 reads |
+| `store_chunks(chunks)` | Group by doc_id → write JSONL shards → upsert Postgres index |
+| `list_all_chunk_ids()` | SELECT all chunk_ids from Postgres index |
+
+**Dependencies:** `boto3`, `psycopg2` (install via `pip install -e ".[distributed]"`)
+
+**Configuration:**
+```toml
+[chunk_storage]
+backend = "s3"
+s3_bucket = "my-rag-chunks"
+s3_prefix = "obsidian"
+postgres_dsn = "postgresql://user:pass@host:5432/rag"
+max_s3_workers = 4
 ```
 
 ---

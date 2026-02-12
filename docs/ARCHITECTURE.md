@@ -325,6 +325,7 @@ graph TB
 | `Reranker` | `rerank()` | Re-order candidates by relevance |
 | `ContextBuilder` | `build()` | Pack candidates into prompt context |
 | `Generator` | `generate()` | Produce answer from context |
+| `ChunkStore` | `get_chunks()`, `store_chunks()`, `list_all_chunk_ids()` | ID-based chunk content storage (distributed mode) |
 | `QueryLogger` | `log()` | Persist query traces |
 
 ### Adapters (Implementations)
@@ -344,12 +345,122 @@ graph TB
 | `BM25Retriever` | `Retriever` | Keyword based search |
 | `VectorRetriever` | `Retriever` | Pure vector similarity search |
 | `HybridRetriever` | `Retriever` | Vector + keyword search with RRF fusion |
+| `HydratingRetriever` | `Retriever` | Wrapper: hydrates thin chunks from ChunkStore |
+| `S3ChunkStore` | `ChunkStore` | S3 JSONL shards + Postgres index |
 | `HeuristicReranker` | `Reranker` | Lexical overlap boost + diversity |
 | `NoOpReranker` | `Reranker` | Pass-through (baseline) |
 | `SimpleContextBuilder` | `ContextBuilder` | Token budget + deduplication |
 | `PropositionAwareContextBuilder` | `ContextBuilder` | Proposition expansion + deduplication |
 | `OpenAIChatGenerator` | `Generator` | GPT-4.1-mini chat completions |
 | `JsonlQueryLogger` | `QueryLogger` | JSONL append logging |
+
+---
+
+## Distributed Chunk Storage
+
+When operating in distributed mode (Qdrant remote + S3 + Postgres), the system separates chunk content storage from vector search. This enables thin Qdrant payloads (smaller index, faster search) while maintaining full chunk hydration at query time.
+
+### Distributed Query Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant HR as HydratingRetriever
+    participant VR as VectorRetriever
+    participant Qdrant as Qdrant (thin payloads)
+    participant CS as S3ChunkStore
+    participant PG as Postgres
+    participant S3
+
+    Client->>HR: retrieve(query, top_k=8)
+    HR->>VR: retrieve(query, top_k=8)
+    VR->>Qdrant: search(query_vector, top_k=8)
+    Qdrant-->>VR: Candidates (IDs + scores, no text)
+    VR-->>HR: Candidates with empty text
+
+    Note over HR: Detect empty text → needs hydration
+
+    HR->>CS: get_chunks([chunk_ids])
+    CS->>PG: SELECT s3_key, line_offset WHERE chunk_id IN (...)
+    PG-->>CS: (s3_key, offset) rows
+    CS->>S3: GET shards (parallel, grouped by key)
+    S3-->>CS: JSONL shard contents
+    CS-->>HR: {chunk_id: Chunk} with full text
+
+    Note over HR: Replace stubs with hydrated chunks
+
+    HR-->>Client: Candidates with full text
+```
+
+### Distributed Indexing Flow (Dual-Write)
+
+```mermaid
+sequenceDiagram
+    participant Pipeline as index_documents()
+    participant Chunker
+    participant Embedder
+    participant Qdrant as Qdrant (thin payloads)
+    participant CS as S3ChunkStore
+    participant S3
+    participant PG as Postgres
+
+    Pipeline->>Chunker: chunk(doc)
+    Chunker-->>Pipeline: chunks
+
+    Pipeline->>Embedder: embed_texts(chunk_texts)
+    Embedder-->>Pipeline: vectors
+
+    par Dual-write
+        Pipeline->>Qdrant: upsert(chunks, vectors) [thin payload: IDs + metadata only]
+        Pipeline->>CS: store_chunks(chunks)
+        CS->>S3: PUT shard JSONL (one per doc_id)
+        CS->>PG: UPSERT chunk_index rows
+    end
+```
+
+### Component Roles
+
+| Component | Role |
+|-----------|------|
+| `ChunkStore` (port) | ID-based chunk storage/retrieval protocol |
+| `S3ChunkStore` (adapter) | S3 JSONL shards + Postgres index |
+| `QdrantVectorStore.thin_payloads` | Store only IDs + filterable metadata, no text |
+| `HydratingRetriever` (wrapper) | Wraps any Retriever; batch-hydrates empty-text chunks |
+| `ChunkStorage` (settings) | Configuration section for distributed chunk storage |
+
+### S3 Shard Layout
+
+```
+s3://{bucket}/{prefix}/shards/{doc_id_hash[:4]}/{doc_id_hash}.jsonl
+```
+
+Each shard is a JSONL file containing one `Chunk.to_dict()` per line, grouped by document. The 4-character hash prefix provides balanced distribution across S3 partition prefixes.
+
+### Postgres Index Schema
+
+```sql
+CREATE TABLE chunk_index (
+    chunk_id    TEXT PRIMARY KEY,
+    doc_id      TEXT NOT NULL,
+    s3_key      TEXT NOT NULL,
+    line_offset INT  NOT NULL
+);
+CREATE INDEX idx_chunk_index_doc_id ON chunk_index(doc_id);
+CREATE INDEX idx_chunk_index_s3_key ON chunk_index(s3_key);
+```
+
+### Configuration
+
+```toml
+[chunk_storage]
+backend = "s3"                                     # "none" | "s3"
+s3_bucket = "my-rag-chunks"
+s3_prefix = "obsidian"
+postgres_dsn = "postgresql://user:pass@host:5432/rag"
+max_s3_workers = 4                                  # parallel S3 fetch threads
+```
+
+When `backend = "none"` (default), the system operates in local mode with fat Qdrant payloads or JSONL storage. No code paths change.
 
 ---
 
@@ -427,7 +538,8 @@ src/rag/
 │   ├── embedding/       # OpenAI, Dummy, SQLite cache
 │   ├── generation/      # OpenAI chat
 │   ├── ingestion/       # Filesystem, loaders
-│   ├── retrieval/       # VectorRetriever
+│   ├── chunk_storage/   # S3ChunkStore
+│   ├── retrieval/       # VectorRetriever, HydratingRetriever
 │   ├── reranking/       # Heuristic, NoOp
 │   ├── vectorstores/    # JSONL, in-memory
 │   ├── context_building/ # Simple, PropositionAware
