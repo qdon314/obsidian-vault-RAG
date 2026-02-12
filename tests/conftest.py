@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,7 @@ from rag.adapters.vectorstores.in_memory_store import InMemoryVectorStore
 from rag.domain.models import Candidate, Chunk, Document
 from rag.ports import (
     Chunker,
+    ChunkStore,
     ContextBuilder,
     Embedder,
     Reranker,
@@ -84,6 +86,56 @@ def simple_context_builder() -> ContextBuilder:
 def text_loader() -> TextLoader:
     """TextLoader with default settings."""
     return TextLoader()
+
+
+class FakeChunkStore:
+    """In-memory ChunkStore implementation for testing.
+
+    Records store_chunks calls and provides access to stored chunks for assertions.
+    """
+
+    def __init__(self) -> None:
+        self._chunks: dict[str, Chunk] = {}
+        self.store_calls: int = 0
+
+    def get_chunks(
+        self,
+        chunk_ids: Sequence[str],
+        *,
+        metadata: Mapping[str, object] | None = None,
+    ) -> dict[str, Chunk]:
+        """Batch fetch chunks by ID."""
+        return {cid: self._chunks[cid] for cid in chunk_ids if cid in self._chunks}
+
+    def store_chunks(
+        self,
+        chunks: Sequence[Chunk],
+        *,
+        metadata: Mapping[str, object] | None = None,
+    ) -> None:
+        """Persist chunks."""
+        for chunk in chunks:
+            self._chunks[chunk.chunk_id] = chunk
+        self.store_calls += 1
+
+    def list_all_chunk_ids(
+        self,
+        *,
+        metadata: Mapping[str, object] | None = None,
+    ) -> list[str]:
+        """List all stored chunk IDs."""
+        return sorted(self._chunks.keys())
+
+    @property
+    def stored_chunks(self) -> list[Chunk]:
+        """Return all stored chunks as a list (for assertions)."""
+        return list(self._chunks.values())
+
+
+@pytest.fixture
+def fake_chunk_store() -> ChunkStore:
+    """Fresh FakeChunkStore for each test."""
+    return FakeChunkStore()
 
 
 # =============================================================================
