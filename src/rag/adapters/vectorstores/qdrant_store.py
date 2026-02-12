@@ -19,18 +19,20 @@ Vector = list[float]
 
 # Fields that map directly to named Chunk attributes (not part of metadata).
 # Used when reconstructing a Chunk from a thin Qdrant payload.
-_CHUNK_FIRST_CLASS_FIELDS: frozenset[str] = frozenset({
-    "chunk_id",
-    "doc_id",
-    "text",
-    "chunk_index",
-    "start_char",
-    "end_char",
-    "section_heading",
-    "section_path",
-    "language",
-    "metadata",
-})
+_CHUNK_FIRST_CLASS_FIELDS: frozenset[str] = frozenset(
+    {
+        "chunk_id",
+        "doc_id",
+        "text",
+        "chunk_index",
+        "start_char",
+        "end_char",
+        "section_heading",
+        "section_path",
+        "language",
+        "metadata",
+    }
+)
 
 
 def _thin_payload(chunk: Chunk) -> dict[str, object]:
@@ -53,16 +55,12 @@ def _thin_payload(chunk: Chunk) -> dict[str, object]:
 
 def _chunk_from_thin_payload(payload: dict[str, object]) -> Chunk:
     """Reconstruct a stub Chunk from a thin payload (empty text)."""
-    metadata = {
-        k: v
-        for k, v in payload.items()
-        if k not in _CHUNK_FIRST_CLASS_FIELDS
-    }
+    metadata = {k: v for k, v in payload.items() if k not in _CHUNK_FIRST_CLASS_FIELDS}
     return Chunk(
         chunk_id=str(payload["chunk_id"]),
         doc_id=str(payload["doc_id"]),
         text="",
-        chunk_index=int(payload.get("chunk_index", 0)),  # type: ignore[arg-type]
+        chunk_index=int(payload.get("chunk_index", 0)),  # type: ignore[call-overload]
         start_char=payload.get("start_char"),  # type: ignore[arg-type]
         end_char=payload.get("end_char"),  # type: ignore[arg-type]
         section_heading=payload.get("section_heading"),  # type: ignore[arg-type]

@@ -141,8 +141,7 @@ class S3ChunkStore:
 
         with ThreadPoolExecutor(max_workers=self.max_s3_workers) as pool:
             futures = {
-                pool.submit(_fetch_shard, key, targets): key
-                for key, targets in by_key.items()
+                pool.submit(_fetch_shard, key, targets): key for key, targets in by_key.items()
             }
             for future in as_completed(futures):
                 result.update(future.result())
@@ -198,9 +197,7 @@ class S3ChunkStore:
         finally:
             self._pool.putconn(conn)
 
-        logger.info(
-            "Stored %d chunks across %d shards", len(index_rows), len(by_doc)
-        )
+        logger.info("Stored %d chunks across %d shards", len(index_rows), len(by_doc))
 
     def list_all_chunk_ids(
         self,

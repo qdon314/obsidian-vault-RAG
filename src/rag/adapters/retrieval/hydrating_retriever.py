@@ -52,13 +52,14 @@ class HydratingRetriever:
         metadata: Mapping[str, object] | None = None,
     ) -> list[Candidate]:
         candidates = self.retriever.retrieve(
-            query, top_k=top_k, where=where, metadata=metadata,
+            query,
+            top_k=top_k,
+            where=where,
+            metadata=metadata,
         )
 
         # Identify candidates that need hydration
-        needs_hydration = [
-            (i, cand) for i, cand in enumerate(candidates) if not cand.chunk.text
-        ]
+        needs_hydration = [(i, cand) for i, cand in enumerate(candidates) if not cand.chunk.text]
         if not needs_hydration:
             return candidates
 
