@@ -130,9 +130,12 @@ def _embed_and_upsert(
     chunks: list[Chunk],
     embedder: Embedder,
     store: VectorStore,
+    chunk_store: object | None = None,
 ) -> int:
     vectors = embedder.embed_texts([c.text for c in chunks])
     store.upsert(chunks=chunks, vectors=vectors)
+    if chunk_store is not None:
+        chunk_store.store_chunks(chunks)  # type: ignore[union-attr]
     return len(chunks)
 
 
@@ -142,6 +145,7 @@ def _run_parallel_index(
     chunker: object,
     embedder: Embedder,
     store: VectorStore,
+    chunk_store: object | None = None,
     embed_batch_size: int,
 ) -> int:
     """Index documents with T5 chunking overlapping embedding API calls."""
@@ -171,11 +175,13 @@ def _run_parallel_index(
             while len(chunk_buffer) >= embed_batch_size:
                 batch = chunk_buffer[:embed_batch_size]
                 chunk_buffer = chunk_buffer[embed_batch_size:]
-                futures.append(pool.submit(_embed_and_upsert, batch, embedder, store))
+                futures.append(pool.submit(_embed_and_upsert, batch, embedder, store, chunk_store))
 
         # flush remainder
         if chunk_buffer:
-            futures.append(pool.submit(_embed_and_upsert, chunk_buffer, embedder, store))
+            futures.append(
+                pool.submit(_embed_and_upsert, chunk_buffer, embedder, store, chunk_store)
+            )
 
     # collect results (raises if any future failed)
     total = 0
@@ -311,6 +317,7 @@ def main() -> None:
             chunker=container.chunker,
             embedder=container.embedder,
             store=container.store,
+            chunk_store=container.chunk_store,
             embed_batch_size=args.embed_batch_size,
             on_doc_chunked=_on_doc_chunked,
             on_batch_embedded=_on_batch_embedded,
@@ -322,6 +329,7 @@ def main() -> None:
             chunker=container.chunker,
             embedder=container.embedder,
             store=container.store,
+            chunk_store=container.chunk_store,
             embed_batch_size=args.embed_batch_size,
         )
 

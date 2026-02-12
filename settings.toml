@@ -2,6 +2,10 @@
 # Settings define defaults.
 # Containers compose adapters.
 # CLI overrides settings via ContainerOverrides.
+#
+# TODO: Migrate backend-specific settings to nested TOML tables
+# (e.g. [retrieval.hybrid], [vectorstore.qdrant], [embeddings.openai])
+# to improve readability as the number of backends grows.
 
 
 # -------------------------------------------------------------------
@@ -111,6 +115,17 @@ top_k = 8
 enabled = true
 backend = "heuristic"      # "heuristic" | "noop"
 keep_k = 4
+
+
+# -------------------------------------------------------------------
+# Chunk storage (distributed mode)
+# -------------------------------------------------------------------
+[chunk_storage]
+backend = "none"              # "none" | "s3"
+# s3_bucket = "my-rag-chunks"
+# s3_prefix = "obsidian"
+# postgres_dsn = "postgresql://user:pass@host:5432/rag"
+# max_s3_workers = 4
 
 
 # -------------------------------------------------------------------

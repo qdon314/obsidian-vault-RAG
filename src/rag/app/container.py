@@ -26,6 +26,7 @@ from rag.adapters.vectorstores.jsonl_store import JsonlVectorStore
 from rag.domain.models import Chunk
 from rag.ports import (
     Chunker,
+    ChunkStore,
     ContextBuilder,
     Embedder,
     Generator,
@@ -48,6 +49,7 @@ class Container:
     retriever: Retriever = field(repr=False)
     logger: QueryLogger = field(repr=False)
     reranker: Reranker = field(repr=False)
+    chunk_store: ChunkStore | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +84,9 @@ class ContainerOverrides:
     rerank_enabled: bool | None = None
 
     logs_directory: Path | None = None
+
+    # Chunk storage overrides
+    chunk_storage_backend: Literal["none", "s3"] | None = None
 
 
 def _get_store_chunks(store: VectorStore) -> Sequence[Chunk]:
@@ -248,6 +253,8 @@ def build_container(
             else:
                 vector_size = 1536  # default fallback
 
+        # Enable thin payloads when a chunk store backend is configured
+        use_thin = (ovrds.chunk_storage_backend or cfg.chunk_storage.backend) != "none"
         store = QdrantVectorStore(
             collection_name=ovrds.qdrant_collection or cfg.vectorstore.qdrant_collection,
             vector_size=vector_size,
@@ -256,6 +263,7 @@ def build_container(
             if (ovrds.qdrant_path or cfg.vectorstore.qdrant_path)
             else None,
             api_key=cfg.vectorstore.qdrant_api_key,
+            thin_payloads=use_thin,
         )
     else:
         # jsonl backend
@@ -289,6 +297,26 @@ def build_container(
     else:
         retriever = VectorRetriever(embedder=embedder, store=store)
 
+    # ----- chunk store + hydrating retriever wrapper (distributed mode)
+    chunk_store: ChunkStore | None = None
+    cs_backend = ovrds.chunk_storage_backend or cfg.chunk_storage.backend
+    if cs_backend == "s3":
+        from rag.adapters.chunk_storage.s3_chunk_store import S3ChunkStore
+        from rag.adapters.retrieval.hydrating_retriever import HydratingRetriever
+
+        if not cfg.chunk_storage.s3_bucket:
+            raise ValueError("chunk_storage.s3_bucket is required when backend='s3'")
+        if not cfg.chunk_storage.postgres_dsn:
+            raise ValueError("chunk_storage.postgres_dsn is required when backend='s3'")
+
+        chunk_store = S3ChunkStore(
+            bucket=cfg.chunk_storage.s3_bucket,
+            prefix=cfg.chunk_storage.s3_prefix,
+            postgres_dsn=cfg.chunk_storage.postgres_dsn,
+            max_s3_workers=cfg.chunk_storage.max_s3_workers,
+        )
+        retriever = HydratingRetriever(retriever=retriever, chunk_store=chunk_store)
+
     # ----- reranker (optional)
     reranker: Reranker
     if not cfg.rerank.enabled or cfg.rerank.backend == "noop":
@@ -310,4 +338,5 @@ def build_container(
         reranker=reranker,
         retriever=retriever,
         logger=logger,
+        chunk_store=chunk_store,
     )

@@ -41,6 +41,12 @@ aws = [
   "boto3>=1.34.0",
 ]
 
+distributed = [
+  "boto3>=1.34.0",
+  "psycopg2-binary>=2.9.0",
+  "qdrant-client>=1.7.0",
+]
+
 proposition = [
   "torch",
   "transformers",

@@ -123,6 +123,22 @@ class Rerank:
 
 
 @dataclass(frozen=True, slots=True)
+class ChunkStorage:
+    """Separated chunk content store (S3 + Postgres).
+
+    Only used when ``backend != "none"``.  When ``backend = "s3"``,
+    Qdrant operates in thin-payload mode and a ``ChunkStore`` adapter
+    handles content storage and hydration.
+    """
+
+    backend: Literal["none", "s3"] = "none"
+    s3_bucket: str | None = None
+    s3_prefix: str = ""
+    postgres_dsn: str | None = None
+    max_s3_workers: int = 4
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     paths: Paths
     ingestion: Ingestion
@@ -133,6 +149,7 @@ class Settings:
     llm: LLM
     retrieval: Retrieval
     rerank: Rerank
+    chunk_storage: ChunkStorage
     secrets: Secrets
 
 
@@ -175,6 +192,7 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
     vectorstore_tbl = get_tbl("vectorstore")
     retrieval_tbl = get_tbl("retrieval")
     rerank_tbl = get_tbl("rerank")
+    chunk_storage_tbl = get_tbl("chunk_storage")
 
     # Paths
     vault_dir = expand(paths_tbl["vault_dir"])
@@ -272,6 +290,15 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         keep_k=int(rerank_tbl.get("keep_k", 4)),
     )
 
+    # Chunk storage
+    chunk_storage = ChunkStorage(
+        backend=str(chunk_storage_tbl.get("backend", "none")),  # type: ignore[arg-type]
+        s3_bucket=chunk_storage_tbl.get("s3_bucket"),
+        s3_prefix=str(chunk_storage_tbl.get("s3_prefix", "")),
+        postgres_dsn=chunk_storage_tbl.get("postgres_dsn"),
+        max_s3_workers=int(chunk_storage_tbl.get("max_s3_workers", 4)),
+    )
+
     return Settings(
         paths=Paths(
             vault_dir=vault_dir,
@@ -287,5 +314,6 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         llm=llm,
         retrieval=retrieval,
         rerank=rerank,
+        chunk_storage=chunk_storage,
         secrets=Secrets.from_env(require_openai=require_openai),
     )

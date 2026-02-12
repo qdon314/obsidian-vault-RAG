@@ -46,6 +46,7 @@ from rag.eval.metrics import semantic_similarity, summarize
 from rag.eval.models import EvalAggregates, EvalResult, EvalRun, EvalRunMeta, RetrievalResult
 from rag.eval.schema import EvalQuery
 from rag.ports import Retriever
+from rag.ports.chunk_store import ChunkStore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -78,7 +79,16 @@ def _store_chunks_for_eval(container: Container) -> list[Chunk]:
     try:
         return container.store.all_chunks()
     except NotImplementedError:
-        return []
+        pass
+
+    # Fallback: hydrate all chunks from the ChunkStore (distributed mode)
+    chunk_store: ChunkStore | None = container.chunk_store
+    if chunk_store is not None:
+        all_ids = chunk_store.list_all_chunk_ids()
+        if all_ids:
+            return list(chunk_store.get_chunks(all_ids).values())
+
+    return []
 
 
 def _build_citation_chunk_indexes(

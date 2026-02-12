@@ -5,7 +5,15 @@ from time import perf_counter
 
 from rag.domain.filters import Where
 from rag.domain.models import Answer, Candidate, Chunk, Document
-from rag.ports import Chunker, ContextBuilder, Embedder, Generator, Retriever, VectorStore
+from rag.ports import (
+    Chunker,
+    ChunkStore,
+    ContextBuilder,
+    Embedder,
+    Generator,
+    Retriever,
+    VectorStore,
+)
 
 
 def index_document(
@@ -14,6 +22,7 @@ def index_document(
     chunker: Chunker,
     embedder: Embedder,
     store: VectorStore,
+    chunk_store: ChunkStore | None = None,
     metadata: Mapping[str, object] | None = None,
 ) -> int:
     chunks: list[Chunk] = chunker.chunk(doc, metadata=metadata)
@@ -21,6 +30,8 @@ def index_document(
         return 0
     vectors = embedder.embed_texts([c.text for c in chunks], metadata=metadata)
     store.upsert(chunks=chunks, vectors=vectors, metadata=metadata)
+    if chunk_store is not None:
+        chunk_store.store_chunks(chunks, metadata=metadata)
     return len(chunks)
 
 
@@ -30,6 +41,7 @@ def index_documents(
     chunker: Chunker,
     embedder: Embedder,
     store: VectorStore,
+    chunk_store: ChunkStore | None = None,
     embed_batch_size: int = 512,
     on_doc_chunked: Callable[[Document, int, float], None] | None = None,
     on_batch_embedded: Callable[[int, float], None] | None = None,
@@ -45,6 +57,7 @@ def index_documents(
         chunker: Chunker to split documents into chunks.
         embedder: Embedder to convert chunk texts into vectors.
         store: VectorStore to persist chunks and vectors.
+        chunk_store: Optional ChunkStore for dual-write (distributed mode).
         embed_batch_size: Max chunks per embedding API call.
         on_doc_chunked: Called after each document is chunked.
             Signature: (doc, n_chunks, elapsed_seconds).
@@ -65,6 +78,8 @@ def index_documents(
         t0 = perf_counter()
         vectors = embedder.embed_texts([c.text for c in chunk_buffer], metadata=metadata)
         store.upsert(chunks=chunk_buffer, vectors=vectors, metadata=metadata)
+        if chunk_store is not None:
+            chunk_store.store_chunks(chunk_buffer, metadata=metadata)
         elapsed = perf_counter() - t0
         if on_batch_embedded:
             on_batch_embedded(len(chunk_buffer), elapsed)
