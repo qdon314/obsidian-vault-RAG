@@ -1,5 +1,16 @@
 from __future__ import annotations
 
+import json
+import logging
+from collections import defaultdict
+from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
+from hashlib import sha256
+from typing import Any
+
+from rag.domain.models import Chunk
+
 """S3 + Postgres chunk store.
 
 Stores chunk content in S3 JSONL shard files (one per document) and
@@ -24,18 +35,6 @@ CREATE TABLE IF NOT EXISTS chunk_index (
 CREATE INDEX IF NOT EXISTS idx_chunk_index_doc_id ON chunk_index(doc_id);
 CREATE INDEX IF NOT EXISTS idx_chunk_index_s3_key ON chunk_index(s3_key);
 """
-
-
-import json
-import logging
-from collections import defaultdict
-from collections.abc import Mapping, Sequence
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
-from hashlib import sha256
-from typing import Any
-
-from rag.domain.models import Chunk
 
 logger = logging.getLogger(__name__)
 
