@@ -34,6 +34,7 @@ def test_poll_completes_when_all_succeeded():
     assert result.all_succeeded is True
     assert result.succeeded == 10
     assert result.failed == 0
+    assert result.expected_total == 10
 
 
 def test_poll_detects_failures():
@@ -53,6 +54,7 @@ def test_poll_detects_failures():
     assert result.all_succeeded is False
     assert result.succeeded == 8
     assert result.failed == 2
+    assert result.expected_total == 10
 
 
 def test_poll_times_out():
@@ -71,3 +73,23 @@ def test_poll_times_out():
     )
 
     assert result.timed_out is True
+    assert result.expected_total == 10
+
+
+def test_poll_times_out_when_terminal_count_mismatch():
+    job_id = uuid.uuid4()
+    # No tasks in flight, but not all expected tasks are represented as terminal.
+    store = _mock_job_store([{TaskStatus.SUCCEEDED: 9}] * 5)
+
+    result = poll_until_complete(
+        job_id=job_id,
+        job_store=store,
+        total_tasks=10,
+        poll_interval_s=0,
+        timeout_s=0,
+    )
+
+    assert result.timed_out is True
+    assert result.succeeded == 9
+    assert result.failed == 0
+    assert result.all_succeeded is False

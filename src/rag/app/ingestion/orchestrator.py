@@ -29,6 +29,7 @@ class PollResult:
     running: int
     retryable: int
     timed_out: bool
+    expected_total: int
 
     @property
     def total(self) -> int:
@@ -38,6 +39,7 @@ class PollResult:
     def all_succeeded(self) -> bool:
         return (
             not self.timed_out
+            and self.succeeded == self.expected_total
             and self.failed == 0
             and self.pending == 0
             and self.running == 0
@@ -78,9 +80,10 @@ def poll_until_complete(
             retryable,
         )
 
-        # Done if no tasks are still in-flight
+        terminal = succeeded + failed
+        # Done only when no tasks are in-flight and every expected task is terminal.
         in_flight = pending + running + retryable
-        if in_flight == 0:
+        if in_flight == 0 and terminal == total_tasks:
             return PollResult(
                 succeeded=succeeded,
                 failed=failed,
@@ -88,6 +91,13 @@ def poll_until_complete(
                 running=0,
                 retryable=0,
                 timed_out=False,
+                expected_total=total_tasks,
+            )
+        if in_flight == 0 and terminal != total_tasks:
+            logger.warning(
+                "No in-flight tasks but terminal count mismatch: terminal=%d expected=%d",
+                terminal,
+                total_tasks,
             )
 
         if time.monotonic() >= deadline:
@@ -99,6 +109,7 @@ def poll_until_complete(
                 running=running,
                 retryable=retryable,
                 timed_out=True,
+                expected_total=total_tasks,
             )
 
         time.sleep(poll_interval_s)
