@@ -20,4 +20,10 @@ resource "aws_db_instance" "this" {
   publicly_accessible     = false
   backup_retention_period = 1
   tags                    = var.tags
+
+  # Existing environments may have a legacy DB subnet group name.
+  # Ignore in-place subnet-group migrations, which can fail on this instance.
+  lifecycle {
+    ignore_changes = [db_subnet_group_name]
+  }
 }
