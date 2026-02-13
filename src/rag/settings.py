@@ -139,6 +139,23 @@ class ChunkStorage:
 
 
 @dataclass(frozen=True, slots=True)
+class DistributedIngestion:
+    """Configuration for distributed ingestion (Phase 3).
+
+    When ``enabled`` is True, ingestion uses remote Postgres for job
+    tracking, SQS for task distribution, and S3 for the corpus-of-record.
+    """
+
+    enabled: bool = False
+    postgres_dsn: str | None = None
+    sqs_queue_url: str | None = None
+    corpus_s3_bucket: str | None = None
+    corpus_s3_prefix: str = ""
+    worker_lease_duration_s: int = 300
+    max_task_retries: int = 3
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     paths: Paths
     ingestion: Ingestion
@@ -150,6 +167,7 @@ class Settings:
     retrieval: Retrieval
     rerank: Rerank
     chunk_storage: ChunkStorage
+    distributed_ingestion: DistributedIngestion
     secrets: Secrets
 
 
@@ -299,6 +317,18 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         max_s3_workers=int(chunk_storage_tbl.get("max_s3_workers", 4)),
     )
 
+    # Distributed ingestion
+    dist_tbl = get_tbl("distributed_ingestion")
+    distributed_ingestion = DistributedIngestion(
+        enabled=bool(dist_tbl.get("enabled", False)),
+        postgres_dsn=dist_tbl.get("postgres_dsn"),
+        sqs_queue_url=dist_tbl.get("sqs_queue_url"),
+        corpus_s3_bucket=dist_tbl.get("corpus_s3_bucket"),
+        corpus_s3_prefix=str(dist_tbl.get("corpus_s3_prefix", "")),
+        worker_lease_duration_s=int(dist_tbl.get("worker_lease_duration_s", 300)),
+        max_task_retries=int(dist_tbl.get("max_task_retries", 3)),
+    )
+
     return Settings(
         paths=Paths(
             vault_dir=vault_dir,
@@ -315,5 +345,6 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         retrieval=retrieval,
         rerank=rerank,
         chunk_storage=chunk_storage,
+        distributed_ingestion=distributed_ingestion,
         secrets=Secrets.from_env(require_openai=require_openai),
     )

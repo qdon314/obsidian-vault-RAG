@@ -170,7 +170,7 @@ class QdrantVectorStore:
 
         response = self._client.query_points(
             collection_name=self.collection_name,
-            query_vector=list(query_vector),
+            query=list(query_vector),
             limit=top_k,
             query_filter=query_filter,
             with_payload=True,

@@ -340,6 +340,7 @@ def run_full_eval(
     container: Container,
     queries_path: str | None,
     index_dir: Path | None = None,
+    manifest: IndexManifest | None = None,
     top_k: int = 10,
     keep_k: int | None = None,
     token_budget: int = 1500,
@@ -354,15 +355,15 @@ def run_full_eval(
     store_chunks = _store_chunks_for_eval(container)
     citation_to_ids, citation_key_to_ids = _build_citation_chunk_indexes(store_chunks)
 
-    # Validate index if directory provided
-    manifest: IndexManifest | None = None
-    if index_dir is not None:
+    # Validate index manifest (explicit manifest takes precedence over index_dir)
+    if manifest is None and index_dir is not None:
         manifest_path = index_dir / "manifest.json"
         if manifest_path.exists():
             manifest = IndexManifest.load(index_dir)
-            validate_index(manifest, container.embedder)
         else:
             logger.warning("No manifest.json in %s — skipping validation", index_dir)
+    if manifest is not None:
+        validate_index(manifest, container.embedder)
     run_id = uuid.uuid4().hex
     started_at = datetime.now(UTC)
 

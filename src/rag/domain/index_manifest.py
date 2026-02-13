@@ -117,3 +117,22 @@ class IndexManifest:
         path = directory / "manifest.json"
         data = json.loads(path.read_text(encoding="utf-8"))
         return IndexManifest.from_dict(data)
+
+    @staticmethod
+    def load_uri(uri: str) -> IndexManifest:
+        """Load a manifest from a local path or ``s3://bucket/key`` URI."""
+        if uri.startswith("s3://"):
+            import boto3  # type: ignore[import-untyped]
+
+            parts = uri[5:].split("/", 1)
+            bucket, key = parts[0], parts[1]
+            s3 = boto3.client("s3")
+            obj = s3.get_object(Bucket=bucket, Key=key)
+            data = json.loads(obj["Body"].read().decode("utf-8"))
+            return IndexManifest.from_dict(data)
+
+        path = Path(uri)
+        if path.is_dir():
+            return IndexManifest.load(path)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return IndexManifest.from_dict(data)

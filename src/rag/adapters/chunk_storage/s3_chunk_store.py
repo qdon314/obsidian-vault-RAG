@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """S3 + Postgres chunk store.
 
 Stores chunk content in S3 JSONL shard files (one per document) and
@@ -10,20 +12,19 @@ S3 layout::
 Each JSONL shard contains one JSON object per line — the full
 ``Chunk.to_dict()`` output.  Sharding by document provides cache
 locality (related chunks are colocated in the same object).
-
-Postgres schema::
-
-    CREATE TABLE chunk_index (
-        chunk_id    TEXT PRIMARY KEY,
-        doc_id      TEXT NOT NULL,
-        s3_key      TEXT NOT NULL,
-        line_offset INT  NOT NULL
-    );
-    CREATE INDEX idx_chunk_index_doc_id ON chunk_index(doc_id);
-    CREATE INDEX idx_chunk_index_s3_key ON chunk_index(s3_key);
 """
 
-from __future__ import annotations
+_SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS chunk_index (
+    chunk_id    TEXT PRIMARY KEY,
+    doc_id      TEXT NOT NULL,
+    s3_key      TEXT NOT NULL,
+    line_offset INT  NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chunk_index_doc_id ON chunk_index(doc_id);
+CREATE INDEX IF NOT EXISTS idx_chunk_index_s3_key ON chunk_index(s3_key);
+"""
+
 
 import json
 import logging
@@ -80,6 +81,19 @@ class S3ChunkStore:
             "_pool",
             psycopg2.pool.SimpleConnectionPool(1, 10, self.postgres_dsn),
         )
+
+    def ensure_schema(self) -> None:
+        """Create the ``chunk_index`` table and indexes if they don't exist."""
+        conn = self._pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                for stmt in _SCHEMA_SQL.strip().split(";"):
+                    stmt = stmt.strip()
+                    if stmt:
+                        cur.execute(stmt)
+            conn.commit()
+        finally:
+            self._pool.putconn(conn)
 
     # ------------------------------------------------------------------
     # ChunkStore protocol
