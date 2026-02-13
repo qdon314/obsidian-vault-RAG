@@ -226,3 +226,106 @@ resource "aws_ecs_service" "ingest_worker" {
 
   tags = var.tags
 }
+
+# --- Ingest orchestrator (run-to-completion) ---
+resource "aws_cloudwatch_log_group" "orchestrator" {
+  name              = "/ecs/${var.cluster_name}/ingest-orchestrator"
+  retention_in_days = 30
+  tags              = var.tags
+}
+
+resource "aws_ecs_task_definition" "ingest_orchestrator" {
+  family                   = "${var.cluster_name}-ingest-orchestrator"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = var.orchestrator_cpu
+  memory                   = var.orchestrator_memory
+  execution_role_arn       = aws_iam_role.task_execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "ingest-orchestrator"
+      image     = var.app_image
+      essential = true
+      command   = ["python", "scripts/run_orchestrator.py"]
+      environment = [
+        { name = "RAG_VECTORSTORE__BACKEND", value = "qdrant" },
+        { name = "RAG_VECTORSTORE__QDRANT_URL", value = "http://qdrant.${var.cluster_name}.local:6333" },
+        { name = "RAG_DISTRIBUTED_INGESTION__ENABLED", value = "true" },
+        { name = "RAG_DISTRIBUTED_INGESTION__SQS_QUEUE_URL", value = var.sqs_queue_url },
+        { name = "RAG_DISTRIBUTED_INGESTION__CORPUS_S3_BUCKET", value = var.s3_bucket_name },
+        { name = "RAG_DISTRIBUTED_INGESTION__CORPUS_S3_PREFIX", value = var.corpus_s3_prefix },
+        { name = "RAG_CHUNK_STORAGE__BACKEND", value = "s3" },
+        { name = "RAG_CHUNK_STORAGE__S3_BUCKET", value = var.s3_bucket_name },
+        { name = "RAG_CHUNK_STORAGE__S3_PREFIX", value = var.chunk_s3_prefix },
+        { name = "RAG_MANIFESTS_S3_PREFIX", value = var.manifests_s3_prefix },
+      ]
+      secrets = [
+        { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
+        { name = "RAG_DISTRIBUTED_INGESTION__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+        { name = "RAG_CHUNK_STORAGE__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.orchestrator.name
+          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-stream-prefix" = "orchestrator"
+        }
+      }
+    }
+  ])
+
+  tags = var.tags
+}
+
+# --- Query/eval task (run-to-completion) ---
+resource "aws_cloudwatch_log_group" "query_eval" {
+  name              = "/ecs/${var.cluster_name}/query-eval"
+  retention_in_days = 30
+  tags              = var.tags
+}
+
+resource "aws_ecs_task_definition" "query_eval" {
+  family                   = "${var.cluster_name}-query-eval"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = var.query_eval_cpu
+  memory                   = var.query_eval_memory
+  execution_role_arn       = aws_iam_role.task_execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "query-eval"
+      image     = var.app_image
+      essential = true
+      command   = ["python", "scripts/run_remote_eval.py"]
+      environment = [
+        { name = "RAG_VECTORSTORE__BACKEND", value = "qdrant" },
+        { name = "RAG_VECTORSTORE__QDRANT_URL", value = "http://qdrant.${var.cluster_name}.local:6333" },
+        { name = "RAG_CHUNK_STORAGE__BACKEND", value = "s3" },
+        { name = "RAG_CHUNK_STORAGE__S3_BUCKET", value = var.s3_bucket_name },
+        { name = "RAG_CHUNK_STORAGE__S3_PREFIX", value = var.chunk_s3_prefix },
+        { name = "RAG_EVAL_S3_PREFIX", value = var.eval_s3_prefix },
+        { name = "RAG_MANIFESTS_S3_PREFIX", value = var.manifests_s3_prefix },
+      ]
+      secrets = [
+        { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
+        { name = "RAG_DISTRIBUTED_INGESTION__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+        { name = "RAG_CHUNK_STORAGE__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.query_eval.name
+          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-stream-prefix" = "query-eval"
+        }
+      }
+    }
+  ])
+
+  tags = var.tags
+}
