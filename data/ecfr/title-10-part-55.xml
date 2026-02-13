@@ -1,0 +1,495 @@
+<?xml version="1.0"?>
+<DIV5 N="55" TYPE="PART" VOLUME="2" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55&amp;quot;}">
+<HEAD>PART 55&#x2014;OPERATORS' LICENSES
+</HEAD>
+<AUTH>
+<HED>Authority:</HED><PSPACE>Atomic Energy Act of 1954, secs. 107, 161, 181, 182, 183, 186, 187, 223, 234 (42 U.S.C. 2137, 2201, 2231, 2232, 2233, 2236, 2237, 2273, 2282); Energy Reorganization Act of 1974, secs. 201, 202 (42 U.S.C. 5841, 5842); Nuclear Waste Policy Act of 1982, sec. 306 (42 U.S.C. 10226); 44 U.S.C. 3504 note.
+</PSPACE></AUTH>
+<SOURCE>
+<HED>Source:</HED><PSPACE>52 FR 9460, Mar. 25, 1987, unless otherwise noted.
+</PSPACE></SOURCE>
+<EDNOTE>
+<HED>Editorial Note:</HED><PSPACE>Nomenclature changes to part 55 appear at 80 FR 74980, Dec. 1, 2015.</PSPACE></EDNOTE>
+<DIV6 N="A" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-A&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart A&amp;quot;}">
+<HEAD>Subpart A&#x2014;General Provisions</HEAD>
+<DIV8 N="55.1" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.1&quot;,&quot;citation&quot;:&quot;10 CFR 55.1&quot;}">
+<HEAD>&#xA7; 55.1 Purpose.</HEAD>
+<P>The regulations in this part:</P>
+<P>(a) Establish procedures and criteria for the issuance of licenses to operators and senior operators of utilization facilities licensed under the Atomic Energy Act of 1954, as amended, or Section 202 of the Energy Reorganization Act of 1974, as amended, and part 50, part 52, or part 54 of this chapter,</P>
+<P>(b) Provide for the terms and conditions upon which the Commission will issue or modify these licenses, and</P>
+<P>(c) Provide for the terms and conditions to maintain and renew these licenses.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 72 FR 49560, Aug. 28, 2007]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.2" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.2&quot;,&quot;citation&quot;:&quot;10 CFR 55.2&quot;}">
+<HEAD>&#xA7; 55.2 Scope.</HEAD>
+<P>The regulations in this part apply to&#x2014;</P>
+<P>(a) Any individual who manipulates the controls of any utilization facility licensed under parts 50, 52, or 54 of this chapter,</P>
+<P>(b) Any individual designated by a facility licensee to be responsible for directing any licensed activity of a licensed operator.</P>
+<P>(c) Any facility license.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 59 FR 5938, Feb. 9, 1994; 72 FR 49560, Aug. 28, 2007]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.3" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.3&quot;,&quot;citation&quot;:&quot;10 CFR 55.3&quot;}">
+<HEAD>&#xA7; 55.3 License requirements.</HEAD>
+<P>A person must be authorized by a license issued by the Commission to perform the function of an operator or a senior operator as defined in this part.</P>
+</DIV8>
+
+<DIV8 N="55.4" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.4&quot;,&quot;citation&quot;:&quot;10 CFR 55.4&quot;}">
+<HEAD>&#xA7; 55.4 Definitions.</HEAD>
+<P>As used in this part:</P>
+<P><I>Act</I> means the Atomic Energy Act of 1954, including any amendments to the Act.</P>
+<P><I>Actively performing the functions of an operator or senior operator</I> means that an individual has a position on the shift crew that requires the individual to be licensed as defined in the facility's technical specifications, and that the individual carries out and is responsible for the duties covered by that position.</P>
+<P><I>Commission</I> means the Nuclear Regulatory Commission or its duly authorized representatives.</P>
+<P><I>Controls</I> when used with respect to a nuclear reactor means apparatus and mechanisms the manipulation of which directly affects the reactivity or power level of the reactor.</P>
+<P><I>Facility</I> means any utilization facility as defined in part 50 of this chapter. In cases for which a license is issued for operation of two or more facilities, <I>facility</I> means all facilities identified in the license.</P>
+<P><I>Facility licensee</I> means an applicant for or holder of a license for a facility.</P>
+<P><I>Licensee</I> means an individual licensed operator or senior operator.</P>
+<P><I>Operator</I> means any individual licensed under this part to manipulate a control of a facility.</P>
+<P><I>Performance testing</I> means testing conducted to verify a simulation facility's performance as compared to actual or predicted reference plant performance.</P>
+<P><I>Physician</I> means an individual licensed by a State or territory of the United States, the District of Columbia or the Commonwealth of Puerto Rico to dispense drugs in the practice of medicine.</P>
+<P><I>Plant-referenced simulator</I> means a simulator modeling the systems of the reference plant with which the operator interfaces in the control room, including operating consoles, and which permits use of the reference plant's procedures.</P>
+<P><I>Reference plant</I> means the specific nuclear power plant from which a simulation facility's control room configuration, system control arrangement, and design data are derived.</P>
+<P><I>Senior operator</I> means any individual licensed under this part to manipulate the controls of a facility and to direct the licensed activities of licensed operators.</P>
+<P><I>Simulation facility</I> means one or more of the following components, alone or in combination: used for either the partial conduct of operating tests for operators, senior operators, and license applicants, or to establish on-the-job training and experience prerequisites for operator license eligibility:</P>
+<P>(1) A plant-referenced simulator;</P>
+<P>(2) A Commission-approved simulator under &#xA7; 55.46(b); or</P>
+<P>(3) Another simulation device, including part-task and limited scope simulation devices, approved under &#xA7; 55.46(b).</P>
+<P><I>Systems approach to training</I> means a training program that includes the following five elements:</P>
+<P>(1) Systematic analysis of the jobs to be performed.</P>
+<P>(2) Learning objectives derived from the analysis which describe desired performance after training.</P>
+<P>(3) Training design and implementation based on the learning objectives.</P>
+<P>(4) Evaluation of trainee mastery of the objectives during training.</P>
+<P>(5) Evaluation and revision of the training based on the performance of trained personnel in the job setting.</P>
+<P><I>United States,</I> when used in a geographical sense, includes Puerto Rico and all territories and possessions of the United States.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 66 FR 52667, Oct. 17, 2001]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.5" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.5&quot;,&quot;citation&quot;:&quot;10 CFR 55.5&quot;}">
+<HEAD>&#xA7; 55.5 Communications.</HEAD>
+<P>(a) Except as provided under a regional licensing program identified in paragraph (b) of this section, an applicant or licensee or facility licensee shall submit any communication or report concerning the regulations in this part and shall submit any application filed under these regulations to the Commission as follows:</P>
+<P>(1) By mail addressed to&#x2014;Director, Office of Nuclear Reactor Regulation, U.S. Nuclear Regulatory Commission, Washington, DC 20555-0001; or</P>
+<P>(2) By delivery in person to the NRC's offices at 11555 Rockville Pike, Rockville, Maryland, or</P>
+<P>(3) Where practicable, by electronic submission, for example, via Electronic Information Exchange, or CD-ROM. Electronic submissions must be made in a manner that enables the NRC to receive, read, authenticate, distribute, and archive the submission, and process and retrieve it a single page at a time. Detailed guidance on making electronic submissions can be obtained by visiting the NRC's Web site at <I>http://www.nrc.gov/site-help/e-submittals.html</I>; by e-mail to <I>MSHD.Resource@nrc.gov</I>; or by writing the Office of the Chief Information Officer, U.S. Nuclear Regulatory Commission, Washington, DC 20555-0001. The guidance discusses, among other topics, the formats the NRC can accept, the use of electronic signatures, and the treatment of nonpublic information.</P>
+<P>(b)(1) The Director, Office of Nuclear Reactor Regulation, has delegated to the Regional Administrators of Regions I, II, III, and IV authority and responsibility under the regulations in this part for the issuance and renewal of licenses for operators and senior operators of nuclear power reactors licensed under 10 CFR part 50 or part 52 of this chapter and located in these regions.</P>
+<P>(2) Any application for a license or license renewal filed under the regulations in this part involving a nuclear power reactor licensed under 10 CFR part 50 or part 52 of this chapter and any related inquiry, communication, information, or report must be submitted to the Regional Administrator by an appropriate method listed in paragraph (a) of this section. The Regional Administrator or the Administrator's designee will transmit to the Director, Office of Nuclear Reactor Regulation, any matter that is not within the scope of the Regional Administrator's delegated authority.</P>
+<P>(i) If the nuclear power reactor is located in Region I, submissions must be made to the Regional Administrator of Region I. Submissions by mail or hand delivery must be addressed to the Administrator at U.S. Nuclear Regulatory Commission, 475 Allendale Road, Suite 102, King of Prussia, PA 19406-1415; where email is appropriate it should be addressed to <I>RidsRgn1MailCenter.Resource@nrc.gov.</I></P>
+<P>(ii) If the nuclear power reactor is located in Region II, submissions must be made to the Regional Administrator of Region II. Submissions by mail or hand delivery must be addressed to the Regional Administrator at U.S. Nuclear Regulatory Commission, 245 Peachtree Center Avenue, NE., Suite 1200, Atlanta, Georgia 30303-1257. Where e-mail is appropriate, it should be addressed to <I>RidsRgn2MailCenter@nrc.gov.</I></P>
+<P>(iii) If the nuclear power reactor is located in Region III, submissions must be made to the Regional Administrator of Region III. Submissions by mail or hand delivery must be addressed to the Administrator at U.S. Nuclear Regulatory Commission, 2443 Warrenville Road, Suite 210, Lisle, IL 60532-4352; where e-mail is appropriate it should be addressed to <I>RidsRgn3MailCenter@nrc.gov.</I></P>
+<P>(iv) If the nuclear power reactor is located in Region IV, submissions must be made to the Regional Administrator of Region IV. Submission by mail or hand delivery must be addressed to the Administrator at U.S. Nuclear Regulatory Commission, 1600 E. Lamar Blvd., Arlington, TX 76011-4511; where email is appropriate, it should be addressed to <I>RidsRgn4MailCenter@nrc.gov.</I></P>
+<P>(3) Any application for a license or license renewal filed under the regulations in this part and all other submissions involving a utilization facility licensed under part 50 of this chapter that is not a power reactor and any related inquiry, communication, information, or report must be submitted to the Office of Nuclear Reactor Regulation, Director of the Division of Advanced Reactors and Non-Power Production and Utilization Facilities at the NRC's headquarters, by an appropriate method listed in paragraph (a) of this section.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 89 FR 106252, Dec. 30, 2024]
+</CITA>
+<EDNOTE>
+<HED>Editorial Note:</HED><PSPACE>For <E T="04">Federal Register</E> citations affecting &#xA7; 55.5, see the List of CFR Sections Affected, which appears in the Finding Aids section of the printed volume and at <I>www.govinfo.gov.</I></PSPACE></EDNOTE>
+</DIV8>
+
+<DIV8 N="55.6" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.6&quot;,&quot;citation&quot;:&quot;10 CFR 55.6&quot;}">
+<HEAD>&#xA7; 55.6 Interpretations.</HEAD>
+<P>Except as specifically authorized by the Commission in writing, no interpretation of the meaning of the regulations in this part by any officer or employee of the Commission other than a written interpretation by the General Counsel will be recognized to be binding upon the Commission.</P>
+</DIV8>
+
+<DIV8 N="55.7" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.7&quot;,&quot;citation&quot;:&quot;10 CFR 55.7&quot;}">
+<HEAD>&#xA7; 55.7 Additional requirements.</HEAD>
+<P>The Commission may, by rule, regulation, or order, impose upon any licensee such requirements, in addition to those established in the regulations in this part, as it deems appropriate or necessary to protect health and to minimize danger to life or property.</P>
+</DIV8>
+
+<DIV8 N="55.8" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.8&quot;,&quot;citation&quot;:&quot;10 CFR 55.8&quot;}">
+<HEAD>&#xA7; 55.8 Information collection requirements: OMB approval.</HEAD>
+<P>(a) The Nuclear Regulatory Commission has submitted the information collection requirements contained in this part to the Office of Management and Budget (OMB) for approval as required by the Paperwork Reduction Act (44 U.S.C. 3501 <I>et seq.</I>). The NRC may not conduct or sponsor, and a person is not required to respond to, a collection of information unless it displays a currently valid OMB control number. OMB has approved the information collection requirements contained in this part under control number 3150-0018.</P>
+<P>(b) The approved information collection requirements contained in this part appear in &#xA7;&#xA7; 55.11, 55.25, 55.27, 55.31, 55.35, 55.40, 55.41, 55.43, 55.45, 55.47, 55.53, 55.57, and 55.59.</P>
+<P>(c) This part contains information collection requirements in addition to those approved under the control number specified in paragraph (a) of this section. These information collection requirements and the control numbers under which they are approved are as follows:</P>
+<P>(1) In &#xA7;&#xA7; 55.23, 55.25, 55.27, 55.31, NRC Form 396 is approved under control number 3150-0024.</P>
+<P>(2) In &#xA7;&#xA7; 55.31, 55.35, 55.47, and 55.57, NRC Form 398 is approved under control number 3150-0090.</P>
+<CITA TYPE="N">[62 FR 52188, Oct. 6, 1997, as amended at 64 FR 19878, Apr. 23, 1999; 66 FR 52667, Oct. 17, 2001; 67 FR 67100, Nov. 4, 2002]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.9" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.9&quot;,&quot;citation&quot;:&quot;10 CFR 55.9&quot;}">
+<HEAD>&#xA7; 55.9 Completeness and accuracy of information.</HEAD>
+<P>Information provided to the Commission by an applicant for a license or by a licensee or information required by statute or by the Commission's regulations, orders, or license conditions to be maintained by the applicant or the licensee shall be complete and accurate in all material respects.</P>
+<CITA TYPE="N">[52 FR 49372, Dec. 31, 1987]
+</CITA>
+</DIV8>
+
+</DIV6>
+<DIV6 N="B" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-B&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart B&amp;quot;}">
+<HEAD>Subpart B&#x2014;Exemptions</HEAD>
+<DIV8 N="55.11" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.11&quot;,&quot;citation&quot;:&quot;10 CFR 55.11&quot;}">
+<HEAD>&#xA7; 55.11 Specific exemptions.</HEAD>
+<P>The Commission may, upon application by an interested person, or upon its own initiative, grant such exemptions from the requirements of the regulations in this part as it determines are authorized by law and will not endanger life or property and are otherwise in the public interest.</P>
+</DIV8>
+
+<DIV8 N="55.13" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.13&quot;,&quot;citation&quot;:&quot;10 CFR 55.13&quot;}">
+<HEAD>&#xA7; 55.13 General exemptions.</HEAD>
+<P>The regulations in this part do not require a license for an individual who&#x2014;</P>
+<P>(a) Under the direction and in the presence of a licensed operator or senior operator, manipulates the controls of&#x2014;</P>
+<P>(1) A research or training reactor as part of the individual's training as a student, or</P>
+<P>(2) A facility as a part of the individual's training in a facility licensee's training program as approved by the Commission to qualify for an operator license under this part.</P>
+<P>(b) Under the direction and in the presence of a licensed senior operator, manipulates the controls of a facility to load or unload the fuel into, out of, or within the reactor vessel.</P>
+</DIV8>
+
+</DIV6>
+<DIV6 N="C" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-C&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart C&amp;quot;}">
+<HEAD>Subpart C&#x2014;Medical Requirements</HEAD>
+<DIV8 N="55.21" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.21&quot;,&quot;citation&quot;:&quot;10 CFR 55.21&quot;}">
+<HEAD>&#xA7; 55.21 Medical examination.</HEAD>
+<P>An applicant for a license shall have a medical examination by a physician. A licensee shall have a medical examination by a physician every two years. The physician shall determine that the applicant or licensee meets the requirements of &#xA7; 55.33(a)(1).</P>
+</DIV8>
+
+<DIV8 N="55.23" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.23&quot;,&quot;citation&quot;:&quot;10 CFR 55.23&quot;}">
+<HEAD>&#xA7; 55.23 Certification.</HEAD>
+<P>To certify the medical fitness of the applicant, an authorized representative of the facility licensee shall complete and sign NRC Form 396, &#x201C;Certification of Medical Examination by Facility Licensee,&#x201D; which can be obtained by writing the Office of the Chief Information Officer, U.S. Nuclear Regulatory Commission, Washington, DC 20555-0001, by calling (301) 415-7232, or by visiting the NRC's Web site at <I>http://www.nrc.gov</I> and selecting forms from the index found on the home page.</P>
+<P>(a) Form NRC-396 must certify that a physician has conducted the medical examination of the applicant as required in &#xA7; 55.21.</P>
+<P>(b) When the certification requests a conditional license based on medical evidence, the medical evidence must be submitted on NRC Form 396 to the Commission and the Commission then makes a determination in accordance with &#xA7; 55.33.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 53 FR 43421, Oct. 27, 1988; 68 FR 58813, Oct. 10, 2003; 73 FR 30458, May 28, 2008]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.25" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.25&quot;,&quot;citation&quot;:&quot;10 CFR 55.25&quot;}">
+<HEAD>&#xA7; 55.25 Incapacitation because of disability or illness.</HEAD>
+<P>If, during the term of the license, the licensee develops a permanent physical or mental condition that causes the licensee to fail to meet the requirements of &#xA7; 55.21 of this part, the facility licensee shall notify the Commission, within 30 days of learning of the diagnosis, in accordance with &#xA7; 50.74(c). For conditions for which a conditional license (as described in &#xA7; 55.33(b) of this part) is requested, the facility licensee shall provide medical certification on Form NRC 396 to the Commission (as described in &#xA7; 55.23 of this part).</P>
+<CITA TYPE="N">[60 FR 13617, Mar. 14, 1995]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.27" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.27&quot;,&quot;citation&quot;:&quot;10 CFR 55.27&quot;}">
+<HEAD>&#xA7; 55.27 Documentation.</HEAD>
+<P>The facility licensee shall document and maintain the results of medical qualifications data, test results, and each operator's or senior operator's medical history for the current license period and provide the documentation to the Commission upon request. The facility licensee shall retain this documentation while an individual performs the functions of an operator or senior operator.</P>
+</DIV8>
+
+</DIV6>
+<DIV6 N="D" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-D&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart D&amp;quot;}">
+<HEAD>Subpart D&#x2014;Applications</HEAD>
+<DIV8 N="55.31" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.31&quot;,&quot;citation&quot;:&quot;10 CFR 55.31&quot;}">
+<HEAD>&#xA7; 55.31 How to apply.</HEAD>
+<P>(a) The applicant shall:</P>
+<P>(1) Complete NRC Form 398, &#x201C;Personal Qualification Statement&#x2014;Licensee,&#x201D; which can be obtained by writing the Office of the Chief Information Officer, U.S. Nuclear Regulatory Commission, Washington, DC 20555-0001, by calling (301) 415-7232, or by visiting the NRC's Web site at <I>http://www.nrc.gov</I> and selecting forms from the index found on the home page;</P>
+<P>(2) File an original of NRC Form 398, together with the information required in paragraphs (a)(3), (4), (5) and (6) of this section, with the appropriate Regional Administrator;</P>
+<P>(3) Submit a written request from an authorized representative of the facility licensee by which the applicant will be employed that the written examination and operating test be administered to the applicant;</P>
+<P>(4) Provide evidence that the applicant has successfully completed the facility licensee's requirements to be licensed as an operator or senior operator and of the facility licensee's need for an operator or a senior operator to perform assigned duties. An authorized representative of the facility licensee shall certify this evidence on Form NRC-398. This certification must include details of the applicant's qualifications, and details on courses of instruction administered by the facility licensee, and describe the nature of the training received at the facility, and the startup and shutdown experience received. In lieu of these details, the Commission may accept certification that the applicant has successfully completed a Commission-approved training program that is based on a systems approach to training and that uses a simulation facility acceptable to the Commission under &#xA7; 55.45(b) of this part;</P>
+<P>(5) Provide evidence that the applicant, as a trainee, has successfully manipulated the controls of either the facility for which a license is sought or a plant-referenced simulator that meets the requirements of &#xA7; 55.46(c). At a minimum, five significant control manipulations must be performed that affect reactivity or power level. Control manipulations performed on the plant-referenced simulator may be chosen from a representative sampling of the control manipulations and plant evolutions described in &#xA7; 55.59(c)(3)(i)(A-F), (R), (T), (W), and (X) of this part, as applicable to the design of the plant for which the license application is submitted. For licensed operators applying for a senior operator license, certification that the operator has successfully operated the controls of the facility as a licensed operator shall be accepted; and</P>
+<P>(6) Provide certification by the facility licensee of medical condition and general health on Form NRC-396, to comply with &#xA7;&#xA7; 55.21, 55.23 and 55.33(a)(1).</P>
+<P>(b) The Commission may at any time after the application has been filed, and before the license has expired, require further information under oath or affirmation in order to enable it to determine whether to grant or deny the application or whether to revoke, modify, or suspend the license.</P>
+<P>(c) An applicant whose application has been denied because of a medical condition or general health may submit a further medical report at any time as a supplement to the application.</P>
+<P>(d) Each application and statement must contain complete and accurate disclosure as to all matters required to be disclosed. The applicant shall sign statements required by paragraphs (a) (1) and (2) of this section.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 53 FR 43421, Oct. 27, 1988; 66 FR 52667, Oct. 17, 2001; 68 FR 58813, Oct. 10, 2003; 73 FR 30458, May 28, 2008; 86 FR 43403, Aug. 9, 2021]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.33" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.33&quot;,&quot;citation&quot;:&quot;10 CFR 55.33&quot;}">
+<HEAD>&#xA7; 55.33 Disposition of an initial application.</HEAD>
+<P>(a) <I>Requirements for the approval of an initial application.</I> The Commission will approve an initial application for a license pursuant to the regulations in this part, if it finds that&#x2014;</P>
+<P>(1) <I>Health.</I> The applicant's medical condition and general health will not adversely affect the performance of assigned operator job duties or cause operational errors endangering public health and safety. The Commission will base its finding upon the certification by the facility licensee as detailed in &#xA7; 55.23.</P>
+<P>(2) <I>Written examination and operating test.</I> The applicant has passed the requisite written examination and operating test in accordance with &#xA7;&#xA7; 55.41 and 55.45 or 55.43 and 55.45. These examinations and tests determine whether the applicant for an operator's license has learned to operate a facility competently and safely, and additionally, in the case of a senior operator, whether the applicant has learned to direct the licensed activities of licensed operators competently and safely.</P>
+<P>(b) <I>Conditional license.</I> If an applicant's general medical condition does not meet the minimum standards under &#xA7; 55.33(a)(1) of this part, the Commission may approve the application and include conditions in the license to accommodate the medical defect. The Commission will consider the recommendations and supporting evidence of the facility licensee and of the examining physician (provided on Form NRC-396) in arriving at its decision.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 86 FR 67843, Nov. 30, 2021]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.35" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.35&quot;,&quot;citation&quot;:&quot;10 CFR 55.35&quot;}">
+<HEAD>&#xA7; 55.35 Re-applications.</HEAD>
+<P>(a) An applicant whose application for a license has been denied because of failure to pass the written examination or operating test, or both, may file a new application two months after the date of denial. The application must be submitted on Form NRC-398 and include a statement signed by an authorized representative of the facility licensee by whom the applicant will be employed that states in detail the extent of the applicant's additional training since the denial and certifies that the applicant is ready for re-examination. An applicant may file a third application six months after the date of denial of the second application, and may file further successive applications two years after the date of denial of each prior application. The applicant shall submit each successive application on Form NRC-398 and include a statement of additional training.</P>
+<P>(b) An applicant who has passed either the written examination or operating test and failed the other may request in a new application on Form NRC-398 to be excused from re-examination on the portions of the examination or test which the applicant has passed. The Commission may in its discretion grant the request, if it determines that sufficient justification is presented.</P>
+</DIV8>
+
+</DIV6>
+<DIV6 N="E" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-E&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart E&amp;quot;}">
+<HEAD>Subpart E&#x2014;Written Examinations and Operating Tests</HEAD>
+<DIV8 N="55.40" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.40&quot;,&quot;citation&quot;:&quot;10 CFR 55.40&quot;}">
+<HEAD>&#xA7; 55.40 Implementation.</HEAD>
+<P>(a) The Commission shall use the criteria in NUREG-1021, &#x201C;Operator Licensing Examination Standards for Power Reactors,&#x201D;
+<SU>1</SU>
+<FTREF/> in effect six months before the examination date to prepare the written examinations required by &#xA7;&#xA7; 55.41 and 55.43 and the operating tests required by &#xA7; 55.45. The Commission shall also use the criteria in NUREG-1021 to evaluate the written examinations and operating tests prepared by power reactor facility licensees pursuant to paragraph (b) of this section.</P>
+<FTNT>
+<P><SU>1</SU> Copies of NUREGs may be purchased from the Superintendent of Documents, U.S. Government Publishing Office, P.O. Box 38082, Washington, DC 20402-9328. Copies are also available from the National Technical Information Service, 5301 Shawnee Road, Alexandria, VA 22312. A copy is available for inspection and/or copying in the NRC Public Document Room, One White Flint North, 11555 Rockville Pike (O-1 F21), Rockville, MD.</P></FTNT>
+<P>(b) Power reactor facility licensees may prepare, proctor, and grade the written examinations required by &#xA7;&#xA7; 55.41 and 55.43 and may prepare the operating tests required by &#xA7; 55.45, subject to the following conditions:</P>
+<P>(1) Power reactor facility licensees shall prepare the required examinations and tests in accordance with the criteria in NUREG-1021 as described in paragraph (a) of this section;</P>
+<P>(2) Pursuant to &#xA7; 55.49, power reactor facility licensees shall establish, implement, and maintain procedures to control examination security and integrity;</P>
+<P>(3) An authorized representative of the power reactor facility licensee shall approve the required examinations and tests before they are submitted to the Commission for review and approval; and</P>
+<P>(4) Power reactor facility licensees must receive Commission approval of their proposed written examinations and operating tests.</P>
+<P>(c) In lieu of paragraph (b) of this section and upon written request from a power reactor facility licensee pursuant to &#xA7; 55.31(a)(3), the Commission shall, for that facility licensee, prepare, proctor, and grade, the written examinations required by &#xA7;&#xA7; 55.41 and 55.43 and the operating tests required by &#xA7; 55.45. In addition, the Commission may exercise its discretion and reject a power reactor facility licensee's determination to elect paragraph (b) of this section, in which case the Commission shall prepare, proctor, and grade the required written examinations and operating tests for that facility licensee.</P>
+<P>(d) The Commission shall use the criteria in NUREG-1478, &#x201C;Operator Licensing Examiner Standards for Research and Test Reactors,&#x201D; for all non-power reactors to prepare, proctor, and grade the written examinations required by &#xA7;&#xA7; 55.41 and 55.43 and the operating tests required by &#xA7; 55.45 for non-power reactor facility licensees.</P>
+<CITA TYPE="N">[64 FR 19878, Apr. 23, 1999, as amended at 69 FR 76600, Dec. 22, 2004; 79 FR 66604, Nov. 10, 2014; 80 FR 45844, Aug. 3, 2015; 80 FR 74980, Dec. 1, 2015; 89 FR 106252, Dec. 30, 2024]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.41" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.41&quot;,&quot;citation&quot;:&quot;10 CFR 55.41&quot;}">
+<HEAD>&#xA7; 55.41 Written examination: Operators.</HEAD>
+<P>(a) <I>Content.</I> The written examination for an operator will contain a representative selection of questions on the knowledge, skills, and abilities needed to perform licensed operator duties. The knowledge, skills, and abilities will be identified, in part, from learning objectives derived from a systematic analysis of licensed operator duties performed by each facility licensee and contained in its training program and from information in the Final Safety Analysis Report, system description manuals and operating procedures, facility license and license amendments, Licensee Event Reports, and other materials requested from the facility licensee by the Commission.</P>
+<P>(b) The written examination for an operator for a facility will include a representative sample from among the following 14 items, to the extent applicable to the facility.</P>
+<P>(1) Fundamentals of reactor theory, including fission process, neutron multiplication, source effects, control rod effects, criticality indications, reactivity coefficients, and poison effects.</P>
+<P>(2) General design features of the core, including core structure, fuel elements, control rods, core instrumentation, and coolant flow.</P>
+<P>(3) Mechanical components and design features of the reactor primary system.</P>
+<P>(4) Secondary coolant and auxiliary systems that affect the facility.</P>
+<P>(5) Facility operating characteristics during steady state and transient conditions, including coolant chemistry, causes and effects of temperature, pressure and reactivity changes, effects of load changes, and operating limitations and reasons for these operating characteristics.</P>
+<P>(6) Design, components, and functions of reactivity control mechanisms and instrumentation.</P>
+<P>(7) Design, components, and functions of control and safety systems, including instrumentation, signals, interlocks, failure modes, and automatic and manual features.</P>
+<P>(8) Components, capacity, and functions of emergency systems.</P>
+<P>(9) Shielding, isolation, and containment design features, including access limitations.</P>
+<P>(10) Administrative, normal, abnormal, and emergency operating procedures for the facility.</P>
+<P>(11) Purpose and operation of radiation monitoring systems, including alarms and survey equipment.</P>
+<P>(12) Radiological safety principles and procedures.</P>
+<P>(13) Procedures and equipment available for handling and disposal of radioactive materials and effluents.</P>
+<P>(14) Principles of heat transfer thermodynamics and fluid mechanics.</P>
+</DIV8>
+
+<DIV8 N="55.43" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.43&quot;,&quot;citation&quot;:&quot;10 CFR 55.43&quot;}">
+<HEAD>&#xA7; 55.43 Written examination: Senior operators.</HEAD>
+<P>(a) <I>Content.</I> The written examination for a senior operator will contain a representative selection of questions on the knowledge, skills, and abilities needed to perform licensed senior operator duties. The knowledge, skills, and abilities will be identified, in part, from learning objectives derived from a systematic analysis of licensed senior operator duties performed by each facility licensee and contained in its training program and from information in the Final Safety Analysis Report, system description manuals and operating procedures, facility license and license amendments, Licensee Event Reports, and other materials requested from the facility licensee by the Commission.</P>
+<P>(b) The written examination for a senior operator for a facility will include a representative sample from among the following seven items and the 14 items specified in &#xA7; 55.41 of this part, to the extent applicable to the facility:</P>
+<P>(1) Conditions and limitations in the facility license.</P>
+<P>(2) Facility operating limitations in the technical specifications and their bases.</P>
+<P>(3) Facility licensee procedures required to obtain authority for design and operating changes in the facility.</P>
+<P>(4) Radiation hazards that may arise during normal and abnormal situations, including maintenance activities and various contamination conditions.</P>
+<P>(5) Assessment of facility conditions and selection of appropriate procedures during normal, abnormal, and emergency situations.</P>
+<P>(6) Procedures and limitations involved in initial core loading, alterations in core configuration, control rod programming, and determination of various internal and external effects on core reactivity.</P>
+<P>(7) Fuel handling facilities and procedures.</P>
+</DIV8>
+
+<DIV8 N="55.45" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.45&quot;,&quot;citation&quot;:&quot;10 CFR 55.45&quot;}">
+<HEAD>&#xA7; 55.45 Operating tests.</HEAD>
+<P>(a) <I>Content.</I> The operating tests administered to applicants for operator and senior operator licenses in accordance with paragraph (b)(1) of this section are generally similar in scope. The content will be identified, in part, from learning objectives derived from a systematic analysis of licensed operator or senior operator duties performed by each facility licensee and contained in its training program and from information in the Final Safety Analysis Report, system description manuals and operating procedures, facility license and license amendments, Licensee Event Reports, and other materials requested from the facility licensee by the Commission. The operating test, to the extent applicable, requires the applicant to demonstrate an understanding of and the ability to perform the actions necessary to accomplish a representative sample from among the following 13 items.</P>
+<P>(1) Perform pre-startup procedures for the facility, including operating of those controls associated with plant equipment that could affect reactivity.</P>
+<P>(2) Manipulate the console controls as required to operate the facility between shutdown and designated power levels.</P>
+<P>(3) Identify annunciators and condition-indicating signals and perform appropriate remedial actions where appropriate.</P>
+<P>(4) Identify the instrumentation systems and the significance of facility instrument readings.</P>
+<P>(5) Observe and safely control the operating behavior characteristics of the facility.</P>
+<P>(6) Perform control manipulations required to obtain desired operating results during normal, abnormal, and emergency situations.</P>
+<P>(7) Safely operate the facility's heat removal systems, including primary coolant, emergency coolant, and decay heat removal systems, and identify the relations of the proper operation of these systems to the operation of the facility.</P>
+<P>(8) Safely operate the facility's auxiliary and emergency systems, including operation of those controls associated with plant equipment that could affect reactivity or the release of radioactive materials to the environment.</P>
+<P>(9) Demonstrate or describe the use and function of the facility's radiation monitoring systems, including fixed radiation monitors and alarms, portable survey instruments, and personnel monitoring equipment.</P>
+<P>(10) Demonstrate knowledge of significant radiation hazards, including permissible levels in excess of those authorized, and ability to perform other procedures to reduce excessive levels of radiation and to guard against personnel exposure.</P>
+<P>(11) Demonstrate knowledge of the emergency plan for the facility, including, as appropriate, the operator's or senior operator's responsibility to decide whether the plan should be executed and the duties under the plan assigned.</P>
+<P>(12) Demonstrate the knowledge and ability as appropriate to the assigned position to assume the responsibilities associated with the safe operation of the facility.</P>
+<P>(13) Demonstrate the applicant's ability to function within the control room team as appropriate to the assigned position, in such a way that the facility licensee's procedures are adhered to and that the limitations in its license and amendments are not violated.</P>
+<P>(b) <I>Implementation&#x2014;Administration.</I> The operating test will be administered in a plant walkthrough and in either&#x2014;</P>
+<P>(1) A simulation facility that the Commission has approved for use after application has been made by the facility licensee under &#xA7; 55.46(b);</P>
+<P>(2) A plant-referenced simulator (&#xA7; 55.46(c)); or</P>
+<P>(3) The plant, if approved for use in the administration of the operating test by the Commission under &#xA7; 55.46(b).</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 53 FR 43421, Oct. 27, 1988; 62 FR 59276, Nov. 3, 1997; 66 FR 52667, Oct. 17, 2001]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.46" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.46&quot;,&quot;citation&quot;:&quot;10 CFR 55.46&quot;}">
+<HEAD>&#xA7; 55.46 Simulation facilities.</HEAD>
+<P>(a) <I>General.</I> This section addresses the use of a simulation facility for the administration of the operating test and plant-referenced simulators to meet experience requirements for applicants for operator and senior operator licenses.</P>
+<P>(b) <I>Commission-approved simulation facilities and Commission approval of use of the plant in the administration of the operating test.</I> (1) Facility licensees that propose to use a simulation facility, other than a plant-referenced simulator, or the plant in the administration of the operating test under &#xA7;&#xA7; 55.45(b)(1) or 55.45(b)(3), shall request approval from the Commission. This request must include:</P>
+<P>(i) A description of the components of the simulation facility intended to be used, or the way the plant would be used for each part of the operating test, unless previously approved; and</P>
+<P>(ii) A description of the performance tests for the simulation facility as part of the request, and the results of these tests; and</P>
+<P>(iii) A description of the procedures for maintaining examination and test integrity consistent with the requirements of &#xA7; 55.49.</P>
+<P>(2) The Commission will approve a simulation facility or use of the plant for administration of operating tests if it finds that the simulation facility and its proposed use, or the proposed use of the plant, are suitable for the conduct of operating tests for the facility licensee's reference plant under &#xA7; 55.45(a).</P>
+<P>(c) <I>Plant-referenced simulators.</I> (1) A plant-referenced simulator used for the administration of the operating test or to meet experience requirements in &#xA7; 55.31(a)(5) must demonstrate expected plant response to operator input and to normal, transient, and accident conditions to which the simulator has been designed to respond. The plant-referenced simulator must be designed and implemented so that it:</P>
+<P>(i) Is sufficient in scope and fidelity to allow conduct of the evolutions listed in &#xA7;&#xA7; 55.45(a)(1) through (13), and 55.59(c)(3)(i)(A) through (AA), as applicable to the design of the reference plant.</P>
+<P>(ii) Allows for the completion of control manipulations for operator license applicants.</P>
+<P>(2) Facility licensees that propose to use a plant-referenced simulator to meet the control manipulation requirements in &#xA7; 55.31(a)(5) must ensure that:</P>
+<P>(i) The plant-referenced simulator utilizes models relating to nuclear and thermal-hydraulic characteristics that replicate the most recent core load in the nuclear power reference plant for which a license is being sought; and</P>
+<P>(ii) Simulator fidelity has been demonstrated so that significant control manipulations are completed without procedural exceptions, simulator performance exceptions, or deviation from the approved training scenario sequence.</P>
+<P>(3) A simulation facility consisting solely of a plant-referenced simulator must meet the requirements of paragraph (c)(1) of this section and the criteria in paragraphs (d)(1) and (4) of this section for the Commission to accept the plant-referenced simulator for conducting operating tests as described in &#xA7; 55.45(a) of this part, requalification training as described in &#xA7; 55.59(c)(3) of this part, or for performing control manipulations that affect reactivity to establish eligibility for an operator's license as described in &#xA7; 55.31(a)(5).</P>
+<P>(d) <I>Continued assurance of simulator fidelity.</I> Facility licensees that maintain a simulation facility shall:</P>
+<P>(1) Conduct performance testing throughout the life of the simulation facility in a manner sufficient to ensure that paragraphs (c)(2)(ii), as applicable, and (d)(3) of this section are met. The results of performance tests must be retained for four years after the completion of each performance test or until superseded by updated test results;</P>
+<P>(2) Correct modeling and hardware discrepancies and discrepancies identified from scenario validation and from performance testing;</P>
+<P>(3) Make results of any uncorrected performance test failures that may exist at the time of the operating test or requalification program inspection available for NRC review, prior to or concurrent with preparations for each operating test or requalification program inspection; and</P>
+<P>(4) Maintain the provisions for license application, examination, and test integrity consistent with &#xA7; 55.49.</P>
+<CITA TYPE="N">[66 FR 52667, Oct. 17, 2001]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.47" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.47&quot;,&quot;citation&quot;:&quot;10 CFR 55.47&quot;}">
+<HEAD>&#xA7; 55.47 Waiver of examination and test requirements.</HEAD>
+<P>(a) On application, the Commission may waive any or all of the requirements for a written examination and operating test, if it finds that the applicant&#x2014;</P>
+<P>(1) Has had extensive actual operating experience at a comparable facility, as determined by the Commission, within two years before the date of application;</P>
+<P>(2) Has discharged his or her responsibilities competently and safely and is capable of continuing to do so; and</P>
+<P>(3) Has learned the operating procedures for and is qualified to operate competently and safely the facility designated in the application.</P>
+<P>(b) The Commission may accept as proof of the applicant's past performance a certification of an authorized representative of the facility licensee or of a holder of an authorization by which the applicant was previously employed. The certification must contain a description of the applicant's operating experience, including an approximate number of hours the applicant operated the controls of the facility, the duties performed, and the extent of the applicant's responsibility.</P>
+<P>(c) The Commission may accept as proof of the applicant's current qualifications a certification of an authorized representative of the facility licensee or of a holder of an authorization where the applicant's services will be utilized.</P>
+</DIV8>
+
+<DIV8 N="55.49" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.49&quot;,&quot;citation&quot;:&quot;10 CFR 55.49&quot;}">
+<HEAD>&#xA7; 55.49 Integrity of examinations and tests.</HEAD>
+<P>Applicants, licensees, and facility licensees shall not engage in any activity that compromises the integrity of any application, test, or examination required by this part. The integrity of a test or examination is considered compromised if any activity, regardless of intent, affected, or, but for detection, would have affected the equitable and consistent administration of the test or examination. This includes activities related to the preparation and certification of license applications and all activities related to the preparation, administration, and grading of the tests and examinations required by this part.</P>
+<CITA TYPE="N">[64 FR 19878, Apr. 23, 1999]
+</CITA>
+</DIV8>
+
+</DIV6>
+<DIV6 N="F" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-F&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart F&amp;quot;}">
+<HEAD>Subpart F&#x2014;Licenses</HEAD>
+<DIV8 N="55.51" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.51&quot;,&quot;citation&quot;:&quot;10 CFR 55.51&quot;}">
+<HEAD>&#xA7; 55.51 Issuance of licenses.</HEAD>
+<P><I>Operator and senior operator licenses.</I> If the Commission determines that an applicant for an operator license or a senior operator license meets the requirements of the Act and its regulations, it will issue a license in the form and containing any conditions and limitations it considers appropriate and necessary.</P>
+</DIV8>
+
+<DIV8 N="55.53" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.53&quot;,&quot;citation&quot;:&quot;10 CFR 55.53&quot;}">
+<HEAD>&#xA7; 55.53 Conditions of licenses.</HEAD>
+<P>Each license contains and is subject to the following conditions whether stated in the license or not:</P>
+<P>(a) Neither the license nor any right under the license may be assigned or otherwise transferred.</P>
+<P>(b) The license is limited to the facility for which it is issued.</P>
+<P>(c) The license is limited to those controls of the facility specified in the license.</P>
+<P>(d) The license is subject to, and the licensee shall observe, all applicable rules, regulations, and orders of the Commission.</P>
+<P>(e) If a licensee has not been actively performing the functions of an operator or senior operator, the licensee may not resume activities authorized by a license issued under this part except as permitted by paragraph (f) of this section. To maintain active status, the licensee shall actively perform the functions of an operator or senior operator on a minimum of seven 8-hour or five 12-hour shifts per calendar quarter. For non-power reactors, the licensee shall actively perform the functions of an operator or senior operator for a minimum of four hours per calendar quarter.</P>
+<P>(f) If paragraph (e) of this section is not met, before resumption of functions authorized by a license issued under this part, an authorized representative of the facility licensee shall certify the following:</P>
+<P>(1) That the qualifications and status of the licensee are current and valid; and</P>
+<P>(2) That the licensee has completed a minimum of 40 hours of shift functions under the direction of an operator or senior operator as appropriate and in the position to which the individual will be assigned. The 40 hours must have included a complete tour of the plant and all required shift turnover procedures. For senior operators limited to fuel handling under paragraph (c) of this section, one shift must have been completed. For non-power reactors, a minimum of six hours must have been completed.</P>
+<P>(g) The licensee shall notify the Commission within 30 days about a conviction for a felony.</P>
+<P>(h) The licensee shall complete a requalification program as described by &#xA7; 55.59.</P>
+<P>(i) The licensee shall have a biennial medical examination.</P>
+<P>(j) The licensee shall not consume or ingest alcoholic beverages within the protected area of power reactors, or the controlled access area of utilization facilities licensed under 10 CFR part 50 that are not power reactors. The licensee shall not use, possess, or sell any illegal drugs. The licensee shall not perform activities authorized by a license issued under this part while under the influence of alcohol or any prescription, over-the-counter, or illegal substance that could adversely affect his or her ability to safely and competently perform his or her licensed duties. For the purpose of this paragraph, with respect to alcoholic beverages and drugs, the term &#x201C;under the influence&#x201D; means the licensee exceeded, as evidenced by a confirmed test result, the lower of the cutoff levels for drugs or alcohol contained in subparts E, F, and G of part 26 of this chapter, or as established by the facility licensee. The term &#x201C;under the influence&#x201D; also means the licensee could be mentally or physically impaired as a result of substance use including prescription and over-the-counter drugs, as determined under the provisions, policies, and procedures established by the facility licensee for its fitness-for-duty program, in such a manner as to adversely affect his or her ability to safely and competently perform licensed duties.</P>
+<P>(k) Each licensee at power reactors shall participate in the drug and alcohol testing programs established pursuant to 10 CFR part 26. Each licensee at utilization facilities licensed under 10 CFR part 50 that are not power reactors shall participate in any drug and alcohol testing program that may be established for that facility.</P>
+<P>(l) The licensee shall comply with any other conditions that the Commission may impose to protect health or to minimize danger to life or property.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 56 FR 32070, July 15, 1991; 74 FR 45545, Sept. 3, 2009; 79 FR 66604, Nov. 10, 2014; 89 FR 106253, Dec. 30, 2024]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.55" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.55&quot;,&quot;citation&quot;:&quot;10 CFR 55.55&quot;}">
+<HEAD>&#xA7; 55.55 Expiration.</HEAD>
+<P>(a) Each operator license and senior operator license expires six years after the date of issuance, upon termination of employment with the facility licensee, or upon determination by the facility licensee that the licensed individual no longer needs to maintain a license.</P>
+<P>(b) If a licensee files an application for renewal or an upgrade of an existing license on Form NRC-398 at least 30 days before the expiration of the existing license, it does not expire until disposition of the application for renewal or for an upgraded license has been finally determined by the Commission. Filing by mail will be deemed to be complete at the time the application is deposited in the mail.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 79 FR 66605, Nov. 10, 2014]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.57" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.57&quot;,&quot;citation&quot;:&quot;10 CFR 55.57&quot;}">
+<HEAD>&#xA7; 55.57 Renewal of licenses.</HEAD>
+<P>(a) The applicant for renewal of a license shall&#x2014;</P>
+<P>(1) Complete and sign Form NRC-398 and include the number of the license for which renewal is sought.</P>
+<P>(2) File an original of NRC Form 398 with the appropriate Regional Administrator specified in &#xA7; 55.5(b).</P>
+<P>(3) Provide written evidence of the applicant's experience under the existing license and the approximate number of hours that the licensee has operated the facility.</P>
+<P>(4) Provide a statement by an authorized representative of the facility licensee that during the effective term of the current license the applicant has satisfactorily completed the requalification program for the facility for which operator or senior operator license renewal is sought.</P>
+<P>(5) Provide evidence that the applicant has discharged the license responsibilities competently and safely. The Commission may accept as evidence of the applicant's having met this requirement a certificate of an authorized representative of the facility licensee or holder of an authorization by which the licensee has been employed.</P>
+<P>(6) Provide certification by the facility licensee of medical condition and general health on Form NRC-396, to comply with &#xA7;&#xA7; 55.21, 55.23 and 55.27.</P>
+<P>(b) The license will be renewed if the Commission finds that&#x2014;</P>
+<P>(1) The medical condition and the general health of the licensee continue to be such as not to cause operational errors that endanger public health and safety. The Commission will base this finding upon the certification by the facility licensee as described in &#xA7; 55.23.</P>
+<P>(2) The licensee&#x2014;</P>
+<P>(i) Is capable of continuing to competently and safely assume licensed duties;</P>
+<P>(ii) Has successfully completed a requalification program that has been approved by the Commission as required by &#xA7; 55.59; and</P>
+<P>(iii) Has passed the requalification examinations and annual operating tests as required by &#xA7; 55.59.</P>
+<P>(3) There is a continued need for a licensee to operate or for a senior operator to direct operators at the facility designated in the application.</P>
+<P>(4) The past performance of the licensee has been satisfactory to the Commission. In making its finding, the Commission will include in its evaluation information such as notices of violations or letters of reprimand in the licensee's docket.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 59 FR 5938, Feb. 9, 1994; 68 FR 58813, Oct. 10, 2003]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.59" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.59&quot;,&quot;citation&quot;:&quot;10 CFR 55.59&quot;}">
+<HEAD>&#xA7; 55.59 Requalification.</HEAD>
+<P>(a) <I>Requalification requirements.</I> Each licensee shall&#x2014;</P>
+<P>(1) Successfully complete a requalification program developed by the facility licensee that has been approved by the Commission. This program shall be conducted for a continuous period not to exceed 24 months in duration.</P>
+<P>(2) Pass a comprehensive requalification written examination and an annual operating test.</P>
+<P>(i) The written examination will sample the items specified in &#xA7;&#xA7; 55.41 and 55.43 of this part, to the extent applicable to the facility, the licensee, and any limitation of the license under &#xA7; 55.53(c) of this part.</P>
+<P>(ii) The operating test will require the operator or senior operator to demonstrate an understanding of and the ability to perform the actions necessary to accomplish a comprehensive sample of items specified in &#xA7; 55.45(a) (2) through (13) inclusive to the extent applicable to the facility.</P>
+<P>(iii) In lieu of the Commission accepting a certification by the facility licensee that the licensee has passed written examinations and operating tests administered by the facility licensee within its Commission-approved program developed by using a systems approach to training under paragraph (c) of this section, the Commission may administer a comprehensive requalification written examination and an annual operating test.</P>
+<P>(b) <I>Additional training.</I> If the requirements of paragraphs (a) (1) and (2) of this section are not met, the Commission may require the licensee to complete additional training and to submit evidence to the Commission of successful completion of this training before returning to licensed duties.</P>
+<P>(c) <I>Requalification program requirements.</I> A facility licensee shall have a requalification program reviewed and approved by the Commission and shall, upon request consistent with the Commission's inspection program needs, submit to the Commission a copy of its comprehensive requalification written examinations or annual operating tests. The requalification program must meet the requirements of paragraphs (c) (1) through (7) of this section. In lieu of paragraphs (c) (2), (3), and (4) of this section, the Commission may approve a program developed by using a systems approach to training.</P>
+<P>(1) <I>Schedule.</I> The requalification program must be conducted for a continuous period not to exceed two years, and upon conclusion must be promptly followed, pursuant to a continuous schedule, by successive requalification programs.</P>
+<P>(2) <I>Lectures.</I> The requalification program must include preplanned lectures on a regular and continuing basis throughout the license period in those areas where operator and senior operator written examinations and facility operating experience indicate that emphasis in scope and depth of coverage is needed in the following subjects:</P>
+<P>(i) Theory and principles of operation.</P>
+<P>(ii) General and specific plant operating characteristics.</P>
+<P>(iii) Plant instrumentation and control systems.</P>
+<P>(iv) Plant protection systems.</P>
+<P>(v) Engineered safety systems.</P>
+<P>(vi) Normal, abnormal, and emergency operating procedures.</P>
+<P>(vii) Radiation control and safety.</P>
+<P>(viii) Technical specifications.</P>
+<P>(ix) Applicable portions of title 10, chapter I, Code of Federal Regulations.</P>
+<P>(3) <I>On-the-job training.</I> The requalification program must include on-the-job training so that&#x2014;</P>
+<P>(i) Each licensed operator of a utilization facility manipulates the plant controls and each licensed senior operator either manipulates the controls or directs the activities of individuals during plant control manipulations during the term of the licensed operator's or senior operator's license. For reactor operators and senior operators, these manipulations must consist of the following control manipulations and plant evolutions if they are applicable to the plant design. Items described in paragraphs (c)(3)(i) (A) through (L) of this section must be performed annually; all other items must be performed on a two-year cycle. However, the requalification programs must contain a commitment that each individual shall perform or participate in a combination of reactivity control manipulations based on the availability of plant equipment and systems. Those control manipulations which are not performed at the plant may be performed on a simulator. The use of the Technical Specifications should be maximized during the simulator control manipulations. Senior operator licensees are credited with these activities if they direct control manipulations as they are performed.</P>
+<P>(A) Plant or reactor startups to include a range that reactivity feedback from nuclear heat addition is noticeable and heatup rate is established.</P>
+<P>(B) Plant shutdown.</P>
+<P>(C) Manual control of steam generators or feedwater or both during startup and shutdown.</P>
+<P>(D) Boration or dilution during power operation.</P>
+<P>(E) Significant (&#x2265;10 percent) power changes in manual rod control or recirculation flow.</P>
+<P>(F) Reactor power change of 10 percent or greater where load change is performed with load limit control or where flux, temperature, or speed control is on manual (for HTGR).</P>
+<P>(G) Loss of coolant, including&#x2014;</P>
+<P>(<I>1</I>) Significant PWR steam generator leaks</P>
+<P>(<I>2</I>) Inside and outside primary containment</P>
+<P>(<I>3</I>) Large and small, including leak-rate determination</P>
+<P>(<I>4</I>) Saturated reactor coolant response (PWR).</P>
+<P>(H) Loss of instrument air (if simulated plant specific).</P>
+<P>(I) Loss of electrical power (or degraded power sources).</P>
+<P>(J) Loss of core coolant flow/natural circulation.</P>
+<P>(K) Loss of feedwater (normal and emergency).</P>
+<P>(L) Loss of service water, if required for safety.</P>
+<P>(M) Loss of shutdown cooling.</P>
+<P>(N) Loss of component cooling system or cooling to an individual component.</P>
+<P>(O) Loss of normal feedwater or normal feedwater system failure.</P>
+<P>(P) Loss of condenser vacuum.</P>
+<P>(Q) Loss of protective system channel.</P>
+<P>(R) Mispositioned control rod or rods (or rod drops).</P>
+<P>(S) Inability to drive control rods.</P>
+<P>(T) Conditions requiring use of emergency boration or standby liquid control system.</P>
+<P>(U) Fuel cladding failure or high activity in reactor coolant or offgas.</P>
+<P>(V) Turbine or generator trip.</P>
+<P>(W) Malfunction of an automatic control system that affects reactivity.</P>
+<P>(X) Malfunction of reactor coolant pressure/volume control system.</P>
+<P>(Y) Reactor trip.</P>
+<P>(Z) Main steam line break (inside or outside containment).</P>
+<P>(AA) A nuclear instrumentation failure.</P>
+<P>(ii) Each licensed operator and senior operator has demonstrated satisfactory understanding of the operation of the apparatus and mechanisms associated with the control manipulations in paragraph (c)(3)(i) of this section, and knows the operating procedures in each area for which the operator or senior operator is licensed.</P>
+<P>(iii) Each licensed operator and senior operator is cognizant of facility design changes, procedure changes, and facility license changes.</P>
+<P>(iv) Each licensed operator and senior operator reviews the contents of all abnormal and emergency procedures on a regularly scheduled basis.</P>
+<P>(v) A simulator may be used in meeting the requirements of paragraphs (c) (3)(i) and (3)(ii) of this section, if it reproduces the general operating characteristics of the facility involved and the arrangement of the instrumentation and controls of the simulator is similar to that of the facility involved. If the simulator or simulation device is used to administer operating tests for a facility, as provided in &#xA7; 55.45(b)(1), the device approved to meet the requirements of &#xA7; 55.45(b)(1) must be used for credit to be given for meeting the requirements of paragraphs (c)(3)(i) (G through AA) of this section.</P>
+<P>(4) <I>Evaluation.</I> The requalification program must include&#x2014;</P>
+<P>(i) Comprehensive requalification written examinations and annual operating tests which determine areas in which retraining is needed to upgrade licensed operator and senior operator knowledge.</P>
+<P>(ii) Written examinations which determine licensed operators' and senior operators' knowledge of subjects covered in the requalification program and provide a basis for evaluating their knowledge of abnormal and emergency procedures.</P>
+<P>(iii) Systematic observation and evaluation of the performance and competency of licensed operators and senior operators by supervisors and/or training staff members, including evaluation of actions taken or to be taken during actual or simulated abnormal and emergency procedures.</P>
+<P>(iv) Simulation of emergency or abnormal conditions that may be accomplished by using the control panel of the facility involved or by using a simulator. When the control panel of the facility is used for simulation, the actions taken or to be taken for the emergency or abnormal condition shall be discussed; actual manipulation of the plant controls is not required. If a simulator is used in meeting the requirements of paragraph (c)(4)(iii) of this section, it must accurately reproduce the operating characteristics of the facility involved and the arrangement of the instrumentation and controls of the simulator must closely parallel that of the facility involved. After the provisions of &#xA7; 55.46 have been implemented at a facility, the Commission approved or plant-referenced simulator must be used to comply with this paragraph.</P>
+<P>(v) Provisions for each licensed operator and senior operator to participate in an accelerated requalification program where performance evaluations conducted pursuant to paragraphs (c)(4) (i) through (iv) of this section clearly indicated the need.</P>
+<P>(5) <I>Records.</I> The requalification program documentation must include the following:</P>
+<P>(i) The facility licensee shall maintain records documenting the participation of each licensed operator and senior operator in the requalification program. The records must contain copies of written examinations administered, the answers given by the licensee, and the results of evaluations and documentation of operating tests and of any additional training administered in areas in which an operator or senior operator has exhibited deficiencies. The facility licensee shall retain these records until the operator's or senior operator's license is renewed.</P>
+<P>(ii) Each record required by this part must be legible throughout the retention period specified by each Commission regulation. The record may be the original or a reproduced copy or a microform provided that the copy or microform is authenticated by authorized personnel and that the microform is capable of producing a clear copy throughout the required retention period.</P>
+<P>(iii) If there is a conflict between the Commission's regulations in this part, and any license condition, or other written Commission approval or authorization pertaining to the retention period for the same type of record, the retention period specified for these records by the regulations in this part apply unless the Commission, pursuant to &#xA7; 55.11, grants a specific exemption from this record retention requirement.</P>
+<P>(6) <I>Alternative training programs.</I> The requirements of this section may be met by requalification programs conducted by persons other than the facility licensee if the requalification programs are similar to the program described in paragraphs (c) (1) through (5) of this section and the alternative program has been approved by the Commission.</P>
+<P>(7) <I>Applicability to utilization facilities licensed under 10 CFR part 50 that are not power reactors.</I> To accommodate specialized modes of operation and differences in control, equipment, and operator skills and knowledge, the requalification program for each licensed operator and senior operator of a utilization facility licensed under 10 CFR part 50 that is not a power reactor must conform generally but need not be identical to the requalification program outlined in paragraphs (c) (1) through (6) of this section. Significant deviations from the requirements of paragraphs (c) (1) through (6) of this section will be permitted only if supported by written justification and approved by the Commission.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 59 FR 5938, Feb. 9, 1994; 66 FR 52668, Oct. 17, 2001, 81 FR 86909, Dec. 2, 2016; 89 FR 106253, Dec. 30, 2024]
+</CITA>
+</DIV8>
+
+</DIV6>
+<DIV6 N="G" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-G&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart G&amp;quot;}">
+<HEAD>Subpart G&#x2014;Modification and Revocation of Licenses</HEAD>
+<DIV8 N="55.61" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.61&quot;,&quot;citation&quot;:&quot;10 CFR 55.61&quot;}">
+<HEAD>&#xA7; 55.61 Modification and revocation of licenses.</HEAD>
+<P>(a) The terms and conditions of all licenses are subject to amendment, revision, or modification by reason of rules, regulations, or orders issued in accordance with the Act or any amendments thereto.</P>
+<P>(b) Any license may be revoked, suspended, or modified, in whole or in part:</P>
+<P>(1) For any material false statement in the application or in any statement of fact required under section 182 of the Act,</P>
+<P>(2) Because of conditions revealed by the application or statement of fact or any report, record, inspection or other means that would warrant the Commission to refuse to grant a license on an original application,</P>
+<P>(3) For willful violation of, or failure to observe any of the terms and conditions of the Act, or the license, or of any rule, regulation, or order of the Commission, or</P>
+<P>(4) For any conduct determined by the Commission to be a hazard to safe operation of the facility.</P>
+<P>(5) For the sale, use or possession of illegal drugs, or refusal to participate in the facility drug and alcohol testing program, or a confirmed positive test for drugs, drug metabolites, or alcohol in violation of the conditions and cutoff levels established by &#xA7; 55.53(j) or the consumption of alcoholic beverages within the protected area of power reactors or the controlled access area of utilization facilities licensed under 10 CFR part 50 that are not power reactors, or a determination of unfitness for scheduled work as a result of the consumption of alcoholic beverages.</P>
+<CITA TYPE="N">[52 FR 9460, Mar. 25, 1987, as amended at 56 FR 32070, July 15, 1991; 89 FR 106253, Dec. 30, 2024]
+</CITA>
+</DIV8>
+
+</DIV6>
+<DIV6 N="H" TYPE="SUBPART" hierarchy_metadata="{&amp;quot;path&amp;quot;:&amp;quot;/on/_SUBSTITUTE_DATE_/title-10/part-55/subpart-H&amp;quot;,&amp;quot;citation&amp;quot;:&amp;quot;10 CFR Part 55 Subpart H&amp;quot;}">
+<HEAD>Subpart H&#x2014;Enforcement</HEAD>
+<DIV8 N="55.71" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.71&quot;,&quot;citation&quot;:&quot;10 CFR 55.71&quot;}">
+<HEAD>&#xA7; 55.71 Violations.</HEAD>
+<P>(a) The Commission may obtain an injunction or other court order to prevent a violation of the provisions of&#x2014;</P>
+<P>(1) The Atomic Energy Act of 1954, as amended;</P>
+<P>(2) Title II of the Energy Reorganization Act of 1974, as amended; or</P>
+<P>(3) A regulation or order issued pursuant to those Acts.</P>
+<P>(b) The Commission may obtain a court order for the payment of a civil penalty imposed under section 234 of the Atomic Energy Act:</P>
+<P>(1) For violations of&#x2014;</P>
+<P>(i) Sections 53, 57, 62, 63, 81, 82, 101, 103, 104, 107, or 109 of the Atomic Energy Act of 1954, as amended;</P>
+<P>(ii) Section 206 of the Energy Reorganization Act;</P>
+<P>(iii) Any rule, regulation, or order issued pursuant to the sections specified in paragraph (b)(1)(i) of this section;</P>
+<P>(iv) Any term, condition, or limitation of any license issued under the sections specified in paragraph (b)(1)(i) of this section.</P>
+<P>(2) For any violation for which a license may be revoked under section 186 of the Atomic Energy Act of 1954, as amended.</P>
+<CITA TYPE="N">[57 FR 55076, Nov. 24, 1992]
+</CITA>
+</DIV8>
+
+<DIV8 N="55.73" TYPE="SECTION" hierarchy_metadata="{&quot;path&quot;:&quot;/on/_SUBSTITUTE_DATE_/title-10/section-55.73&quot;,&quot;citation&quot;:&quot;10 CFR 55.73&quot;}">
+<HEAD>&#xA7; 55.73 Criminal penalties.</HEAD>
+<P>(a) Section 223 of the Atomic Energy Act of 1954, as amended, provides for criminal sanctions for willful violation of, attempted violation of, or conspiracy of violate, any regulation issued under sections 161b, 161i, or 161o of the Act. For purposes of section 223, all the regulations in part 55 are issued under one or more of sections 161b, 161i, or 161o, except for the sections listed in paragraph (b) of this section.</P>
+<P>(b) The regulations in part 55 that are not issued under sections 161b, 161i, or 161o for the purposes of section 223 are as follows: &#xA7;&#xA7; 55.1, 55.2, 55.4, 55.5, 55.6, 55.7, 55.8, 55.11. 55.13, 55.31, 55.33, 55.35, 55.41, 55.43, 55.47, 55.51, 55.55, 55.57, 55.61, 55.71, and 55.73.</P>
+<CITA TYPE="N">[57 FR 55076, Nov. 24, 1992]
+</CITA>
+</DIV8>
+
+</DIV6>
+</DIV5>
