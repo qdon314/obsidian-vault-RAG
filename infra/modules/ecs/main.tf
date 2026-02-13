@@ -156,3 +156,67 @@ resource "aws_ecs_service" "app" {
 
   tags = var.tags
 }
+
+# --- Ingest worker task definition ---
+resource "aws_ecs_task_definition" "ingest_worker" {
+  family                   = "${var.cluster_name}-ingest-worker"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = var.worker_cpu
+  memory                   = var.worker_memory
+  execution_role_arn       = aws_iam_role.task_execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "ingest-worker"
+      image     = var.app_image
+      essential = true
+      command   = ["python", "scripts/run_worker.py"]
+      environment = [
+        { name = "RAG_VECTORSTORE__BACKEND", value = "qdrant" },
+        { name = "RAG_VECTORSTORE__QDRANT_URL", value = "http://qdrant.${var.cluster_name}.local:6333" },
+        { name = "RAG_DISTRIBUTED_INGESTION__ENABLED", value = "true" },
+        { name = "RAG_DISTRIBUTED_INGESTION__SQS_QUEUE_URL", value = var.sqs_queue_url },
+        { name = "RAG_DISTRIBUTED_INGESTION__CORPUS_S3_BUCKET", value = var.s3_bucket_name },
+      ]
+      secrets = [
+        { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
+        { name = "RAG_DISTRIBUTED_INGESTION__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.worker.name
+          "awslogs-region"        = data.aws_region.current.name
+          "awslogs-stream-prefix" = "worker"
+        }
+      }
+    }
+  ])
+
+  tags = var.tags
+}
+
+resource "aws_cloudwatch_log_group" "worker" {
+  name              = "/ecs/${var.cluster_name}/ingest-worker"
+  retention_in_days = 30
+  tags              = var.tags
+}
+
+# --- Ingest worker service ---
+resource "aws_ecs_service" "ingest_worker" {
+  name            = "${var.cluster_name}-ingest-worker"
+  cluster         = aws_ecs_cluster.this.id
+  task_definition = aws_ecs_task_definition.ingest_worker.arn
+  desired_count   = var.worker_desired_count
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = var.subnet_ids
+    security_groups  = var.security_group_ids
+    assign_public_ip = true
+  }
+
+  tags = var.tags
+}

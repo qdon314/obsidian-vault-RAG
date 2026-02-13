@@ -82,3 +82,46 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+# Worker-specific variables
+variable "worker_cpu" {
+  description = "CPU units for ingest worker task"
+  type        = number
+  default     = 256
+}
+
+variable "worker_memory" {
+  description = "Memory (MB) for ingest worker task"
+  type        = number
+  default     = 512
+}
+
+variable "worker_desired_count" {
+  description = "Desired number of ingest worker tasks"
+  type        = number
+  default     = 0
+}
+
+variable "sqs_queue_url" {
+  description = "URL of the SQS queue for ingestion tasks"
+  type        = string
+  default     = ""
+}
+
+variable "sqs_queue_arn" {
+  description = "ARN of the SQS queue for ingestion tasks"
+  type        = string
+  default     = ""
+}
+
+variable "s3_bucket_name" {
+  description = "Name of the S3 bucket for corpus storage"
+  type        = string
+  default     = ""
+}
+
+variable "rds_dsn_arn" {
+  description = "ARN of the SSM parameter containing the RDS DSN"
+  type        = string
+  default     = ""
+}
