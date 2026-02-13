@@ -98,6 +98,8 @@ docker compose run --rm app query --q "What is hexagonal architecture?"
 docker compose run --rm app bash
 ```
 
+Note: keep local volume mounts portable in committed `docker-compose.yml` (template paths), and apply machine-specific mounts locally.
+
 ---
 
 ## 4. Configuration
@@ -260,6 +262,15 @@ To set these, go to your GitHub repository **Settings > Secrets and variables > 
 | Cloud Map namespace | Private DNS namespace (`obsidian-rag.local`) for inter-service communication | `modules/ecs` |
 | CloudWatch log groups | Log streams for both app and Qdrant containers, 30-day retention | `modules/ecs` |
 | IAM roles | Task execution role (ECR pull, SSM read) and task role (S3 read/write), both least-privilege scoped | `modules/ecs` |
+
+### Distributed ingestion deployment notes
+
+- Provision queue/database modules and wire outputs into ECS worker settings.
+- Keep worker desired count at `0` by default; scale up when running ingestion jobs.
+- Store ingestion DSN in secure parameter store and inject via `rds_dsn_arn`.
+- See:
+  - `docs/operations/distributed-ingestion.md` for runtime operations
+  - `infra/modules/README.md` for module input/output wiring
 
 ### Deployment steps
 

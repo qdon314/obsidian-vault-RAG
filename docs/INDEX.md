@@ -10,6 +10,7 @@ Welcome to the Obsidian Vault RAG system documentation.
 | [User Guide](USER_GUIDE.md) | Step-by-step usage instructions |
 | [Configuration](CONFIGURATION.md) | Complete settings reference |
 | [Architecture](ARCHITECTURE.md) | System design and data flows |
+| [Distributed Ingestion Runbook](operations/distributed-ingestion.md) | Operator playbook for enumerator/workers |
 | [API Reference](API_REFERENCE.md) | Domain models and ports |
 | [Adapters](ADAPTERS.md) | Implementation details |
 | [Evaluation](evaluation/README.md) | Evaluation system and workflows |
@@ -51,6 +52,14 @@ System design and patterns:
 - Component relationships
 - Data flow diagrams (Mermaid)
 - Design principles
+
+### [Distributed Ingestion Runbook](operations/distributed-ingestion.md)
+
+Operational guidance for distributed ingestion:
+- Required config and startup commands
+- Queue/lease/task semantics
+- Failure modes and recovery steps
+- Safe disable/rollback actions
 
 ### [API Reference](API_REFERENCE.md)
 
@@ -147,3 +156,5 @@ keep_k = 4
 
 - [README](../README.md) - Project overview and quick start
 - [AGENTS.md](../AGENTS.md) - Repository command discipline and agent guidance
+- [Notes: Infrastructure](notes/INFRASTRUCTURE.md) - Deep dive on Docker, CI/CD, Terraform, and AWS architecture
+- [Notes: Distributed Ingestion Tools and Techniques](notes/DISTRIBUTED_INGESTION_TOOLS_AND_TECHNIQUES.md) - Implementation patterns and reliability techniques used in Phase 3

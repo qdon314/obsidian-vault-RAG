@@ -235,6 +235,31 @@ backend = "none"              # "none" | "s3"
 
 When `backend = "s3"`, Qdrant automatically uses thin payloads and a `HydratingRetriever` wraps the retriever for text hydration. Install dependencies with `./scripts/pip install -e ".[distributed]"`.
 
+### `[distributed_ingestion]`
+
+```toml
+[distributed_ingestion]
+enabled = false
+# postgres_dsn = "postgresql://user:pass@host:5432/rag"
+# sqs_queue_url = "https://sqs.us-east-1.amazonaws.com/123/rag-tasks"
+# corpus_s3_bucket = "rag-prod-artifacts"
+# corpus_s3_prefix = "corpus"
+# worker_lease_duration_s = 300
+# max_task_retries = 3
+```
+
+| Option | Type | Default | Notes |
+|--------|------|---------|-------|
+| `enabled` | bool | `false` | Enable distributed enumerator/worker flow |
+| `postgres_dsn` | string | - | Postgres DSN for ingestion jobs/tasks/doc records |
+| `sqs_queue_url` | string | - | SQS queue URL for ingestion task messages |
+| `corpus_s3_bucket` | string | - | S3 bucket for raw document corpus-of-record |
+| `corpus_s3_prefix` | string | `""` | Prefix for raw corpus objects |
+| `worker_lease_duration_s` | int | `300` | Lease TTL used when workers claim tasks |
+| `max_task_retries` | int | `3` | Retry budget setting (policy hook; not fully enforced yet) |
+
+When `enabled = true`, set `postgres_dsn`, `sqs_queue_url`, and `corpus_s3_bucket`.
+
 ### `[llm]`
 
 ```toml
@@ -333,3 +358,17 @@ Common ask overrides:
 - `--skip-validation`
 
 Note: `ask.py` uses `settings.rerank.keep_k` for reranking and defaults `token_budget` to `1800` if `--token-budget` is not provided.
+
+---
+
+## Local vs Production Configuration
+
+Keep committed defaults portable:
+
+- Use placeholders or `~` for `[paths].vault_dir`; avoid user-specific absolute paths in committed config.
+- Keep `docker-compose.yml` volume mounts as templates (for example, `/path/to/your/vault:/data/vault:ro`).
+- Inject environment-specific values through overrides, especially in deployment:
+  - `RAG_DISTRIBUTED_INGESTION__POSTGRES_DSN`
+  - `RAG_DISTRIBUTED_INGESTION__SQS_QUEUE_URL`
+  - `RAG_DISTRIBUTED_INGESTION__CORPUS_S3_BUCKET`
+  - `RAG_DISTRIBUTED_INGESTION__CORPUS_S3_PREFIX`

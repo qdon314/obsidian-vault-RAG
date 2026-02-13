@@ -464,6 +464,119 @@ When `backend = "none"` (default), the system operates in local mode with fat Qd
 
 ---
 
+## Distributed Ingestion
+
+The distributed ingestion system enables scalable, parallel document processing using S3 as the corpus-of-record, SQS for task distribution, and Postgres for job/task state.
+
+### Architecture
+
+```mermaid
+graph TB
+    subgraph "Control Plane"
+        CLI[CLI: start_ingestion.py]
+        Enum[Enumerator Service]
+    end
+
+    subgraph "AWS Infrastructure"
+        S3[S3 Bucket<br/>Corpus of Record]
+        SQS[SQS Queue<br/>Task Distribution]
+        RDS[(RDS Postgres<br/>Job/Task State)]
+    end
+
+    subgraph "Worker Fleet"
+        W1[Worker 1]
+        W2[Worker 2]
+        W3[Worker N...]
+    end
+
+    subgraph "Vector Store"
+        VS[VectorStore<br/>Qdrant/JSONL]
+    end
+
+    CLI -->|1. Enumerate corpus| Enum
+    Enum -->|2. Store raw docs| S3
+    Enum -->|3. Upsert docs/tasks| RDS
+    Enum -->|4. Enqueue messages| SQS
+    W1 -->|5. Receive + ack/nack| SQS
+    W1 -->|6. Lease/complete/fail task| RDS
+    W1 -->|7. Fetch raw doc| S3
+    W1 -->|8. Chunk/embed/upsert| VS
+    W2 -->|5. Receive + ack/nack| SQS
+    W3 -->|5. Receive + ack/nack| SQS
+```
+
+### Flow
+
+1. **Enumerator** (control plane entry point):
+   - Creates an `IngestJob` in Postgres (`CREATED`)
+   - Stores each raw `Document` in S3 via `RawDocumentStore`
+   - Upserts a `DocumentRecord` and creates one `IngestTask` per `doc_id`
+   - Enqueues one SQS message per document: `{"job_id","corpus_id","doc_id"}`
+   - Marks the job `RUNNING` (or `COMPLETED` when no docs)
+
+2. **Workers** (parallel processing):
+   - Poll SQS via `TaskQueue.receive()`
+   - Resolve `DocumentRecord` from Postgres, then lease task by `job_id + doc_id`
+   - Process the raw document from S3: chunk -> embed -> vector upsert -> chunk-store write
+   - Mark task `SUCCEEDED` or `RETRYABLE` in Postgres, then `ack`/`nack` SQS
+
+### Domain Models
+
+| Model | Purpose |
+|-------|---------|
+| `IngestJob` | Top-level job state for a corpus indexing run |
+| `IngestTask` | Single-document task with lease/attempt/error fields |
+| `DocumentRecord` | Corpus-of-record pointer (`s3_raw_key`) and content hash |
+| `JobStatus` | `CREATED`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED` |
+| `TaskStatus` | `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `RETRYABLE` |
+
+### Ports
+
+| Port | Methods | Purpose |
+|------|---------|---------|
+| `IngestJobStore` | `create_job()`, `create_tasks()`, `acquire_task()`, `complete_task()`, `fail_task()`, `upsert_document()` | Postgres-backed job/task/document persistence |
+| `RawDocumentStore` | `store_document()`, `get_document()` | Raw corpus storage and retrieval |
+| `TaskQueue` | `send()`, `send_batch()`, `receive()`, `ack()`, `nack()` | SQS task distribution lifecycle |
+
+### Message and Lease Contract
+
+- SQS message body must include: `job_id`, `corpus_id`, `doc_id`.
+- Worker must lease by `job_id` and `doc_id` to avoid cross-document task mismatch.
+- Lease reclaim behavior:
+  - claimable: `PENDING`, `RETRYABLE`
+  - reclaimable: `RUNNING` with expired `lease_expires_at`
+- Queue outcome:
+  - `ack`: successful processing, or message references already-completed work
+  - `nack`: missing document record, task failure, or lease mismatch
+
+### Configuration
+
+```toml
+[distributed_ingestion]
+enabled = true
+postgres_dsn = "postgresql://user:pass@host:5432/rag"
+sqs_queue_url = "https://sqs.us-east-1.amazonaws.com/123/rag-tasks"
+corpus_s3_bucket = "rag-prod-artifacts"
+corpus_s3_prefix = "corpus"
+worker_lease_duration_s = 300
+max_task_retries = 3
+```
+
+### CLI Usage
+
+```bash
+# Start a new ingestion job (enumerator from local corpus path)
+./scripts/py scripts/start_ingestion.py \
+  --corpus /path/to/corpus \
+  --corpus-id my-corpus \
+  --index-name my-index
+
+# Run a worker (typically ECS/Fargate in production)
+./scripts/py scripts/run_worker.py --worker-id worker-1
+```
+
+---
+
 ## Design Principles
 
 ### 1. Stable Identifiers
