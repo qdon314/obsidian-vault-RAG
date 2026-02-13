@@ -22,3 +22,18 @@ output "qdrant_discovery_name" {
   description = "DNS name for Qdrant via Cloud Map"
   value       = "qdrant.${var.cluster_name}.local"
 }
+
+output "orchestrator_task_definition_arn" {
+  description = "ARN of the ingest orchestrator task definition"
+  value       = aws_ecs_task_definition.ingest_orchestrator.arn
+}
+
+output "query_eval_task_definition_arn" {
+  description = "ARN of the query/eval task definition"
+  value       = aws_ecs_task_definition.query_eval.arn
+}
+
+output "worker_service_name" {
+  description = "Name of the ingest worker ECS service"
+  value       = aws_ecs_service.ingest_worker.name
+}
