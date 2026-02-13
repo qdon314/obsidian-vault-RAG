@@ -143,3 +143,42 @@ variable "chunk_max_s3_workers" {
   type        = number
   default     = 4
 }
+
+# Orchestrator task sizing
+variable "orchestrator_cpu" {
+  description = "CPU units for ingest orchestrator task"
+  type        = number
+  default     = 256
+}
+
+variable "orchestrator_memory" {
+  description = "Memory (MB) for ingest orchestrator task"
+  type        = number
+  default     = 512
+}
+
+# Query/eval task sizing
+variable "query_eval_cpu" {
+  description = "CPU units for query/eval task"
+  type        = number
+  default     = 256
+}
+
+variable "query_eval_memory" {
+  description = "Memory (MB) for query/eval task"
+  type        = number
+  default     = 512
+}
+
+# S3 prefixes for eval and manifests
+variable "eval_s3_prefix" {
+  description = "Prefix for eval queries and run results in S3"
+  type        = string
+  default     = "eval"
+}
+
+variable "manifests_s3_prefix" {
+  description = "Prefix for index manifest objects in S3"
+  type        = string
+  default     = "manifests"
+}
