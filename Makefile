@@ -3,7 +3,8 @@
         test lint fmt typecheck env-check \
         docker-build docker-up docker-down \
         infra-init infra-plan infra-apply infra-destroy \
-        ecs-up ecs-down ecs-status
+        ecs-up ecs-down ecs-status \
+        ingest-remote eval-remote query-remote upload-eval-queries
 
 # ---- Python interpreter (pin to .venv) ----
 PYTHON := $(CURDIR)/.venv/bin/python
@@ -212,3 +213,32 @@ ecs-status:  ## Show running ECS task counts
 		--services $(ECS_APP_SERVICE) $(ECS_QDRANT_SERVICE) \
 		--query 'services[].{name:serviceName,running:runningCount,desired:desiredCount}' \
 		--output table --no-cli-pager
+
+# -------------------------------------------------------------------
+# Remote Operations (ECS)
+# -------------------------------------------------------------------
+
+WORKERS ?= 3
+CORPUS_ID ?= regulations_v1
+INDEX_NAME ?= regulatory
+QUERY_SET ?= default
+RUN_NAME ?=
+
+ingest-remote:  ## Run distributed ingestion on ECS (auto-scales workers)
+	scripts/ecs_run_ingest.sh \
+		--workers $(WORKERS) \
+		--corpus-id $(CORPUS_ID) \
+		--index-name $(INDEX_NAME)
+
+eval-remote:  ## Run eval against remote backends on ECS
+	scripts/ecs_run_eval.sh \
+		--query-set $(QUERY_SET) \
+		$(if $(RUN_NAME),--run-name $(RUN_NAME),)
+
+query-remote:  ## Run ad-hoc query on ECS
+	scripts/ecs_run_query.sh "$(QUERY)"
+
+upload-eval-queries:  ## Sync local eval datasets to S3
+	@BUCKET=$$(cd infra && terraform output -raw corpus_bucket_name 2>/dev/null || echo "obsidian-rag-corpus"); \
+	echo "Uploading eval datasets to s3://$$BUCKET/eval/queries/default/"; \
+	aws s3 sync eval/datasets/ "s3://$$BUCKET/eval/queries/default/" --exclude "*.pyc"
