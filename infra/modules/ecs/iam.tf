@@ -36,7 +36,7 @@ resource "aws_iam_role_policy" "task_execution_ssm" {
           "ssm:GetParameters",
           "ssm:GetParameter"
         ]
-        Resource = [var.openai_api_key_arn]
+        Resource = compact([var.openai_api_key_arn, var.rds_dsn_arn])
       }
     ]
   })

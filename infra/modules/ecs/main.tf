@@ -179,10 +179,16 @@ resource "aws_ecs_task_definition" "ingest_worker" {
         { name = "RAG_DISTRIBUTED_INGESTION__ENABLED", value = "true" },
         { name = "RAG_DISTRIBUTED_INGESTION__SQS_QUEUE_URL", value = var.sqs_queue_url },
         { name = "RAG_DISTRIBUTED_INGESTION__CORPUS_S3_BUCKET", value = var.s3_bucket_name },
+        { name = "RAG_DISTRIBUTED_INGESTION__CORPUS_S3_PREFIX", value = var.corpus_s3_prefix },
+        { name = "RAG_CHUNK_STORAGE__BACKEND", value = "s3" },
+        { name = "RAG_CHUNK_STORAGE__S3_BUCKET", value = var.s3_bucket_name },
+        { name = "RAG_CHUNK_STORAGE__S3_PREFIX", value = var.chunk_s3_prefix },
+        { name = "RAG_CHUNK_STORAGE__MAX_S3_WORKERS", value = tostring(var.chunk_max_s3_workers) },
       ]
       secrets = [
         { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
         { name = "RAG_DISTRIBUTED_INGESTION__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+        { name = "RAG_CHUNK_STORAGE__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
       ]
       logConfiguration = {
         logDriver = "awslogs"

@@ -17,3 +17,28 @@ output "qdrant_dns" {
   description = "Qdrant service discovery DNS name"
   value       = module.ecs.qdrant_discovery_name
 }
+
+output "sqs_queue_url" {
+  description = "SQS queue URL for ingestion tasks"
+  value       = module.sqs.queue_url
+}
+
+output "sqs_queue_arn" {
+  description = "SQS queue ARN for ingestion tasks"
+  value       = module.sqs.queue_arn
+}
+
+output "rds_endpoint" {
+  description = "RDS endpoint (host:port)"
+  value       = module.rds.endpoint
+}
+
+output "rds_dsn_parameter_arn" {
+  description = "SSM parameter ARN containing RDS DSN"
+  value       = aws_ssm_parameter.rds_dsn.arn
+}
+
+output "corpus_bucket_name" {
+  description = "S3 bucket for distributed ingestion corpus-of-record"
+  value       = local.corpus_bucket_name
+}

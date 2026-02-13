@@ -11,3 +11,20 @@ subnet_ids = ["subnet-xxxxxxxx"]
 # Scale to zero by default (set to 1 to run)
 app_desired_count    = 0
 qdrant_desired_count = 0
+worker_desired_count = 0
+
+# Worker sizing
+worker_cpu    = 256
+worker_memory = 512
+
+# Optional: separate corpus bucket (defaults to <project>-artifacts when empty)
+# corpus_bucket_name = "obsidian-rag-corpus"
+corpus_s3_prefix = "corpus"
+chunk_s3_prefix  = "chunks"
+
+# RDS + SQS for distributed ingestion
+db_username          = "rag"
+db_password          = "replace-me"
+db_instance_class    = "db.t4g.micro"
+sqs_visibility_timeout = 300
+sqs_max_receive_count  = 5

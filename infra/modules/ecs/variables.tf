@@ -125,3 +125,21 @@ variable "rds_dsn_arn" {
   type        = string
   default     = ""
 }
+
+variable "corpus_s3_prefix" {
+  description = "Prefix for raw corpus objects in S3"
+  type        = string
+  default     = "corpus"
+}
+
+variable "chunk_s3_prefix" {
+  description = "Prefix for chunk-store objects in S3"
+  type        = string
+  default     = "chunks"
+}
+
+variable "chunk_max_s3_workers" {
+  description = "Max S3 workers for chunk storage/hydration"
+  type        = number
+  default     = 4
+}
