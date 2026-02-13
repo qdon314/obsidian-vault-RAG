@@ -40,6 +40,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from rag.app.container import ContainerOverrides, build_container
+from rag.domain.index_manifest import IndexManifest
 from rag.eval.harness import (  # your runner function returning EvalRun
     load_eval_queries,
     run_full_eval,
@@ -76,6 +77,12 @@ def main() -> None:
         help="Which chunk-id list to score for retrieval metrics when generation is enabled.",
     )
 
+    parser.add_argument(
+        "--manifest",
+        type=str,
+        default=None,
+        help="Index manifest: local path or s3://bucket/key URI.",
+    )
     parser.add_argument("--no-save", action="store_true", help="Do not write artifacts to disk.")
 
     args = parser.parse_args()
@@ -94,7 +101,6 @@ def main() -> None:
     logger.info("Loaded %d queries", len(eval_queries))
 
     overrides = ContainerOverrides(
-        store_backend="jsonl",
         jsonl_index_dir=args.index,
         logs_directory=Path(run_dir),
     )
@@ -112,12 +118,19 @@ def main() -> None:
     else:
         judge_client = None
 
+    # Load manifest (explicit flag takes precedence over index_dir discovery)
+    manifest = None
+    if args.manifest:
+        logger.info("Loading manifest from %s", args.manifest)
+        manifest = IndexManifest.load_uri(args.manifest)
+
     # Run eval
     run = run_full_eval(
         eval_queries=eval_queries,
         container=container,
         queries_path=str(args.queries),
         index_dir=args.index,
+        manifest=manifest,
         top_k=args.top_k,
         keep_k=args.keep_k,
         token_budget=args.token_budget,
