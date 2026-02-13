@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Launch an eval run on ECS.
+#
+# Usage:
+#   scripts/ecs_run_eval.sh [--query-set default] [--run-name my-run]
+
+set -euo pipefail
+
+CLUSTER="${ECS_CLUSTER:-obsidian-rag}"
+QUERY_SET="${QUERY_SET:-default}"
+RUN_NAME=""
+EXTRA_ARGS=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --query-set)  QUERY_SET="$2"; shift 2 ;;
+        --run-name)   RUN_NAME="$2"; shift 2 ;;
+        --cluster)    CLUSTER="$2"; shift 2 ;;
+        *)            EXTRA_ARGS="$EXTRA_ARGS $1"; shift ;;
+    esac
+done
+
+EVAL_TASK_DEF="${CLUSTER}-query-eval"
+WORKER_SERVICE="${CLUSTER}-ingest-worker"
+
+echo "=== Remote Eval ==="
+echo "Cluster:    $CLUSTER"
+echo "Query Set:  $QUERY_SET"
+echo "Run Name:   ${RUN_NAME:-<auto>}"
+echo ""
+
+# Build command
+CMD_ARGS="--query-set $QUERY_SET"
+if [[ -n "$RUN_NAME" ]]; then
+    CMD_ARGS="$CMD_ARGS --run-name $RUN_NAME"
+fi
+
+# Retrieve network config from existing service
+NETWORK_CONFIG=$(aws ecs describe-services \
+    --cluster "$CLUSTER" \
+    --services "$WORKER_SERVICE" \
+    --query 'services[0].networkConfiguration' \
+    --output json --no-cli-pager)
+
+SUBNETS=$(echo "$NETWORK_CONFIG" | python3 -c "import sys,json; nc=json.load(sys.stdin); print(','.join(nc['awsvpcConfiguration']['subnets']))")
+SECURITY_GROUPS=$(echo "$NETWORK_CONFIG" | python3 -c "import sys,json; nc=json.load(sys.stdin); sgs=nc['awsvpcConfiguration'].get('securityGroups',[]); print(','.join(sgs))" 2>/dev/null || echo "")
+
+NETWORK_OVERRIDE="awsvpcConfiguration={subnets=[$SUBNETS],assignPublicIp=ENABLED"
+if [[ -n "$SECURITY_GROUPS" ]]; then
+    NETWORK_OVERRIDE="$NETWORK_OVERRIDE,securityGroups=[$SECURITY_GROUPS]"
+fi
+NETWORK_OVERRIDE="$NETWORK_OVERRIDE}"
+
+# Launch task
+echo ">>> Launching eval task..."
+TASK_ARN=$(aws ecs run-task \
+    --cluster "$CLUSTER" \
+    --task-definition "$EVAL_TASK_DEF" \
+    --launch-type FARGATE \
+    --network-configuration "$NETWORK_OVERRIDE" \
+    --overrides "{\"containerOverrides\":[{\"name\":\"query-eval\",\"command\":[\"python\",\"scripts/run_remote_eval.py\",$( echo $CMD_ARGS | python3 -c "import sys; args=sys.stdin.read().split(); print(','.join(['\"'+a+'\"' for a in args]))")]}]}" \
+    --query 'tasks[0].taskArn' \
+    --output text --no-cli-pager)
+
+TASK_ID=$(basename "$TASK_ARN")
+echo ">>> Eval task: $TASK_ID"
+
+# Tail logs
+LOG_GROUP="/ecs/${CLUSTER}/query-eval"
+sleep 10
+aws logs tail "$LOG_GROUP" --follow --format short &
+TAIL_PID=$!
+
+aws ecs wait tasks-stopped \
+    --cluster "$CLUSTER" \
+    --tasks "$TASK_ARN" 2>/dev/null || true
+
+kill $TAIL_PID 2>/dev/null || true
+wait $TAIL_PID 2>/dev/null || true
+
+EXIT_CODE=$(aws ecs describe-tasks \
+    --cluster "$CLUSTER" \
+    --tasks "$TASK_ARN" \
+    --query 'tasks[0].containers[0].exitCode' \
+    --output text --no-cli-pager)
+
+echo ">>> Eval exited with code: $EXIT_CODE"
+exit "${EXIT_CODE:-1}"
