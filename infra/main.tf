@@ -100,6 +100,12 @@ module "ecs" {
   corpus_s3_prefix     = var.corpus_s3_prefix
   chunk_s3_prefix      = var.chunk_s3_prefix
   chunk_max_s3_workers = var.chunk_max_s3_workers
+  orchestrator_cpu     = var.orchestrator_cpu
+  orchestrator_memory  = var.orchestrator_memory
+  query_eval_cpu       = var.query_eval_cpu
+  query_eval_memory    = var.query_eval_memory
+  eval_s3_prefix       = var.eval_s3_prefix
+  manifests_s3_prefix  = var.manifests_s3_prefix
 
   tags = local.tags
 }

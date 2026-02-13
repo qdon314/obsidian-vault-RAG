@@ -42,3 +42,18 @@ output "corpus_bucket_name" {
   description = "S3 bucket for distributed ingestion corpus-of-record"
   value       = local.corpus_bucket_name
 }
+
+output "orchestrator_task_definition_arn" {
+  description = "ARN of the ingest orchestrator task definition"
+  value       = module.ecs.orchestrator_task_definition_arn
+}
+
+output "query_eval_task_definition_arn" {
+  description = "ARN of the query/eval task definition"
+  value       = module.ecs.query_eval_task_definition_arn
+}
+
+output "worker_service_name" {
+  description = "Name of the ingest worker ECS service"
+  value       = module.ecs.worker_service_name
+}

@@ -28,3 +28,15 @@ db_password          = "replace-me"
 db_instance_class    = "db.t4g.micro"
 sqs_visibility_timeout = 300
 sqs_max_receive_count  = 5
+
+# Orchestrator sizing
+orchestrator_cpu    = 256
+orchestrator_memory = 512
+
+# Query/eval sizing
+query_eval_cpu    = 256
+query_eval_memory = 512
+
+# S3 prefixes
+eval_s3_prefix      = "eval"
+manifests_s3_prefix = "manifests"
