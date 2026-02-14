@@ -1,5 +1,5 @@
 .PHONY: help index index-dummy ask ask-dummy results verdict tail-logs clean-index \
-        index-regulatory index-regulatory-dummy normalize-regulatory \
+        index-regulatory index-regulatory-dummy normalize-regulatory index-regulatory-push \
         test lint fmt typecheck env-check \
         docker-build docker-up docker-down \
         infra-init infra-plan infra-apply infra-destroy \
@@ -20,7 +20,9 @@ CORPUS ?= /Users/quentindonnelly/Documents/Personal & Professional
 QUERY ?= What are the applications of scaled dot-product attention?
 NUM_LOGS ?= 20
 REGULATORY_XML ?= data/ecfr/title-10-part-50.xml
-REGULATORY_VERSION ?= 2026-02-02
+REGULATORY_VERSION ?= 2025-02-01
+REGULATORY_S3_BUCKET ?=
+REGULATORY_S3_PREFIX ?= regulatory/part-50
 VERDICT_SCOPE ?=
 
 help:  ## Show available commands
@@ -79,6 +81,20 @@ normalize-regulatory:  ## Normalize eCFR XML to canonical markdown (no indexing)
 		--source-revision "ecfr-$(REGULATORY_VERSION)" \
 		--effective-date "$(REGULATORY_VERSION)" \
 		--skip-index
+
+index-regulatory-push:  ## Build regulatory index, push normalized files to S3, wipe local normalized files
+	@test -n "$(REGULATORY_S3_BUCKET)" || (echo "Set REGULATORY_S3_BUCKET=<bucket>"; exit 1)
+	$(PYTHON) scripts/ingest_regulatory.py \
+		--xml-source "$(REGULATORY_XML)" \
+		--part 50 \
+		--instrument-version "$(REGULATORY_VERSION)" \
+		--source-revision "ecfr-$(REGULATORY_VERSION)" \
+		--effective-date "$(REGULATORY_VERSION)" \
+		--index-name regulatory \
+		--artifacts-dir $(ARTIFACTS_DIR) \
+		--push-s3-bucket "$(REGULATORY_S3_BUCKET)" \
+		--push-s3-prefix "$(REGULATORY_S3_PREFIX)" \
+		--wipe-local
 
 # -------------------------------------------------------------------
 # Querying
@@ -219,8 +235,8 @@ ecs-status:  ## Show running ECS task counts
 # -------------------------------------------------------------------
 
 WORKERS ?= 3
-CORPUS_ID ?= regulations_v1
-INDEX_NAME ?= regulatory
+CORPUS_ID ?= regulatory
+INDEX_NAME ?= chunks_regulatory_v1
 QUERY_SET ?= default
 RUN_NAME ?=
 
