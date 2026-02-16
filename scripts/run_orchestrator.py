@@ -15,7 +15,10 @@ import argparse
 import json
 import logging
 import os
+import tempfile
+from dataclasses import replace
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 
 import boto3  # type: ignore[import-untyped]
@@ -31,6 +34,7 @@ from rag.app.ingestion.enumerator import Enumerator
 from rag.app.ingestion.orchestrator import poll_until_complete
 from rag.domain.index_manifest import IndexManifest
 from rag.domain.ingestion import JobStatus
+from rag.domain.models import Document
 
 log = logging.getLogger("orchestrator")
 
@@ -45,9 +49,72 @@ def _count_chunks(dsn: str) -> int:
         conn.close()
 
 
+def _download_s3_prefix(bucket: str, prefix: str, local_dir: Path) -> list[Path]:
+    """Download all objects under an S3 prefix to a local directory."""
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
+    downloaded: list[Path] = []
+
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            key = obj["Key"]
+            rel = key[len(prefix) :].lstrip("/")
+            if not rel:
+                continue
+            local_path = local_dir / rel
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            s3.download_file(bucket, key, str(local_path))
+            downloaded.append(local_path)
+    return downloaded
+
+
+def _canonicalize_s3_docs(
+    *,
+    docs: list[Document],
+    local_root: Path,
+    bucket: str,
+    prefix: str,
+) -> list[Document]:
+    """Rewrite temp local URIs/doc_ids to stable s3:// URIs/doc_ids."""
+    root = local_root.resolve()
+    prefix = prefix.strip("/")
+    canonical: list[Document] = []
+
+    for doc in docs:
+        path = Path(doc.uri).resolve()
+        try:
+            rel = path.relative_to(root).as_posix()
+        except ValueError:
+            # Defensive fallback: keep basename-stable key if path is outside root.
+            rel = path.name
+        key = "/".join(part for part in (prefix, rel) if part)
+        s3_uri = f"s3://{bucket}/{key}"
+        text_hash = sha256(doc.text.encode("utf-8")).hexdigest()
+        doc_id = sha256(f"{s3_uri}|{text_hash}".encode()).hexdigest()
+        metadata = dict(doc.metadata)
+        metadata["uri"] = s3_uri
+        metadata["s3_key"] = key
+        metadata["source_uri"] = s3_uri
+        canonical.append(replace(doc, uri=s3_uri, doc_id=doc_id, metadata=metadata))
+
+    return canonical
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run full ingestion lifecycle.")
     ap.add_argument("--corpus", required=True, help="Path to corpus directory.")
+    ap.add_argument(
+        "--corpus-s3-prefix",
+        type=str,
+        default=None,
+        help="S3 prefix containing corpus files to ingest (overrides --corpus path input).",
+    )
+    ap.add_argument(
+        "--corpus-s3-bucket",
+        type=str,
+        default=None,
+        help="S3 bucket for --corpus-s3-prefix (default: distributed_ingestion.corpus_s3_bucket).",
+    )
     ap.add_argument("--corpus-id", required=True, help="Unique corpus identifier.")
     ap.add_argument("--index-name", required=True, help="Index name for manifest.")
     ap.add_argument("--max-docs", type=int, default=0, help="Limit docs (0=all).")
@@ -79,11 +146,48 @@ def main() -> None:
     log.info("Phase 1: Enumerating documents...")
 
     container = build_container()
-    vault_root = Path(args.corpus).expanduser().resolve()
-    docs, _report = container.ingestor.ingest([str(vault_root)])
+
+    if args.corpus_s3_prefix:
+        bucket = args.corpus_s3_bucket or cfg.distributed_ingestion.corpus_s3_bucket
+        if not bucket:
+            log.error("No S3 bucket configured for --corpus-s3-prefix")
+            raise SystemExit(1)
+        prefix = args.corpus_s3_prefix.strip("/")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            corpus_root = Path(tmpdir) / "corpus"
+            corpus_root.mkdir(parents=True, exist_ok=True)
+            downloaded = _download_s3_prefix(bucket, prefix, corpus_root)
+            log.info(
+                "Downloaded %d corpus files from s3://%s/%s to %s",
+                len(downloaded),
+                bucket,
+                prefix,
+                corpus_root,
+            )
+            docs, _report = container.ingestor.ingest([str(corpus_root)])
+            docs = _canonicalize_s3_docs(
+                docs=docs,
+                local_root=corpus_root,
+                bucket=bucket,
+                prefix=prefix,
+            )
+    else:
+        vault_root = Path(args.corpus).expanduser().resolve()
+        docs, _report = container.ingestor.ingest([str(vault_root)])
 
     if args.max_docs > 0:
         docs = docs[: args.max_docs]
+
+    if len(docs) == 0:
+        if args.corpus_s3_prefix:
+            log.error(
+                "No documents found under s3://%s/%s",
+                args.corpus_s3_bucket or cfg.distributed_ingestion.corpus_s3_bucket,
+                args.corpus_s3_prefix.strip("/"),
+            )
+        else:
+            log.error("No documents found under corpus path: %s", args.corpus)
+        raise SystemExit(1)
 
     log.info("Ingested %d docs, now creating job...", len(docs))
 
@@ -115,10 +219,6 @@ def main() -> None:
     )
 
     log.info("Job %s created (status=%s, tasks=%d)", job.job_id, job.status.value, len(docs))
-
-    if len(docs) == 0:
-        log.info("No documents to process. Done.")
-        return
 
     # ── Phase 2: Poll ──────────────────────────────────────────────
     log.info("Phase 2: Polling for task completion...")
