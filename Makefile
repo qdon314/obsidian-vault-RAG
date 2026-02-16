@@ -1,7 +1,8 @@
 .PHONY: help index index-dummy ask ask-dummy results verdict tail-logs clean-index \
-        index-regulatory index-regulatory-dummy normalize-regulatory index-regulatory-push \
+        index-regulatory index-regulatory-dummy normalize-regulatory \
+        push-regulatory-s3 normalize-and-push-regulatory index-regulatory-push \
         test lint fmt typecheck env-check \
-        docker-build docker-up docker-down \
+        docker-build docker-up docker-down image-push deploy-image \
         infra-init infra-plan infra-apply infra-destroy \
         ecs-up ecs-down ecs-status \
         ingest-remote eval-remote query-remote upload-eval-queries
@@ -21,12 +22,13 @@ QUERY ?= What are the applications of scaled dot-product attention?
 NUM_LOGS ?= 20
 REGULATORY_XML ?= data/ecfr/title-10-part-50.xml
 REGULATORY_VERSION ?= 2025-02-01
+REGULATORY_PART ?= 50
 REGULATORY_S3_BUCKET ?=
 REGULATORY_S3_PREFIX ?= regulatory/part-50
 VERDICT_SCOPE ?=
 
 help:  ## Show available commands
-	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # -------------------------------------------------------------------
 # Indexing
@@ -55,7 +57,7 @@ clean-index:  ## Remove index directory (DANGEROUS)
 index-regulatory:  ## Build regulatory index from eCFR XML
 	$(PYTHON) scripts/ingest_regulatory.py \
 		--xml-source "$(REGULATORY_XML)" \
-		--part 50 \
+		--part $(REGULATORY_PART) \
 		--instrument-version "$(REGULATORY_VERSION)" \
 		--source-revision "ecfr-$(REGULATORY_VERSION)" \
 		--effective-date "$(REGULATORY_VERSION)" \
@@ -65,7 +67,7 @@ index-regulatory:  ## Build regulatory index from eCFR XML
 index-regulatory-dummy:  ## Build regulatory index with DummyEmbedder
 	$(PYTHON) scripts/ingest_regulatory.py \
 		--xml-source "$(REGULATORY_XML)" \
-		--part 50 \
+		--part $(REGULATORY_PART) \
 		--instrument-version "$(REGULATORY_VERSION)" \
 		--source-revision "ecfr-$(REGULATORY_VERSION)" \
 		--effective-date "$(REGULATORY_VERSION)" \
@@ -74,19 +76,29 @@ index-regulatory-dummy:  ## Build regulatory index with DummyEmbedder
 		--use-dummy-embeddings
 
 normalize-regulatory:  ## Normalize eCFR XML to canonical markdown (no indexing)
-	$(PYTHON) scripts/ingest_regulatory.py \
+	$(PYTHON) scripts/regulatory_normalize.py \
 		--xml-source "$(REGULATORY_XML)" \
-		--part 50 \
+		--part $(REGULATORY_PART) \
 		--instrument-version "$(REGULATORY_VERSION)" \
 		--source-revision "ecfr-$(REGULATORY_VERSION)" \
-		--effective-date "$(REGULATORY_VERSION)" \
-		--skip-index
+		--effective-date "$(REGULATORY_VERSION)"
+
+push-regulatory-s3:  ## Push normalized regulatory part directory to S3
+	@test -n "$(REGULATORY_S3_BUCKET)" || (echo "Set REGULATORY_S3_BUCKET=<bucket>"; exit 1)
+	$(PYTHON) scripts/regulatory_push_s3.py \
+		--bucket "$(REGULATORY_S3_BUCKET)" \
+		--prefix "$(REGULATORY_S3_PREFIX)" \
+		--part $(REGULATORY_PART)
+
+normalize-and-push-regulatory:  ## Normalize regulatory corpus then push that part directory to S3
+	$(MAKE) normalize-regulatory REGULATORY_PART=$(REGULATORY_PART)
+	$(MAKE) push-regulatory-s3 REGULATORY_PART=$(REGULATORY_PART)
 
 index-regulatory-push:  ## Build regulatory index, push normalized files to S3, wipe local normalized files
 	@test -n "$(REGULATORY_S3_BUCKET)" || (echo "Set REGULATORY_S3_BUCKET=<bucket>"; exit 1)
 	$(PYTHON) scripts/ingest_regulatory.py \
 		--xml-source "$(REGULATORY_XML)" \
-		--part 50 \
+		--part $(REGULATORY_PART) \
 		--instrument-version "$(REGULATORY_VERSION)" \
 		--source-revision "ecfr-$(REGULATORY_VERSION)" \
 		--effective-date "$(REGULATORY_VERSION)" \
@@ -163,9 +175,15 @@ env-check:  ## Check Python environment
 ECS_CLUSTER ?= obsidian-rag
 ECS_APP_SERVICE ?= $(ECS_CLUSTER)-app
 ECS_QDRANT_SERVICE ?= $(ECS_CLUSTER)-qdrant
+AWS_REGION ?= us-east-1
+AWS_ACCOUNT_ID ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
+ECR_REPO ?= obsidian-rag
+IMAGE_TAG ?= $(shell git rev-parse --short HEAD)
+ECR_IMAGE ?= $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(ECR_REPO):$(IMAGE_TAG)
+IMAGE_PLATFORM ?= linux/amd64
 
 docker-build:  ## Build Docker image locally
-	docker build -t rag-obsidian:dev .
+	docker buildx build --platform $(IMAGE_PLATFORM) -t rag-obsidian:dev --load .
 
 docker-index:  ## Build index inside Docker (starts Qdrant + runs indexer)
 	docker compose run --rm app build-index \
@@ -184,6 +202,19 @@ docker-up:  ## Start local stack (Qdrant + app shell)
 
 docker-down:  ## Tear down local stack and volumes
 	docker compose down -v
+
+image-push: docker-build  ## Build and push pinned image tag to ECR
+	@test -n "$(AWS_ACCOUNT_ID)" || (echo "Set AWS_ACCOUNT_ID or configure AWS CLI credentials"; exit 1)
+	@aws ecr describe-repositories --region $(AWS_REGION) --repository-names $(ECR_REPO) >/dev/null 2>&1 || \
+		aws ecr create-repository --region $(AWS_REGION) --repository-name $(ECR_REPO) >/dev/null
+	aws ecr get-login-password --region $(AWS_REGION) | \
+		docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
+	docker buildx build --platform $(IMAGE_PLATFORM) -t $(ECR_IMAGE) --push .
+
+deploy-image: image-push  ## Push pinned image and apply Terraform with app_image_tag
+	@test -n "$$TF_VAR_openai_api_key" || (echo "Export TF_VAR_openai_api_key first"; exit 1)
+	@test -n "$$TF_VAR_db_password" || (echo "Export TF_VAR_db_password first"; exit 1)
+	cd infra && terraform apply -var "app_image_tag=$(IMAGE_TAG)"
 
 # -------------------------------------------------------------------
 # Terraform
@@ -237,6 +268,8 @@ ecs-status:  ## Show running ECS task counts
 WORKERS ?= 3
 CORPUS_ID ?= regulatory
 INDEX_NAME ?= chunks_regulatory_v1
+CORPUS_S3_PREFIX ?= regulatory
+CORPUS_S3_BUCKET ?= $(shell cd infra && terraform output -raw corpus_bucket_name 2>/dev/null || echo "obsidian-rag-artifacts")
 QUERY_SET ?= default
 RUN_NAME ?=
 
@@ -244,7 +277,9 @@ ingest-remote:  ## Run distributed ingestion on ECS (auto-scales workers)
 	scripts/ecs_run_ingest.sh \
 		--workers $(WORKERS) \
 		--corpus-id $(CORPUS_ID) \
-		--index-name $(INDEX_NAME)
+		--index-name $(INDEX_NAME) \
+		$(if $(CORPUS_S3_PREFIX),--corpus-s3-prefix $(CORPUS_S3_PREFIX),) \
+		$(if $(CORPUS_S3_BUCKET),--corpus-s3-bucket $(CORPUS_S3_BUCKET),)
 
 eval-remote:  ## Run eval against remote backends on ECS
 	scripts/ecs_run_eval.sh \
