@@ -3,3 +3,5 @@
 .terraform/
 *.tfvars
 !terraform.tfvars.example
+tfplan
+*.tfplan
