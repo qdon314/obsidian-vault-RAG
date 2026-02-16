@@ -3,15 +3,13 @@
 
 1. Parse eCFR XML for a CFR part.
 2. Normalize into canonical markdown files.
-3. Build citation manifest.
-4. Ingest -> chunk -> enrich -> embed -> store.
+3. Ingest -> chunk -> enrich -> embed -> store.
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
-import shutil
 from dataclasses import asdict
 from pathlib import Path
 from time import perf_counter
@@ -22,17 +20,14 @@ from rag import settings
 from rag.adapters.ingestion.filesystem import FilesystemIngestor
 from rag.adapters.ingestion.loaders.obsidian_markdown_loader import ObsidianMarkdownLoader
 from rag.adapters.ingestion.loaders.text_loader import TextLoader
-from rag.adapters.ingestion.regulatory.ecfr_parser import parse_ecfr_xml
 from rag.adapters.ingestion.regulatory.enrichment import enrich_regulatory_chunks
-from rag.adapters.ingestion.regulatory.manifest import (
-    build_citation_manifest,
-    save_citation_manifest,
-)
-from rag.adapters.ingestion.regulatory.normalizer import (
-    NormalizationConfig,
-    normalize_part,
-)
+from rag.adapters.ingestion.regulatory.normalizer import NormalizationConfig
 from rag.app.container import ContainerOverrides, build_container
+from rag.app.regulatory_pipeline import (
+    normalize_part_from_xml,
+    upload_directory_to_s3,
+    wipe_directory,
+)
 from rag.domain.index_manifest import IndexManifest
 from rag.domain.models import Chunk
 
@@ -90,22 +85,6 @@ def _format_duration(seconds: float) -> str:
     return f"{minutes}m{secs:04.1f}s"
 
 
-def _upload_directory_to_s3(local_dir: Path, bucket: str, prefix: str) -> int:
-    import boto3  # type: ignore[import-untyped]
-
-    s3 = boto3.client("s3")
-    uploaded = 0
-    clean_prefix = prefix.strip("/")
-    for file_path in local_dir.rglob("*"):
-        if not file_path.is_file():
-            continue
-        relative = file_path.relative_to(local_dir).as_posix()
-        key = f"{clean_prefix}/{relative}" if clean_prefix else relative
-        s3.upload_file(str(file_path), bucket, key)
-        uploaded += 1
-    return uploaded
-
-
 def main() -> None:
     args = build_argparser().parse_args()
     load_dotenv()
@@ -129,21 +108,14 @@ def main() -> None:
 
     if not args.skip_normalize:
         log.info("Reading XML from %s...", args.xml_source)
-        xml_text = Path(args.xml_source).read_text(encoding="utf-8")
-
-        log.info("Parsing eCFR XML...")
-        sections = parse_ecfr_xml(xml_text)
-        sections = [s for s in sections if s.part_number == str(args.part)]
-        log.info("Found %d sections in Part %d", len(sections), args.part)
-
         log.info("Normalizing to %s...", part_dir)
-        written = normalize_part(sections, config, part_dir)
+        written, _part_dir = normalize_part_from_xml(
+            xml_source=args.xml_source,
+            corpus_dir=corpus_dir,
+            part=args.part,
+            config=config,
+        )
         log.info("Wrote %d canonical markdown files", len(written))
-
-        manifest = build_citation_manifest(corpus_dir)
-        manifest_path = corpus_dir / "citation_manifest.json"
-        save_citation_manifest(manifest, manifest_path)
-        log.info("Citation manifest: %d entries -> %s", len(manifest), manifest_path)
     else:
         log.info("Skipping normalization (--skip-normalize)")
 
@@ -211,12 +183,15 @@ def main() -> None:
             )
         prefix = args.push_s3_prefix.strip("/")
         log.info("Uploading normalized files from %s to s3://%s/%s", part_dir, args.push_s3_bucket, prefix)
-        uploaded = _upload_directory_to_s3(part_dir, args.push_s3_bucket, prefix)
+        uploaded = upload_directory_to_s3(
+            part_dir,
+            bucket=args.push_s3_bucket,
+            prefix=prefix,
+        )
         log.info("Uploaded %d files to s3://%s/%s", uploaded, args.push_s3_bucket, prefix)
 
     if args.wipe_local:
-        if part_dir.exists():
-            shutil.rmtree(part_dir)
+        if wipe_directory(part_dir):
             log.info("Deleted local normalized files directory: %s", part_dir)
         else:
             log.info("Local normalized files directory already absent: %s", part_dir)
