@@ -1,12 +1,18 @@
-aws_region     = "us-east-1"
-project_name   = "obsidian-rag"
-openai_api_key = "sk-your-key-here"
+aws_region   = "us-east-1"
+project_name = "obsidian-rag"
+app_image_tag = "git-sha-or-release-tag"
+
+# Provide secrets via environment, not tfvars:
+# export TF_VAR_openai_api_key='sk-...'
+# export TF_VAR_db_password='...'
 
 # Find these with: aws ec2 describe-subnets --query 'Subnets[].SubnetId'
 subnet_ids = ["subnet-xxxxxxxx"]
 
-# Optional: restrict traffic
-# security_group_ids = ["sg-xxxxxxxx"]
+# Security groups are managed by Terraform by default.
+# Optionally provide *additional* SG IDs to attach:
+# ecs_security_group_ids = ["sg-extra-ecsxxxxxxxx"]
+# rds_security_group_ids = ["sg-extra-rdsxxxxxxxx"]
 
 # Scale to zero by default (set to 1 to run)
 app_desired_count    = 0
@@ -24,7 +30,6 @@ chunk_s3_prefix  = "chunks"
 
 # RDS + SQS for distributed ingestion
 db_username          = "rag"
-db_password          = "replace-me"
 db_instance_class    = "db.t4g.micro"
 sqs_visibility_timeout = 300
 sqs_max_receive_count  = 5

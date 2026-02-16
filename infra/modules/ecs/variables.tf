@@ -24,6 +24,12 @@ variable "s3_bucket_arn" {
   type        = string
 }
 
+variable "corpus_bucket_arn" {
+  description = "ARN of the S3 bucket used as corpus source of truth"
+  type        = string
+  default     = ""
+}
+
 variable "subnet_ids" {
   description = "Subnet IDs for ECS tasks"
   type        = list(string)

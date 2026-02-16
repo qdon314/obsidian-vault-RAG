@@ -10,6 +10,11 @@ variable "project_name" {
   default     = "obsidian-rag"
 }
 
+variable "app_image_tag" {
+  description = "Pinned ECR image tag for ECS task definitions (for example a git SHA)"
+  type        = string
+}
+
 variable "openai_api_key" {
   description = "OpenAI API key"
   type        = string
@@ -21,10 +26,24 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "security_group_ids" {
+variable "ecs_security_group_ids" {
   description = "Security group IDs for ECS tasks"
   type        = list(string)
   default     = []
+}
+
+variable "rds_security_group_ids" {
+  description = "Security group IDs for RDS"
+  type        = list(string)
+  default     = []
+}
+
+# Deprecated: use ecs_security_group_ids and rds_security_group_ids.
+variable "security_group_ids" {
+  description = "DEPRECATED: shared security group IDs for ECS and RDS"
+  type        = list(string)
+  default     = null
+  nullable    = true
 }
 
 variable "app_desired_count" {

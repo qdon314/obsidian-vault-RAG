@@ -66,6 +66,9 @@ resource "aws_iam_role_policy" "task_s3" {
   name = "${var.cluster_name}-s3-access"
   role = aws_iam_role.task.id
 
+  # Include both the artifacts bucket and the corpus source-of-truth bucket.
+  # When corpus_bucket_arn is empty, compact() drops empty entries.
+  # Distinct avoids duplicate ARNs when both buckets are the same.
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -77,10 +80,12 @@ resource "aws_iam_role_policy" "task_s3" {
           "s3:ListBucket",
           "s3:DeleteObject"
         ]
-        Resource = [
+        Resource = distinct(compact([
           var.s3_bucket_arn,
-          "${var.s3_bucket_arn}/*"
-        ]
+          "${var.s3_bucket_arn}/*",
+          var.corpus_bucket_arn,
+          var.corpus_bucket_arn != "" ? "${var.corpus_bucket_arn}/*" : "",
+        ]))
       }
     ]
   })

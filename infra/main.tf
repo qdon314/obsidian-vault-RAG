@@ -25,7 +25,69 @@ locals {
     Project   = var.project_name
     ManagedBy = "terraform"
   }
-  corpus_bucket_name = var.corpus_bucket_name != "" ? var.corpus_bucket_name : module.s3.bucket_name
+  corpus_bucket_name        = var.corpus_bucket_name != "" ? var.corpus_bucket_name : module.s3.bucket_name
+  legacy_security_group_ids = var.security_group_ids != null ? var.security_group_ids : []
+  ecs_security_group_ids    = length(var.ecs_security_group_ids) > 0 ? var.ecs_security_group_ids : local.legacy_security_group_ids
+  rds_security_group_ids    = length(var.rds_security_group_ids) > 0 ? var.rds_security_group_ids : local.legacy_security_group_ids
+}
+
+data "aws_subnet" "first" {
+  id = var.subnet_ids[0]
+}
+
+resource "aws_security_group" "ecs_tasks" {
+  name        = "${var.project_name}-ecs-sg"
+  description = "Security group for ECS tasks"
+  vpc_id      = data.aws_subnet.first.vpc_id
+  tags        = local.tags
+}
+
+resource "aws_security_group_rule" "ecs_egress_all" {
+  type              = "egress"
+  description       = "Allow ECS tasks outbound access to AWS APIs and internet"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.ecs_tasks.id
+}
+
+resource "aws_security_group_rule" "ecs_ingress_qdrant_http_from_self" {
+  type                     = "ingress"
+  description              = "Allow ECS tasks to reach Qdrant HTTP"
+  from_port                = 6333
+  to_port                  = 6333
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.ecs_tasks.id
+  source_security_group_id = aws_security_group.ecs_tasks.id
+}
+
+resource "aws_security_group_rule" "ecs_ingress_qdrant_grpc_from_self" {
+  type                     = "ingress"
+  description              = "Allow ECS tasks to reach Qdrant gRPC"
+  from_port                = 6334
+  to_port                  = 6334
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.ecs_tasks.id
+  source_security_group_id = aws_security_group.ecs_tasks.id
+}
+
+resource "aws_security_group" "rds" {
+  name = "${var.project_name}-rds-sg"
+  # Keep description aligned with existing imported SG to avoid ForceNew replacement.
+  description = "RDS access for ingestion bootstrap"
+  vpc_id      = data.aws_subnet.first.vpc_id
+  tags        = local.tags
+}
+
+resource "aws_security_group_rule" "rds_postgres_from_ecs" {
+  type                     = "ingress"
+  description              = "Allow ECS tasks to access Postgres"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rds.id
+  source_security_group_id = aws_security_group.ecs_tasks.id
 }
 
 module "ecr" {
@@ -63,7 +125,7 @@ module "rds" {
 
   name_prefix        = var.project_name
   subnet_ids         = var.subnet_ids
-  security_group_ids = var.security_group_ids
+  security_group_ids = concat([aws_security_group.rds.id], local.rds_security_group_ids)
   instance_class     = var.db_instance_class
   db_username        = var.db_username
   db_password        = var.db_password
@@ -82,11 +144,12 @@ module "ecs" {
   source = "./modules/ecs"
 
   cluster_name       = var.project_name
-  app_image          = "${module.ecr.repository_url}:latest"
+  app_image          = "${module.ecr.repository_url}:${var.app_image_tag}"
   openai_api_key_arn = module.secrets.openai_api_key_arn
   s3_bucket_arn      = module.s3.bucket_arn
+  corpus_bucket_arn  = "arn:aws:s3:::${local.corpus_bucket_name}"
   subnet_ids         = var.subnet_ids
-  security_group_ids = var.security_group_ids
+  security_group_ids = concat([aws_security_group.ecs_tasks.id], local.ecs_security_group_ids)
 
   app_desired_count    = var.app_desired_count
   qdrant_desired_count = var.qdrant_desired_count
