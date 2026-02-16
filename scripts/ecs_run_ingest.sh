@@ -5,10 +5,11 @@
 #   scripts/ecs_run_ingest.sh --workers 5 --corpus-id regulations_v1 --index-name regulatory
 #
 # This script:
-#   1. Scales the ingest-worker service to desired count
+#   1. Scales the qdrant service to 1 task
+#   2. Scales the ingest-worker service to desired count
 #   2. Launches the ingest-orchestrator task
 #   3. Streams CloudWatch logs
-#   4. Scales workers back to 0 when the orchestrator exits
+#   4. Scales workers and qdrant back to 0 when the orchestrator exits
 
 set -euo pipefail
 
@@ -18,6 +19,8 @@ WORKERS="${WORKERS:-3}"
 CORPUS_ID=""
 INDEX_NAME=""
 CORPUS_PATH=""
+CORPUS_S3_PREFIX=""
+CORPUS_S3_BUCKET=""
 MAX_DOCS=""
 EXTRA_ARGS=""
 
@@ -28,6 +31,8 @@ while [[ $# -gt 0 ]]; do
         --corpus-id)    CORPUS_ID="$2"; shift 2 ;;
         --index-name)   INDEX_NAME="$2"; shift 2 ;;
         --corpus)       CORPUS_PATH="$2"; shift 2 ;;
+        --corpus-s3-prefix) CORPUS_S3_PREFIX="$2"; shift 2 ;;
+        --corpus-s3-bucket) CORPUS_S3_BUCKET="$2"; shift 2 ;;
         --max-docs)     MAX_DOCS="$2"; shift 2 ;;
         --cluster)      CLUSTER="$2"; shift 2 ;;
         *)              EXTRA_ARGS="$EXTRA_ARGS $1"; shift ;;
@@ -40,6 +45,7 @@ if [[ -z "$CORPUS_ID" || -z "$INDEX_NAME" ]]; then
 fi
 
 WORKER_SERVICE="${CLUSTER}-ingest-worker"
+QDRANT_SERVICE="${CLUSTER}-qdrant"
 ORCH_TASK_DEF="${CLUSTER}-ingest-orchestrator"
 
 echo "=== Distributed Ingestion ==="
@@ -47,9 +53,26 @@ echo "Cluster:      $CLUSTER"
 echo "Workers:      $WORKERS"
 echo "Corpus ID:    $CORPUS_ID"
 echo "Index Name:   $INDEX_NAME"
+if [[ -n "$CORPUS_S3_PREFIX" ]]; then
+    echo "S3 Prefix:    $CORPUS_S3_PREFIX"
+fi
 echo ""
 
-# ── Step 1: Scale up workers ──────────────────────────────────
+# ── Step 1: Scale up qdrant ───────────────────────────────────
+echo ">>> Scaling qdrant service to 1..."
+aws ecs update-service \
+    --cluster "$CLUSTER" \
+    --service "$QDRANT_SERVICE" \
+    --desired-count 1 \
+    --no-cli-pager > /dev/null
+
+echo ">>> Waiting for qdrant to stabilize..."
+aws ecs wait services-stable \
+    --cluster "$CLUSTER" \
+    --services "$QDRANT_SERVICE"
+echo ">>> qdrant is running."
+
+# ── Step 2: Scale up workers ──────────────────────────────────
 echo ">>> Scaling ingest-worker service to $WORKERS..."
 aws ecs update-service \
     --cluster "$CLUSTER" \
@@ -63,18 +86,24 @@ aws ecs wait services-stable \
     --services "$WORKER_SERVICE"
 echo ">>> $WORKERS workers running."
 
-# ── Step 2: Build command override ────────────────────────────
+# ── Step 3: Build command override ────────────────────────────
 CMD_ARGS="--corpus-id $CORPUS_ID --index-name $INDEX_NAME"
 if [[ -n "$CORPUS_PATH" ]]; then
     CMD_ARGS="$CMD_ARGS --corpus $CORPUS_PATH"
 else
     CMD_ARGS="$CMD_ARGS --corpus /data/vault"
 fi
+if [[ -n "$CORPUS_S3_PREFIX" ]]; then
+    CMD_ARGS="$CMD_ARGS --corpus-s3-prefix $CORPUS_S3_PREFIX"
+fi
+if [[ -n "$CORPUS_S3_BUCKET" ]]; then
+    CMD_ARGS="$CMD_ARGS --corpus-s3-bucket $CORPUS_S3_BUCKET"
+fi
 if [[ -n "$MAX_DOCS" ]]; then
     CMD_ARGS="$CMD_ARGS --max-docs $MAX_DOCS"
 fi
 
-# ── Step 3: Retrieve network config from existing worker ──────
+# ── Step 4: Retrieve network config from existing worker ──────
 NETWORK_CONFIG=$(aws ecs describe-services \
     --cluster "$CLUSTER" \
     --services "$WORKER_SERVICE" \
@@ -90,7 +119,7 @@ if [[ -n "$SECURITY_GROUPS" ]]; then
 fi
 NETWORK_OVERRIDE="$NETWORK_OVERRIDE}"
 
-# ── Step 4: Launch orchestrator task ──────────────────────────
+# ── Step 5: Launch orchestrator task ──────────────────────────
 echo ">>> Launching orchestrator task..."
 TASK_ARN=$(aws ecs run-task \
     --cluster "$CLUSTER" \
@@ -104,7 +133,7 @@ TASK_ARN=$(aws ecs run-task \
 TASK_ID=$(basename "$TASK_ARN")
 echo ">>> Orchestrator task: $TASK_ID"
 
-# ── Step 5: Wait for completion ───────────────────────────────
+# ── Step 6: Wait for completion ───────────────────────────────
 echo ">>> Waiting for orchestrator to complete (tailing logs)..."
 LOG_GROUP="/ecs/${CLUSTER}/ingest-orchestrator"
 
@@ -134,11 +163,18 @@ EXIT_CODE=$(aws ecs describe-tasks \
 echo ""
 echo ">>> Orchestrator exited with code: $EXIT_CODE"
 
-# ── Step 6: Scale down workers ────────────────────────────────
+# ── Step 7: Scale down workers + qdrant ───────────────────────
 echo ">>> Scaling ingest-worker service to 0..."
 aws ecs update-service \
     --cluster "$CLUSTER" \
     --service "$WORKER_SERVICE" \
+    --desired-count 0 \
+    --no-cli-pager > /dev/null
+
+echo ">>> Scaling qdrant service to 0..."
+aws ecs update-service \
+    --cluster "$CLUSTER" \
+    --service "$QDRANT_SERVICE" \
     --desired-count 0 \
     --no-cli-pager > /dev/null
 
