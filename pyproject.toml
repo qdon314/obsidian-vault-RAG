@@ -37,6 +37,10 @@ qdrant = [
   "qdrant-client>=1.7.0",
 ]
 
+nrc = [
+  "httpx>=0.27.0",
+]
+
 aws = [
   "boto3>=1.34.0",
 ]
