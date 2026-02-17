@@ -116,12 +116,16 @@ class HttpNrcAdamsClient:
         metadata: Mapping[str, object] | None = None,
     ) -> Iterator[AdamsSearchResult]:
         """Search for documents with automatic pagination."""
+        current_query = query
+        current_filters = filters or []
+        current_any_filters = any_filters or []
+        attempted_query_fallback = False
         skip = 0
         while True:
             body: dict[str, object] = {
-                "q": query,
-                "filters": filters or [],
-                "anyFilters": any_filters or [],
+                "q": current_query,
+                "filters": current_filters,
+                "anyFilters": current_any_filters,
                 "legacyLibFilter": True,
                 "mainLibFilter": True,
                 "sort": sort_by,
@@ -133,7 +137,42 @@ class HttpNrcAdamsClient:
             if not isinstance(results, list):
                 results = []
 
+            # ADAMS filters can be inconsistent for some categories.
+            # If the first filtered page is empty, retry once as a text query.
+            if (
+                skip == 0
+                and not results
+                and not attempted_query_fallback
+                and (current_filters or current_any_filters)
+            ):
+                fallback_query = _build_filter_fallback_query(
+                    current_query,
+                    current_filters,
+                    current_any_filters,
+                )
+                if fallback_query and fallback_query != current_query:
+                    logger.info(
+                        "No filtered results; retrying with fallback text query: %r",
+                        fallback_query,
+                    )
+                    current_query = fallback_query
+                    current_filters = []
+                    current_any_filters = []
+                    attempted_query_fallback = True
+                    continue
+
             for raw in results:
+                # ADAMS search results can be either:
+                # 1) flat dicts with fields directly on the item, or
+                # 2) wrapped dicts: {"document": {...}}.
+                if not isinstance(raw, dict):
+                    continue
+                raw_doc = raw.get("document")
+                if not isinstance(raw_doc, dict):
+                    raw_doc = raw.get("Document")
+                if isinstance(raw_doc, dict):
+                    yield _parse_search_result(raw_doc)
+                    continue
                 yield _parse_search_result(raw)
 
             if len(results) < self.page_size:
@@ -255,25 +294,27 @@ class HttpNrcAdamsClient:
 # ------------------------------------
 
 
-def _parse_search_result(raw: dict[str, Any]) -> AdamsSearchResult:
+def _parse_search_result(raw_doc: dict[str, Any]) -> AdamsSearchResult:
+    document_type = _coerce_text_field(raw_doc.get("DocumentType", ""))
     return AdamsSearchResult(
-        accession_number=raw.get("AccessionNumber", ""),
-        title=raw.get("DocumentTitle", ""),
-        document_type=raw.get("DocumentType", ""),
-        document_date=raw.get("DocumentDate"),
-        author_name=raw.get("AuthorName"),
-        author_affiliation=raw.get("AuthorAffiliation"),
-        docket_number=raw.get("DocketNumber"),
-        url=raw.get("Url"),
-        estimated_pages=raw.get("EstimatedPages"),
+        accession_number=raw_doc.get("AccessionNumber", ""),
+        title=raw_doc.get("DocumentTitle", ""),
+        document_type=document_type,
+        document_date=raw_doc.get("DocumentDate"),
+        author_name=raw_doc.get("AuthorName"),
+        author_affiliation=raw_doc.get("AuthorAffiliation"),
+        docket_number=raw_doc.get("DocketNumber"),
+        url=raw_doc.get("Url"),
+        estimated_pages=raw_doc.get("EstimatedPages"),
     )
 
 
 def _parse_document(raw: dict[str, Any]) -> AdamsDocument:
+    document_type = _coerce_text_field(raw.get("DocumentType", ""))
     return AdamsDocument(
         accession_number=raw.get("AccessionNumber", ""),
         title=raw.get("DocumentTitle", ""),
-        document_type=raw.get("DocumentType", ""),
+        document_type=document_type,
         document_date=raw.get("DocumentDate"),
         author_name=raw.get("AuthorName"),
         author_affiliation=raw.get("AuthorAffiliation"),
@@ -286,3 +327,40 @@ def _parse_document(raw: dict[str, Any]) -> AdamsDocument:
         url=raw.get("Url"),
         estimated_pages=raw.get("EstimatedPages"),
     )
+
+
+def _coerce_text_field(value: Any) -> str:
+    """Coerce ADAMS text-like fields that may arrive as strings or string lists."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = [str(item).strip() for item in value if isinstance(item, str) and item.strip()]
+        return "; ".join(parts)
+    return ""
+
+
+def _build_filter_fallback_query(
+    base_query: str,
+    filters: list[dict[str, object]],
+    any_filters: list[dict[str, object]],
+) -> str:
+    """Build fallback text query by appending filter values."""
+    terms: list[str] = []
+    seen: set[str] = set()
+
+    for flt in [*filters, *any_filters]:
+        if not isinstance(flt, dict):
+            continue
+        value = flt.get("value")
+        if isinstance(value, str):
+            term = value.strip()
+            if term and term not in seen:
+                seen.add(term)
+                terms.append(term)
+
+    base = base_query.strip()
+    if not terms:
+        return base
+    if base:
+        return f"{base} {' '.join(terms)}"
+    return " ".join(terms)
