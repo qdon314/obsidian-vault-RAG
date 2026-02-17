@@ -16,13 +16,17 @@ from rag.config.env_override import apply_env_overrides
 @dataclass(frozen=True, slots=True)
 class Secrets:
     openai_api_key: str | None
+    nrc_adams_api_key: str | None
 
     @staticmethod
     def from_env(*, require_openai: bool) -> Secrets:
         key = os.getenv("OPENAI_API_KEY")
         if require_openai and not key:
             raise RuntimeError("OPENAI_API_KEY is required but not set in environment")
-        return Secrets(openai_api_key=key)
+        return Secrets(
+            openai_api_key=key,
+            nrc_adams_api_key=os.getenv("NRC_ADAMS_API_KEY"),
+        )
 
 
 # ----------------------------
@@ -139,6 +143,24 @@ class ChunkStorage:
 
 
 @dataclass(frozen=True, slots=True)
+class NrcAdams:
+    """Configuration for the NRC ADAMS API client."""
+
+    base_url: str = "https://adams-api.nrc.gov/aps/api"
+    timeout: float = 30.0
+    page_size: int = 100
+    max_retries: int = 3
+
+
+@dataclass(frozen=True, slots=True)
+class CaseIngestion:
+    """Configuration for NRC case document ingestion."""
+
+    output_dir: Path = Path("corpus/us-nrc/cases")
+    document_types: tuple[str, ...] = ("Inspection Report", "Part 21 Correspondence")
+
+
+@dataclass(frozen=True, slots=True)
 class DistributedIngestion:
     """Configuration for distributed ingestion (Phase 3).
 
@@ -168,6 +190,8 @@ class Settings:
     rerank: Rerank
     chunk_storage: ChunkStorage
     distributed_ingestion: DistributedIngestion
+    nrc_adams: NrcAdams
+    case_ingestion: CaseIngestion
     secrets: Secrets
 
 
@@ -329,6 +353,31 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         max_task_retries=int(dist_tbl.get("max_task_retries", 3)),
     )
 
+    # NRC ADAMS API
+    adams_tbl = get_tbl("nrc_adams")
+    nrc_adams = NrcAdams(
+        base_url=str(adams_tbl.get("base_url", "https://adams-api.nrc.gov/aps/api")),
+        timeout=float(adams_tbl.get("timeout", 30.0)),
+        page_size=int(adams_tbl.get("page_size", 100)),
+        max_retries=int(adams_tbl.get("max_retries", 3)),
+    )
+
+    # Case ingestion
+    case_tbl = get_tbl("case_ingestion")
+    doc_types_raw = case_tbl.get(
+        "document_types", ["Inspection Report", "Part 21 Correspondence"]
+    )
+    if isinstance(doc_types_raw, str):
+        doc_types = tuple(t.strip() for t in doc_types_raw.split(",") if t.strip())
+    else:
+        doc_types = tuple(str(t) for t in doc_types_raw)
+
+    output_dir_raw = case_tbl.get("output_dir", "corpus/us-nrc/cases")
+    case_ingestion = CaseIngestion(
+        output_dir=expand(output_dir_raw) if isinstance(output_dir_raw, str) else Path(output_dir_raw),
+        document_types=doc_types,
+    )
+
     return Settings(
         paths=Paths(
             vault_dir=vault_dir,
@@ -346,5 +395,7 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         rerank=rerank,
         chunk_storage=chunk_storage,
         distributed_ingestion=distributed_ingestion,
+        nrc_adams=nrc_adams,
+        case_ingestion=case_ingestion,
         secrets=Secrets.from_env(require_openai=require_openai),
     )

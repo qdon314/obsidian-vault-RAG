@@ -121,11 +121,24 @@ keep_k = 4
 # Chunk storage (distributed mode)
 # -------------------------------------------------------------------
 [chunk_storage]
-backend = "none"              # "none" | "s3"
-# s3_bucket = "my-rag-chunks"
-# s3_prefix = "obsidian"
-# postgres_dsn = "postgresql://user:pass@host:5432/rag"
-# max_s3_workers = 4
+
+# -------------------------------------------------------------------
+# NRC ADAMS API
+# -------------------------------------------------------------------
+[nrc_adams]
+base_url = "https://adams-api.nrc.gov/aps/api"
+timeout = 30.0
+page_size = 100
+max_retries = 3
+# subscription_key comes from env var NRC_ADAMS_API_KEY (see .env.example)
+
+
+# -------------------------------------------------------------------
+# Case Document Ingestion
+# -------------------------------------------------------------------
+[case_ingestion]
+output_dir = "corpus/us-nrc/cases"
+document_types = ["Inspection Report", "Part 21 Correspondence"]
 
 
 # -------------------------------------------------------------------
