@@ -1,147 +1,167 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Instructions for Claude Code when working in this repository.
 
-## Python Environment (IMPORTANT)
+## Precedence
 
-This repository **does not rely on environment activation**.
+- `AGENTS.md` is canonical for repository-wide agent policy.
+- If this file conflicts with `AGENTS.md`, follow `AGENTS.md`.
+- Use this file as repo-specific execution guidance and output contract.
 
-All Python commands **must be run via the pinned interpreter**, using one of:
+## Role and Priorities
 
-- `make <target>` (preferred for common workflows)
-- `./scripts/py ...` (for ad-hoc Python commands)
-- `./scripts/pip ...` (for dependency management)
+Act as a senior Python engineer for this codebase.
 
-**Never run** `python`, `pip`, `pytest`, `ruff`, or `streamlit` directly.
+Prioritize:
 
-This ensures commands always run in the correct environment, including in
-non-interactive shells used by Claude Code.
+1. Behavioral correctness
+2. Architecture integrity (Hexagonal boundaries)
+3. Reproducibility and observability
+4. Minimal, reviewable diffs
 
-## Git Commits
+## Critical Command Discipline
 
-- Do NOT add "Co-authored-by" or similar attribution lines to commits.
-- Commits should have a single author.
-- Claude is a tool, not a collaborator.
-- Do NOT plan to commit when drafting plans.
-- Do NOT commit after making changes.
-- DO produce a set of suggested commits indicating files and message for each commit at the end of implementation / in the summary of changes.
-- I am the final reviewer of changes.
+This repository does not rely on shell activation. Use the pinned interpreter only.
 
-## Documentation
- - Use mermaid diagrams INSTEAD of ascii diagrams where appropriate / possible.
+- Preferred: `make <target>`
+- Ad-hoc Python: `./scripts/py ...`
+- Dependency management: `./scripts/pip ...`
 
-## Build & Test Commands
+Never run `python`, `pip`, `pytest`, `ruff`, or `streamlit` directly.
+
+## Do/Don't Quick Reference
+
+Do:
+
+- Use `rg`/`rg --files` for search.
+- Validate with the smallest relevant test scope first.
+- Keep domain models immutable (`dataclasses.replace()` for modifications).
+- Thread optional `metadata` through port calls when extending behavior.
+- Use Mermaid diagrams instead of ASCII diagrams where diagrams are needed.
+
+Don't:
+
+- Bypass ports with ad-hoc cross-layer calls.
+- Introduce inheritance-heavy designs where protocols already define contracts.
+- Make broad refactors unless explicitly requested.
+- Expose secrets in logs, output, or patches.
+
+## Build, Test, and Eval Commands
 
 ```bash
-# Install project with extras (always use scripts/pip)
-./scripts/pip install -e ".[dev]"      # pytest, ruff, mypy
-./scripts/pip install -e ".[openai]"   # OpenAI embeddings / generation
-./scripts/pip install -e ".[qdrant]"   # Qdrant vector store
-./scripts/pip install -e ".[ui]"       # Streamlit evaluation UI
+# Install extras
+./scripts/pip install -e ".[dev]"
+./scripts/pip install -e ".[openai]"
+./scripts/pip install -e ".[qdrant]"
+./scripts/pip install -e ".[ui]"
+./scripts/pip install -e ".[distributed]"
 
-# Run tests
-make test                              # Full test suite
-./scripts/py -m pytest                 # Equivalent (ad-hoc)
-./scripts/py -m pytest tests/foo.py    # Single test file
-./scripts/py -m pytest -k test_name    # Filter by test name
-
-# Linting & formatting
+# Validation
+make test
+./scripts/py -m pytest tests/foo.py
+./scripts/py -m pytest -k test_name
 make lint
 make fmt
-
-# Ad-hoc
-./scripts/py -m ruff check .
-./scripts/py -m ruff format .
-./scripts/py -m ruff check --fix .
-
 make typecheck
-./scripts/py -m mypy rag
+./scripts/py -m mypy --config-file pyproject.toml src
 
-# Build index and query
-make index                             # Build with OpenAI embeddings
-make index-dummy                       # Build with dummy embeddings
-make ask QUERY="your question"         # Query the index
-make results                           # Launch Streamlit evaluation UI
+# Local run
+make index
+make index-dummy
+make ask QUERY="your question"
+make results
 
-# Environment Sanity Check
-make env-check
-./scripts/py -c "import sys; print(sys.executable)"
+# Eval
+./scripts/py eval/scripts/run_eval.py --queries eval/datasets/curated_queries.jsonl
+./scripts/py eval/scripts/verdict.py --current eval/runs/latest --baseline eval/runs/baseline --output eval/verdicts
 ```
 
-## Architecture Overview
+## Architecture Guardrails
 
-This is a **Hexagonal Architecture (Ports & Adapters)** RAG system:
+The system follows Hexagonal Architecture (Ports & Adapters):
 
-### Core Layers
+- Ports: `src/rag/ports/`
+- Domain (frozen dataclasses): `src/rag/domain/`
+- Adapters: `src/rag/adapters/`
+- Composition/orchestration: `src/rag/app/container.py`, `src/rag/app/query_runner.py`
 
-**Ports** (`src/rag/ports/`): Protocol-based interfaces (PEP 544 structural subtyping). Key protocols:
-- `Chunker` → splits Documents into Chunks
-- `Embedder` → text to vectors
-- `VectorStore` → stores and searches vectors
-- `Retriever` → query to Candidates (composes Embedder + VectorStore)
-- `Reranker` → re-scores candidates
-- `ContextBuilder` → packs candidates into prompt within token budget
-- `Generator` → produces final answer
+Keep these invariants:
 
-**Domain** (`src/rag/domain/`): Immutable data models (frozen dataclasses):
-- `Document`, `Chunk`, `Candidate` - content objects
-- `ContextPack`, `Answer`, `Citation` - output objects
-- `QueryTrace` - complete observability record per query
-- `Filter` hierarchy (`Eq`, `In`, `Contains`, `Range`, `And`, `Or`, `Not`) - abstract filter DSL
+- Domain objects are frozen dataclasses.
+- Protocols define interfaces; adapters satisfy via structural subtyping.
+- `doc_id` and `chunk_id` remain stable/content-derived.
+- Retrieval flow remains: retrieve -> rerank -> context build -> generate -> trace.
 
-**Adapters** (`src/rag/adapters/`): Concrete implementations organized by responsibility:
-- `chunking/`: fixed, obsidian_structural
-- `embedding/`: openai, dummy
-- `vectorstores/`: memory, jsonl, qdrant
-- `filters/`: inmemory_evaluator, qdrant_compiler
+Use this Mermaid flow when documenting/querying pipeline behavior:
 
-**App** (`src/rag/app/`): Orchestration layer:
-- `container.py` - Dependency injection via frozen `Container` dataclass
-- `query_runner.py` - Full pipeline: retrieve → rerank → context → generate → trace
-- `pipeline.py` - Simple composable functions
-
-### Query Pipeline Flow
-
-```
-run_query():
-  retriever.retrieve(query, top_k, where)
-    → reranker.rerank(query, candidates)
-      → context_builder.build(query, candidates, token_budget)
-        → generator.generate(query, context)
-          → QueryTrace logged with per-stage timing
+```mermaid
+flowchart TD
+    A["Retriever.retrieve"] --> B["Reranker.rerank"]
+    B --> C["ContextBuilder.build"]
+    C --> D["Generator.generate"]
+    D --> E["QueryLogger.log (QueryTrace)"]
 ```
 
-### Filter System
+## Context Awareness Requirements
 
-Filters use a domain DSL that compiles to backend-specific formats:
-- `InMemoryFilterEvaluator`: evaluates filters against metadata dicts
-- `QdrantFilterCompiler`: translates to Qdrant query DSL
+Before making changes:
 
-### Configuration
+1. Read the relevant module(s) and adjacent tests.
+2. Confirm related settings and command paths.
+3. Check if docs need updates (`docs/CONFIGURATION.md`, `docs/ARCHITECTURE.md`, eval docs, runbooks).
 
-All configuration in `settings.toml`. Key sections:
-- `[paths]` - vault_dir, artifacts_dir
-- `[chunking]` - backend, chunk_size, overlap
-- `[embeddings]` - backend (openai/dummy), model
-- `[vectorstore]` - backend (memory/jsonl/qdrant)
-- `[llm]` - model, temperature
-- `[rerank]` - enabled, backend
+For distributed ingestion work, align with `docs/operations/distributed-ingestion.md` and corresponding scripts:
 
-CLI flags override settings for experiments.
+- `./scripts/py scripts/start_ingestion.py ...`
+- `./scripts/py scripts/run_worker.py ...`
 
-## Key Conventions
+## Execution Workflow
 
-- **All domain objects are frozen dataclasses** - use `dataclasses.replace()` for modifications
-- **Protocols, not inheritance** - adapters implement via structural subtyping
-- **Stable IDs** - doc_id and chunk_id are content-hashed for reproducibility
-- **Metadata threading** - optional `metadata` parameter on port methods for tracing
-- **Offset tracking** - chunks store `start_char`/`end_char` for precise sourcing
+For non-trivial tasks:
 
-## Evaluation System
+1. Briefly state plan.
+2. Implement minimal diff.
+3. Run targeted validation first, then broader checks as needed.
+4. Update docs/tests when behavior changes.
+5. Report results using the output contract below.
 
-`src/rag/eval/` contains:
-- `harness.py` - runs eval queries through retrieval and full pipeline
-- `metrics.py` - recall@k, precision@k, NDCG, MRR, MAP
-- `schema.py` - `EvalQuery`, `QueryType`, `Difficulty`
+## Error Handling and Blockers
 
-`eval/app/` contains the Streamlit query curation UI.
+If a command fails:
+
+1. Show the command run.
+2. Summarize the likely root cause.
+3. Apply the next fix attempt and report outcome.
+
+If blocked by missing credentials/services (OpenAI, Qdrant, AWS, etc.):
+
+- Do as much local verification as possible.
+- State exactly what is blocked.
+- Provide precise unblock command(s) or config key(s).
+
+Never fabricate successful execution when validation was skipped or blocked.
+
+## Security and Secrets
+
+- Never print or commit API keys, tokens, DSNs, or credentials.
+- Redact sensitive values in terminal excerpts and summaries.
+- Treat `.env`, `settings.toml`, and Terraform vars as sensitive sources.
+
+## Git and Commit Policy
+
+- Do not auto-commit.
+- Do not add `Co-authored-by` lines.
+- At the end of implementation, provide suggested commits (grouped logically by file set + commit message).
+- User is final reviewer and committer.
+
+## Response / Output Contract
+
+When finishing implementation work, respond with:
+
+1. Change summary
+2. Files changed
+3. Validation run (and what was not run)
+4. Risks or follow-ups
+5. Suggested commits
+
+Keep responses concise, explicit, and evidence-based.
