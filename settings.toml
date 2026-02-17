@@ -101,11 +101,22 @@ backend = "vector"            # "vector" | "hybrid"
 top_k = 8
 
 # Hybrid retrieval settings (only used when backend = "hybrid")
-# hybrid_primary_weight = 0.7
-# hybrid_secondary_weight = 0.3
-# hybrid_rrf_k = 60
-# hybrid_bm25_k1 = 1.5
-# hybrid_bm25_b = 0.75
+
+# Weights for combining vector similarity and BM25 scores.
+# Higher values favor vector similarity.
+hybrid_primary_weight = 0.7
+
+# Secondary score weight is 1 - primary_weight, but can be adjusted independently to allow for overall score scaling.
+hybrid_secondary_weight = 0.3
+
+# Number of top results to consider for RRF (Reciprocal Rank Fusion)
+hybrid_rrf_k = 60
+
+# BM25 parameters (only used for the BM25 component of hybrid retrieval)
+hybrid_bm25_k1 = 1.5
+
+# BM25 b parameter (controls the influence of document length normalization)
+hybrid_bm25_b = 0.75
 
 
 # -------------------------------------------------------------------
