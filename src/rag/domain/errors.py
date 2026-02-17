@@ -32,3 +32,19 @@ class GenerationError(RagAppError):
 
 class IndexIncompatibleError(RagAppError):
     pass
+
+
+class AdamsApiError(RagAppError):
+    """NRC ADAMS API failure."""
+
+
+class AdamsRateLimitError(RagAppError):
+    """Rate limit exceeded (HTTP 429)."""
+
+
+class AdamsAuthError(RagAppError):
+    """Authentication failed (HTTP 401/403)."""
+
+
+class AdamsNotFoundError(RagAppError):
+    """Document not found (HTTP 404)."""
