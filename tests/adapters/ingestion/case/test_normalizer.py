@@ -450,7 +450,7 @@ class TestNormalizeCaseDocumentToMarkdown:
         assert "## Content" in markdown
 
     def test_cross_reference_rewriting(self):
-        """Should rewrite CFR references to wikilinks."""
+        """Should rewrite CFR references to wikilinks and populate frontmatter."""
         doc = CaseDocument(
             accession_number="ML12345A678",
             title="Test",
@@ -461,8 +461,14 @@ class TestNormalizeCaseDocumentToMarkdown:
 
         markdown = normalize_case_document_to_markdown(doc, config)
 
-        # Check that wikilinks were created (exact format depends on rewrite_cross_references_to_wikilinks)
-        assert "[[" in markdown or "50.46" in markdown
+        # Body text should contain wikilinks
+        assert "[[10 CFR §50.46]]" in markdown
+        assert "[[10 CFR §50.55a]]" in markdown
+
+        # Frontmatter (between --- delimiters) should list cross-references
+        frontmatter = markdown.split("---")[1]
+        assert "10 CFR §50.46" in frontmatter
+        assert "10 CFR §50.55a" in frontmatter
 
     def test_facility_info_in_markdown(self):
         """Should include reactor type in markdown when extractable."""

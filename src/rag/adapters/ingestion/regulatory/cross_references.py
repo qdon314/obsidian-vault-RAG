@@ -20,9 +20,13 @@ _WIKILINK_CITATION_RE = re.compile(
     r"\[\[\s*(?:(?P<title>\d+)\s*CFR\s*)?§\s*(?P<section>\d+\.\d+[A-Za-z0-9-]*(?:\([A-Za-z0-9]+\))*)\s*\]\]"
 )
 
-# Matches a bare (non-wikilink) CFR reference, e.g. ``§ 50.36`` or ``10 CFR § 50.36``.
+# Matches a bare (non-wikilink) CFR reference.
+# Branch 1: ``10 CFR 50.46`` or ``10 CFR § 50.46`` — title prefix present, § optional.
+# Branch 2: ``§ 50.46`` or ``§§ 50.46`` — no title prefix, § required.
+_SECTION = r"\d+\.\d+[A-Za-z0-9-]*(?:\([A-Za-z0-9]+\))*"
 _CFR_REFERENCE_RE = re.compile(
-    r"(?:(?P<title>\d+)\s*CFR\s*)?§+\s*(?P<section>\d+\.\d+[A-Za-z0-9-]*(?:\([A-Za-z0-9]+\))*)"
+    rf"(?P<title>\d+)\s*CFR\s*§*\s*(?P<titled_section>{_SECTION})"
+    rf"|§+\s*(?P<bare_section>{_SECTION})"
 )
 
 
@@ -58,6 +62,19 @@ def _canonical_citation(title: str | None, section: str) -> str:
     title_num = title or "10"
     canonical_section = _strip_subsection_suffix(section)
     return f"{title_num} CFR §{canonical_section}"
+
+
+def _ref_groups(match: re.Match[str]) -> tuple[str | None, str]:
+    """Extract ``(title, section)`` from a ``_CFR_REFERENCE_RE`` match.
+
+    The regex has two alternation branches with different group names:
+    ``titled_section`` (when a ``<title> CFR`` prefix is present) and
+    ``bare_section`` (when only a ``§`` prefix is present).
+    """
+    titled = match.group("titled_section")
+    if titled is not None:
+        return match.group("title"), titled
+    return None, match.group("bare_section")
 
 
 def _split_outside_wikilinks(text: str) -> list[tuple[str, bool]]:
@@ -97,7 +114,8 @@ def extract_cross_references(text: str) -> list[str]:
 
     scrubbed = _WIKILINK_RE.sub(" ", text)
     for match in _CFR_REFERENCE_RE.finditer(scrubbed):
-        refs.add(_canonical_citation(match.group("title"), match.group("section")))
+        title, section = _ref_groups(match)
+        refs.add(_canonical_citation(title, section))
 
     return sorted(refs, key=_citation_sort_key)
 
@@ -107,7 +125,8 @@ def rewrite_cross_references_to_wikilinks(text: str) -> str:
 
     def rewrite_segment(segment: str) -> str:
         def repl(match: re.Match[str]) -> str:
-            citation = _canonical_citation(match.group("title"), match.group("section"))
+            title, section = _ref_groups(match)
+            citation = _canonical_citation(title, section)
             return f"[[{citation}]]"
 
         return _CFR_REFERENCE_RE.sub(repl, segment)
