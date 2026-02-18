@@ -182,7 +182,16 @@ class TestSearchDocuments:
         """Should pass filters to API endpoint."""
         mock_http_client.request.return_value = Mock(
             status_code=200,
-            json=lambda: {"results": []},
+            json=lambda: {
+                "results": [
+                    {
+                        "document": {
+                            "AccessionNumber": "TEST-001",
+                            "DocumentTitle": "Test Document",
+                        }
+                    }
+                ]
+            },
         )
 
         client = HttpNrcAdamsClient._for_test(client=mock_http_client)
@@ -500,7 +509,19 @@ class TestErrorHandling:
             if call_count == 1:
                 raise httpx.NetworkError("Connection failed")
             else:
-                return Mock(status_code=200, json=lambda: {"results": []})
+                return Mock(
+                    status_code=200,
+                    json=lambda: {
+                        "results": [
+                            {
+                                "document": {
+                                    "AccessionNumber": "TEST-001",
+                                    "DocumentTitle": "Test Document",
+                                }
+                            }
+                        ]
+                    },
+                )
 
         mock_http_client.request.side_effect = side_effect
 
