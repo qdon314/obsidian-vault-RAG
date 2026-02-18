@@ -16,6 +16,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from rag.adapters.ingestion.case.citation_extractor import extract_all_citations
 from rag.adapters.ingestion.regulatory.cross_references import (
     extract_cross_references,
     rewrite_cross_references_to_wikilinks,
@@ -406,6 +407,21 @@ def extract_case_metadata(doc: CaseDocument) -> CaseMetadata:
     for m in _SECTION_RE.finditer(search_text):
         sections.add(m.group(2))
 
+    # Extract citations using the new citation extraction pipeline
+    citation_result = extract_all_citations(search_text)
+
+    # Serialize citation spans for storage
+    citation_spans = tuple(
+        {
+            "kind": span.kind,
+            "key": span.key,
+            "raw": span.raw,
+            "confidence": span.confidence,
+            "source_field": span.source_field,
+        }
+        for span in citation_result.spans
+    )
+
     return CaseMetadata(
         case_category=classification.category,
         case_subcategory=classification.subcategory,
@@ -416,6 +432,8 @@ def extract_case_metadata(doc: CaseDocument) -> CaseMetadata:
         regulation_parts=tuple(sorted(parts)),
         regulation_sections=tuple(sorted(sections)),
         dockets=doc.docket_numbers,
+        citation_keys=tuple(sorted(citation_result.unique_keys)),
+        citation_spans=citation_spans,
     )
 
 
@@ -461,6 +479,7 @@ def _build_frontmatter(
         ("dockets", list(meta.dockets)),
         ("regulation_parts", list(meta.regulation_parts)),
         ("regulation_sections", list(meta.regulation_sections)),
+        ("citation_keys", list(meta.citation_keys)),
         ("cross_references", cross_references),
     ]:
         items_json = ", ".join(json.dumps(item, ensure_ascii=False) for item in items)

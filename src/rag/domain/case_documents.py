@@ -113,8 +113,7 @@ def validate_category_pair(
 
     if not subcategory.value.startswith(category.value + "_"):
         raise ValueError(
-            f"Subcategory '{subcategory.value}' "
-            f"does not match category '{category.value}'"
+            f"Subcategory '{subcategory.value}' does not match category '{category.value}'"
         )
 
 
@@ -156,6 +155,10 @@ class CaseMetadata:
     regulation_sections: tuple[str, ...] = ()
     dockets: tuple[str, ...] = ()
 
+    # New citation extraction fields
+    citation_keys: tuple[str, ...] = ()  # Canonical citation keys (e.g., "cfr:10:50.46")
+    citation_spans: tuple[Mapping[str, object], ...] = ()  # type: ignore[type-arg]  # Serialized CitationSpan objects
+
     def validate(self) -> None:
         """Check internal consistency.
 
@@ -177,6 +180,8 @@ class CaseMetadata:
             "regulation_parts": list(self.regulation_parts),
             "regulation_sections": list(self.regulation_sections),
             "dockets": list(self.dockets),
+            "citation_keys": list(self.citation_keys),
+            "citation_spans": list(self.citation_spans),
         }
 
 
