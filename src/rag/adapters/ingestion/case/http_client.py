@@ -126,7 +126,7 @@ class HttpNrcAdamsClient:
                 "q": current_query,
                 "filters": current_filters,
                 "anyFilters": current_any_filters,
-                "legacyLibFilter": True,
+                "legacyLibFilter": False,
                 "mainLibFilter": True,
                 "sort": sort_by,
                 "sortDirection": 0 if sort_desc else 1,
@@ -190,6 +190,13 @@ class HttpNrcAdamsClient:
             data = self._get(f"/search/{accession_number}")
         except AdamsNotFoundError:
             return None
+        if not isinstance(data, dict):
+            return None
+        raw_doc = data.get("document")
+        if not isinstance(raw_doc, dict):
+            raw_doc = data.get("Document")
+        if isinstance(raw_doc, dict):
+            return _parse_document(raw_doc)
         return _parse_document(data)
 
     # ---- private HTTP helpers ----
@@ -320,9 +327,9 @@ def _parse_document(raw: dict[str, Any]) -> AdamsDocument:
         author_affiliation=raw.get("AuthorAffiliation"),
         addressee=raw.get("AddresseeName"),
         addressee_affiliation=raw.get("AddresseeAffiliation"),
-        docket_numbers=raw.get("DocketNumber", "").split("; ") if raw.get("DocketNumber") else [],
-        license_numbers=raw.get("LicenseNumber", "").split("; ") if raw.get("LicenseNumber") else [],
-        keywords=raw.get("Keyword", "").split("; ") if raw.get("Keyword") else [],
+        docket_numbers=_coerce_list_field(raw.get("DocketNumber")),
+        license_numbers=_coerce_list_field(raw.get("LicenseNumber")),
+        keywords=_coerce_list_field(raw.get("Keyword")),
         content=raw.get("content"),
         url=raw.get("Url"),
         estimated_pages=raw.get("EstimatedPages"),
@@ -337,6 +344,36 @@ def _coerce_text_field(value: Any) -> str:
         parts = [str(item).strip() for item in value if isinstance(item, str) and item.strip()]
         return "; ".join(parts)
     return ""
+
+
+def _coerce_list_field(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(";") if part.strip()]
+    return []
+
+
+def _coerce_int_field(value: Any) -> int | None:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        v = value.strip()
+        if v.isdigit():
+            return int(v)
+    return None
+
+
+def _coerce_boolish(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"yes", "true", "1"}:
+            return True
+        if normalized in {"no", "false", "0"}:
+            return False
+    return None
 
 
 def _build_filter_fallback_query(
