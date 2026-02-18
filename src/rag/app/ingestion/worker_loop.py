@@ -4,6 +4,7 @@ This module provides the ``process_one_message`` function (testable
 without real SQS) and a ``run_loop`` entry point for the worker
 service.
 """
+
 from __future__ import annotations
 
 import logging

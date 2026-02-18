@@ -187,12 +187,8 @@ class TestSearchDocuments:
 
         client = HttpNrcAdamsClient._for_test(client=mock_http_client)
 
-        filters: list[dict[str, object]] = [
-            {"field": "DocumentType", "value": "Inspection Report"}
-        ]
-        any_filters: list[dict[str, object]] = [
-            {"field": "DocketNumber", "value": "DOCKET-123"}
-        ]
+        filters: list[dict[str, object]] = [{"field": "DocumentType", "value": "Inspection Report"}]
+        any_filters: list[dict[str, object]] = [{"field": "DocketNumber", "value": "DOCKET-123"}]
 
         list(
             client.search_documents(

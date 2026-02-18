@@ -2,6 +2,7 @@
 
 Uses psycopg2 connection pooling (same pattern as S3ChunkStore).
 """
+
 from __future__ import annotations
 
 import json
@@ -70,6 +71,7 @@ class PostgresIngestJobStore:
 
     def __post_init__(self) -> None:
         import psycopg2.pool  # type: ignore[import-untyped]
+
         object.__setattr__(
             self,
             "_pool",
@@ -181,8 +183,7 @@ class PostgresIngestJobStore:
                     )
                 else:
                     cur.execute(
-                        "UPDATE ingest_jobs SET status = %s, updated_at = %s "
-                        "WHERE job_id = %s",
+                        "UPDATE ingest_jobs SET status = %s, updated_at = %s WHERE job_id = %s",
                         (status.value, datetime.now(UTC), str(job_id)),
                     )
             conn.commit()
@@ -286,8 +287,7 @@ class PostgresIngestJobStore:
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE ingest_tasks SET status = %s, updated_at = %s "
-                    "WHERE task_id = %s",
+                    "UPDATE ingest_tasks SET status = %s, updated_at = %s WHERE task_id = %s",
                     (TaskStatus.SUCCEEDED.value, datetime.now(UTC), str(task_id)),
                 )
             conn.commit()
@@ -319,8 +319,7 @@ class PostgresIngestJobStore:
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT status, COUNT(*) FROM ingest_tasks "
-                    "WHERE job_id = %s GROUP BY status",
+                    "SELECT status, COUNT(*) FROM ingest_tasks WHERE job_id = %s GROUP BY status",
                     (str(job_id),),
                 )
                 rows = cur.fetchall()

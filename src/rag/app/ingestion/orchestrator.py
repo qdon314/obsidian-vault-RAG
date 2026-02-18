@@ -3,6 +3,7 @@
 The poll loop queries the Postgres job store for task counts until all tasks
 have reached a terminal state (SUCCEEDED or FAILED) or a timeout is reached.
 """
+
 from __future__ import annotations
 
 import logging

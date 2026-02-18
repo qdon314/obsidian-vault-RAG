@@ -26,9 +26,7 @@ from rag.adapters.ingestion.regulatory.cross_references import (
 from rag.adapters.ingestion.regulatory.ecfr_parser import ParsedSection
 
 _SUBSECTION_PREFIX_RE = re.compile(r"^\([a-zA-Z0-9ivxlcdmIVXLCDM]+\)\s*")
-_SUBSECTION_CHAIN_PREFIX_RE = re.compile(
-    r"^\s*(?:\([a-zA-Z0-9ivxlcdmIVXLCDM]+\)\s*)+"
-)
+_SUBSECTION_CHAIN_PREFIX_RE = re.compile(r"^\s*(?:\([a-zA-Z0-9ivxlcdmIVXLCDM]+\)\s*)+")
 # Maps ``ParsedParagraph.level`` → markdown heading prefix.
 _HEADING_LEVEL = {1: "##", 2: "###", 3: "####", 4: "#####"}
 

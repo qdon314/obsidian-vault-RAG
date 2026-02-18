@@ -1,4 +1,5 @@
 """Tests for the SQS worker loop."""
+
 from __future__ import annotations
 
 import uuid

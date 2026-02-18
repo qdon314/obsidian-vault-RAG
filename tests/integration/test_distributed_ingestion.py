@@ -48,10 +48,12 @@ class FakeTaskQueue:
 
     def send(self, message: dict[str, str]) -> None:
         """Enqueue a single message."""
-        self._messages.append({
-            "body": message,
-            "receipt_handle": f"receipt-{len(self._messages)}",
-        })
+        self._messages.append(
+            {
+                "body": message,
+                "receipt_handle": f"receipt-{len(self._messages)}",
+            }
+        )
 
     def send_batch(self, messages: list[dict[str, str]]) -> None:
         """Enqueue a batch of messages."""

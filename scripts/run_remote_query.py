@@ -5,6 +5,7 @@ Designed to run as an ECS task (query-eval with command override).
 Usage:
     ./scripts/py scripts/run_remote_query.py --query "What is 10 CFR 50.46?"
 """
+
 from __future__ import annotations
 
 import argparse

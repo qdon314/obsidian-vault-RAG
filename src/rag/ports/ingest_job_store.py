@@ -1,4 +1,5 @@
 """Port for ingestion job and task persistence."""
+
 from __future__ import annotations
 
 import uuid

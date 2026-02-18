@@ -230,8 +230,7 @@ class TestAdamsDocumentToCaseDocument:
 
         assert case.case_metadata.case_category == CaseCategory.ENFORCEMENT
         assert (
-            case.case_metadata.case_subcategory
-            == CaseSubcategory.ENFORCEMENT_NOTICE_OF_VIOLATION
+            case.case_metadata.case_subcategory == CaseSubcategory.ENFORCEMENT_NOTICE_OF_VIOLATION
         )
         assert case.case_metadata.case_category_confidence == 0.95
         assert case.case_metadata.case_category_method == "rules"

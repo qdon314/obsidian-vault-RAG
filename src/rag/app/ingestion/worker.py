@@ -3,6 +3,7 @@
 Pulls a raw document from S3, chunks it, embeds, and writes to both
 the chunk store (S3 shards) and vector store (Qdrant).
 """
+
 from __future__ import annotations
 
 import logging
@@ -86,9 +87,7 @@ class Worker:
             return True
 
         except Exception as exc:
-            logger.exception(
-                "Worker %s failed doc %s", self.worker_id, task.doc_id
-            )
+            logger.exception("Worker %s failed doc %s", self.worker_id, task.doc_id)
             err = str(exc) or exc.__class__.__name__
             self.job_store.fail_task(  # type: ignore[union-attr]
                 task.task_id, error=err, retryable=True

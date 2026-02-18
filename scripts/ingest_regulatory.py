@@ -182,7 +182,12 @@ def main() -> None:
                 f"Cannot upload normalized files because directory does not exist: {part_dir}"
             )
         prefix = args.push_s3_prefix.strip("/")
-        log.info("Uploading normalized files from %s to s3://%s/%s", part_dir, args.push_s3_bucket, prefix)
+        log.info(
+            "Uploading normalized files from %s to s3://%s/%s",
+            part_dir,
+            args.push_s3_bucket,
+            prefix,
+        )
         uploaded = upload_directory_to_s3(
             part_dir,
             bucket=args.push_s3_bucket,

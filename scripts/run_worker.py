@@ -3,6 +3,7 @@
 Usage:
     ./scripts/py scripts/run_worker.py --worker-id worker-1
 """
+
 from __future__ import annotations
 
 import argparse
@@ -53,9 +54,13 @@ def main() -> None:
         log.error("distributed_ingestion.sqs_queue_url must be set")
         raise SystemExit(1)
 
-    overrides = ContainerOverrides(
-        qdrant_collection=args.qdrant_collection,
-    ) if args.qdrant_collection else None
+    overrides = (
+        ContainerOverrides(
+            qdrant_collection=args.qdrant_collection,
+        )
+        if args.qdrant_collection
+        else None
+    )
     container = build_container(overrides=overrides)
 
     from rag.adapters.chunk_storage.s3_chunk_store import S3ChunkStore

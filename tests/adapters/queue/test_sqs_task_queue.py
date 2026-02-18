@@ -1,4 +1,5 @@
 """Tests for SQSTaskQueue — uses unittest.mock for boto3."""
+
 from __future__ import annotations
 
 import json
@@ -16,7 +17,9 @@ def mock_sqs() -> MagicMock:
 
 @pytest.fixture
 def queue(mock_sqs: MagicMock) -> SQSTaskQueue:
-    return SQSTaskQueue._for_test(queue_url="https://sqs.us-east-1.amazonaws.com/123/test-queue", sqs_client=mock_sqs)
+    return SQSTaskQueue._for_test(
+        queue_url="https://sqs.us-east-1.amazonaws.com/123/test-queue", sqs_client=mock_sqs
+    )
 
 
 class TestSend:

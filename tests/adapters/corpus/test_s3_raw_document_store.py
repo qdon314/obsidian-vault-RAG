@@ -1,4 +1,5 @@
 """Tests for S3RawDocumentStore — uses unittest.mock for boto3."""
+
 from __future__ import annotations
 
 import json
@@ -56,19 +57,19 @@ class TestStoreDocument:
 class TestGetDocument:
     def test_round_trip(self, store: S3RawDocumentStore, mock_s3: MagicMock) -> None:
         doc = make_document(doc_id="abc123", text="hello", source="filesystem", uri="/x.md")
-        payload = json.dumps({
-            "doc_id": doc.doc_id,
-            "text": doc.text,
-            "source": doc.source,
-            "uri": doc.uri,
-            "metadata": dict(doc.metadata),
-            "corpus_id": "c",
-            "content_sha256": "f" * 64,
-        }).encode("utf-8")
+        payload = json.dumps(
+            {
+                "doc_id": doc.doc_id,
+                "text": doc.text,
+                "source": doc.source,
+                "uri": doc.uri,
+                "metadata": dict(doc.metadata),
+                "corpus_id": "c",
+                "content_sha256": "f" * 64,
+            }
+        ).encode("utf-8")
 
-        mock_s3.get_object.return_value = {
-            "Body": MagicMock(read=MagicMock(return_value=payload))
-        }
+        mock_s3.get_object.return_value = {"Body": MagicMock(read=MagicMock(return_value=payload))}
 
         result = store.get_document("corpus/c/raw/ab/abc.json")
         assert result.doc_id == "abc123"

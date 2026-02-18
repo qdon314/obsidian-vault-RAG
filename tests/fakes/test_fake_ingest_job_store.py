@@ -4,6 +4,7 @@ These tests verify behavior, not implementation. They can be
 parameterized to run against FakeIngestJobStore and (later)
 PostgresIngestJobStore.
 """
+
 from __future__ import annotations
 
 import uuid

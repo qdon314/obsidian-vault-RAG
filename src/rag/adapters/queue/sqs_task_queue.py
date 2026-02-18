@@ -1,4 +1,5 @@
 """SQS-backed task queue for distributing ingestion work."""
+
 from __future__ import annotations
 
 import json
@@ -17,6 +18,7 @@ class SQSTaskQueue:
 
     def __post_init__(self) -> None:
         import boto3  # type: ignore[import-untyped]
+
         object.__setattr__(self, "_sqs", boto3.client("sqs"))
 
     @classmethod
@@ -34,16 +36,11 @@ class SQSTaskQueue:
         )
 
     def send_batch(self, messages: Sequence[dict[str, str]]) -> None:
-        entries = [
-            {"Id": str(uuid.uuid4()), "MessageBody": json.dumps(m)}
-            for m in messages
-        ]
+        entries = [{"Id": str(uuid.uuid4()), "MessageBody": json.dumps(m)} for m in messages]
         # SQS batch limit is 10
         for i in range(0, len(entries), 10):
             batch = entries[i : i + 10]
-            resp = self._sqs.send_message_batch(
-                QueueUrl=self.queue_url, Entries=batch
-            )
+            resp = self._sqs.send_message_batch(QueueUrl=self.queue_url, Entries=batch)
             failed = resp.get("Failed", [])
             if failed:
                 raise RuntimeError(f"Failed to enqueue {len(failed)} messages: {failed}")

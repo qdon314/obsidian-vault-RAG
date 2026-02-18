@@ -6,6 +6,7 @@ uploads it to S3, and marks the job COMPLETED in Postgres.
 Usage:
     ./scripts/py scripts/finalize_job.py --job-id <uuid>
 """
+
 from __future__ import annotations
 
 import argparse
@@ -69,13 +70,18 @@ def main() -> None:
 
     log.info(
         "Tasks: %d total, %d succeeded, %d failed, %d retryable, %d pending",
-        total, succeeded, failed, retryable, pending,
+        total,
+        succeeded,
+        failed,
+        retryable,
+        pending,
     )
 
     if succeeded < total and not args.force:
         log.error(
             "Not all tasks succeeded (%d/%d). Use --force to finalize anyway.",
-            succeeded, total,
+            succeeded,
+            total,
         )
         raise SystemExit(1)
 
@@ -101,7 +107,11 @@ def main() -> None:
     # 5) Upload to S3
     bucket = cfg.distributed_ingestion.corpus_s3_bucket
     prefix = cfg.distributed_ingestion.corpus_s3_prefix or ""
-    s3_key = f"{prefix}/manifests/{job.index_id}/manifest.json" if prefix else f"manifests/{job.index_id}/manifest.json"
+    s3_key = (
+        f"{prefix}/manifests/{job.index_id}/manifest.json"
+        if prefix
+        else f"manifests/{job.index_id}/manifest.json"
+    )
 
     s3 = boto3.client("s3")
     s3.put_object(

@@ -4,6 +4,7 @@ These models represent the control-plane state for parallel, resumable
 ingestion jobs.  They are pure domain objects — no infrastructure
 dependencies.
 """
+
 from __future__ import annotations
 
 import uuid

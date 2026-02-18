@@ -8,6 +8,7 @@ Usage:
         --query-set default \
         --run-name my-eval-run
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,7 +38,7 @@ def _download_s3_prefix(bucket: str, prefix: str, local_dir: Path) -> list[Path]
     for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
         for obj in page.get("Contents", []):
             key = obj["Key"]
-            rel = key[len(prefix):].lstrip("/")
+            rel = key[len(prefix) :].lstrip("/")
             if not rel:
                 continue
             local_path = local_dir / rel
@@ -81,7 +82,9 @@ def main() -> None:
     # Determine S3 bucket and prefixes
     bucket = cfg.distributed_ingestion.corpus_s3_bucket or cfg.chunk_storage.s3_bucket
     if not bucket:
-        log.error("No S3 bucket configured (need distributed_ingestion.corpus_s3_bucket or chunk_storage.s3_bucket)")
+        log.error(
+            "No S3 bucket configured (need distributed_ingestion.corpus_s3_bucket or chunk_storage.s3_bucket)"
+        )
         raise SystemExit(1)
 
     eval_prefix = os.environ.get("RAG_EVAL_S3_PREFIX", "eval")
@@ -117,6 +120,7 @@ def main() -> None:
         judge_client = None
         if args.use_llm_judge:
             from openai import OpenAI
+
             api_key = cfg.secrets.openai_api_key
             if not api_key:
                 raise ValueError("OpenAI API key required for LLM judge")
@@ -126,6 +130,7 @@ def main() -> None:
         manifest = None
         if args.manifest:
             from rag.domain.index_manifest import IndexManifest
+
             manifest = IndexManifest.load_uri(args.manifest)
 
         # ── Run eval ───────────────────────────────────────────────

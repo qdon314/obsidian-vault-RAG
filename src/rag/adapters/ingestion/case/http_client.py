@@ -242,19 +242,13 @@ class HttpNrcAdamsClient:
                 return response.json()  # type: ignore[no-any-return]
 
             if status in (401, 403):
-                raise AdamsAuthError(
-                    f"{method} {endpoint} returned {status}: {response.text}"
-                )
+                raise AdamsAuthError(f"{method} {endpoint} returned {status}: {response.text}")
 
             if status == 404:
-                raise AdamsNotFoundError(
-                    f"{method} {endpoint} returned 404: {response.text}"
-                )
+                raise AdamsNotFoundError(f"{method} {endpoint} returned 404: {response.text}")
 
             if status == 429:
-                last_exc = AdamsRateLimitError(
-                    f"{method} {endpoint} returned 429: {response.text}"
-                )
+                last_exc = AdamsRateLimitError(f"{method} {endpoint} returned 429: {response.text}")
                 if attempt < self.retry.max_retries:
                     # Respect Retry-After header if present, otherwise backoff
                     retry_after = response.headers.get("Retry-After")
@@ -269,17 +263,13 @@ class HttpNrcAdamsClient:
                 raise last_exc
 
             if status in self.retry.retryable_statuses:
-                last_exc = AdamsApiError(
-                    f"{method} {endpoint} returned {status}: {response.text}"
-                )
+                last_exc = AdamsApiError(f"{method} {endpoint} returned {status}: {response.text}")
                 if attempt < self.retry.max_retries:
                     continue
                 raise last_exc
 
             # Non-retryable error
-            raise AdamsApiError(
-                f"{method} {endpoint} returned {status}: {response.text}"
-            )
+            raise AdamsApiError(f"{method} {endpoint} returned {status}: {response.text}")
 
         # Should not reach here, but satisfy type checker
         raise AdamsApiError(  # pragma: no cover

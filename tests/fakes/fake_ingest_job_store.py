@@ -1,4 +1,5 @@
 """In-memory IngestJobStore for testing."""
+
 from __future__ import annotations
 
 import uuid
@@ -90,9 +91,7 @@ class FakeIngestJobStore:
 
     def complete_task(self, task_id: uuid.UUID) -> None:
         t = self._tasks[task_id]
-        self._tasks[task_id] = replace(
-            t, status=TaskStatus.SUCCEEDED, updated_at=datetime.now(UTC)
-        )
+        self._tasks[task_id] = replace(t, status=TaskStatus.SUCCEEDED, updated_at=datetime.now(UTC))
 
     def fail_task(
         self,

@@ -9,6 +9,7 @@ Usage:
         --corpus-id regulations_v1 \
         --index-name regulatory
 """
+
 from __future__ import annotations
 
 import argparse
@@ -234,26 +235,36 @@ def main() -> None:
     if result.timed_out:
         log.error(
             "Timed out: %d succeeded, %d failed, %d still in-flight",
-            result.succeeded, result.failed,
+            result.succeeded,
+            result.failed,
             result.pending + result.running + result.retryable,
         )
-        job_store.update_job_status(job.job_id, JobStatus.FAILED, stats={
-            "reason": "timeout",
-            "succeeded": result.succeeded,
-            "failed": result.failed,
-        })
+        job_store.update_job_status(
+            job.job_id,
+            JobStatus.FAILED,
+            stats={
+                "reason": "timeout",
+                "succeeded": result.succeeded,
+                "failed": result.failed,
+            },
+        )
         raise SystemExit(1)
 
     log.info("All tasks terminal: %d succeeded, %d failed", result.succeeded, result.failed)
 
     if result.failed > 0 and not args.force_finalize:
         log.error(
-            "%d tasks failed. Use --force-finalize to proceed anyway.", result.failed,
+            "%d tasks failed. Use --force-finalize to proceed anyway.",
+            result.failed,
         )
-        job_store.update_job_status(job.job_id, JobStatus.FAILED, stats={
-            "succeeded": result.succeeded,
-            "failed": result.failed,
-        })
+        job_store.update_job_status(
+            job.job_id,
+            JobStatus.FAILED,
+            stats={
+                "succeeded": result.succeeded,
+                "failed": result.failed,
+            },
+        )
         raise SystemExit(1)
 
     # ── Phase 3: Finalize ──────────────────────────────────────────
@@ -279,7 +290,9 @@ def main() -> None:
     bucket = cfg.distributed_ingestion.corpus_s3_bucket
     corpus_prefix = (cfg.distributed_ingestion.corpus_s3_prefix or "").strip("/")
     manifests_prefix = os.environ.get("RAG_MANIFESTS_S3_PREFIX", "manifests").strip("/")
-    key_parts = [part for part in (corpus_prefix, manifests_prefix, index_id, "manifest.json") if part]
+    key_parts = [
+        part for part in (corpus_prefix, manifests_prefix, index_id, "manifest.json") if part
+    ]
     s3_key = "/".join(key_parts)
 
     s3 = boto3.client("s3")

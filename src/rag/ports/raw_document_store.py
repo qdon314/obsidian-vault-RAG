@@ -1,4 +1,5 @@
 """Port for storing and retrieving raw documents in the corpus-of-record."""
+
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable

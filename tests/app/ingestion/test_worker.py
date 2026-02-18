@@ -1,4 +1,5 @@
 """Tests for the ingestion worker."""
+
 from __future__ import annotations
 
 import uuid

@@ -1,4 +1,5 @@
 """Tests for distributed ingestion settings."""
+
 from __future__ import annotations
 
 from rag.settings import DistributedIngestion, load_settings
@@ -30,6 +31,9 @@ corpus_s3_prefix = "corpus"
         cfg = load_settings(toml_path, require_openai=False)
         assert cfg.distributed_ingestion.enabled is True
         assert cfg.distributed_ingestion.postgres_dsn == "postgresql://user:pass@host:5432/rag"
-        assert cfg.distributed_ingestion.sqs_queue_url == "https://sqs.us-east-1.amazonaws.com/123/rag-tasks"
+        assert (
+            cfg.distributed_ingestion.sqs_queue_url
+            == "https://sqs.us-east-1.amazonaws.com/123/rag-tasks"
+        )
         assert cfg.distributed_ingestion.corpus_s3_bucket == "rag-prod-artifacts"
         assert cfg.distributed_ingestion.corpus_s3_prefix == "corpus"

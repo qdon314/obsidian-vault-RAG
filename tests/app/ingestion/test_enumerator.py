@@ -1,4 +1,5 @@
 """Tests for the ingestion enumerator."""
+
 from __future__ import annotations
 
 import pytest
@@ -70,10 +71,7 @@ class TestEnumerator:
         raw_store: FakeRawDocumentStore,
         queue: FakeTaskQueue,
     ) -> None:
-        docs = [
-            make_document(doc_id=f"doc-{i}", text=f"content {i}")
-            for i in range(3)
-        ]
+        docs = [make_document(doc_id=f"doc-{i}", text=f"content {i}") for i in range(3)]
         enum = Enumerator(
             job_store=job_store,
             raw_document_store=raw_store,

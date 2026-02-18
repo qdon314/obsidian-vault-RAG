@@ -3,6 +3,7 @@
 Uses a real SQLite-in-memory database via psycopg2 mocking for unit tests.
 For true integration tests, use a Postgres testcontainer (marked slow).
 """
+
 from __future__ import annotations
 
 import uuid

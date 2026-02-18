@@ -1,4 +1,5 @@
 """Port for distributing ingestion tasks to workers."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence

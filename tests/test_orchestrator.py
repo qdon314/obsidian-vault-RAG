@@ -1,4 +1,5 @@
 """Tests for the orchestrator poll loop."""
+
 from __future__ import annotations
 
 import uuid
@@ -17,11 +18,13 @@ def _mock_job_store(counts_sequence: list[dict[TaskStatus, int]]) -> MagicMock:
 
 def test_poll_completes_when_all_succeeded():
     job_id = uuid.uuid4()
-    store = _mock_job_store([
-        {TaskStatus.PENDING: 5, TaskStatus.RUNNING: 5},
-        {TaskStatus.SUCCEEDED: 8, TaskStatus.RUNNING: 2},
-        {TaskStatus.SUCCEEDED: 10},
-    ])
+    store = _mock_job_store(
+        [
+            {TaskStatus.PENDING: 5, TaskStatus.RUNNING: 5},
+            {TaskStatus.SUCCEEDED: 8, TaskStatus.RUNNING: 2},
+            {TaskStatus.SUCCEEDED: 10},
+        ]
+    )
 
     result = poll_until_complete(
         job_id=job_id,
@@ -39,9 +42,11 @@ def test_poll_completes_when_all_succeeded():
 
 def test_poll_detects_failures():
     job_id = uuid.uuid4()
-    store = _mock_job_store([
-        {TaskStatus.SUCCEEDED: 8, TaskStatus.FAILED: 2},
-    ])
+    store = _mock_job_store(
+        [
+            {TaskStatus.SUCCEEDED: 8, TaskStatus.FAILED: 2},
+        ]
+    )
 
     result = poll_until_complete(
         job_id=job_id,

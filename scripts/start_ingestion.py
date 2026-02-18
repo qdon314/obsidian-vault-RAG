@@ -6,6 +6,7 @@ Usage:
         --corpus-id regulations_v1 \
         --index-name regulations
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,7 +31,12 @@ def main() -> None:
     ap.add_argument("--corpus-id", required=True, help="Unique corpus identifier.")
     ap.add_argument("--index-name", required=True, help="Index name for manifest.")
     ap.add_argument("--max-docs", type=int, default=0, help="Limit docs (0=all).")
-    ap.add_argument("--qdrant-collection", type=str, default=None, help="Qdrant collection (default: from settings).")
+    ap.add_argument(
+        "--qdrant-collection",
+        type=str,
+        default=None,
+        help="Qdrant collection (default: from settings).",
+    )
     args = ap.parse_args()
 
     load_dotenv()
@@ -52,8 +58,6 @@ def main() -> None:
         docs = docs[: args.max_docs]
 
     log.info("Ingested %d docs, now enumerating...", len(docs))
-
-    
 
     if cfg.distributed_ingestion.postgres_dsn is None:
         log.error("distributed_ingestion.postgres_dsn must be set")

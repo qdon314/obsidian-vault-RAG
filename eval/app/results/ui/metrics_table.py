@@ -79,7 +79,9 @@ def _render_retrieval_table(
     # Build table data
     metrics = ["Recall", "Precision", "Hit Rate", "NDCG"]
     include_tiered = bool(
-        summary.critical_recall_at_k or summary.weighted_recall_at_k or summary.critical_hit_rate_at_k
+        summary.critical_recall_at_k
+        or summary.weighted_recall_at_k
+        or summary.critical_hit_rate_at_k
     )
     if include_tiered:
         metrics.extend(

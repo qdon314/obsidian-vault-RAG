@@ -48,7 +48,9 @@ def main() -> None:
     load_dotenv()
     logging.basicConfig(format="[regulatory-push-s3] %(message)s", level=logging.INFO)
 
-    local_dir = _resolve_local_dir(local_dir=args.local_dir, corpus_dir=args.corpus_dir, part=args.part)
+    local_dir = _resolve_local_dir(
+        local_dir=args.local_dir, corpus_dir=args.corpus_dir, part=args.part
+    )
     if not local_dir.exists():
         raise FileNotFoundError(f"Local directory does not exist: {local_dir}")
 

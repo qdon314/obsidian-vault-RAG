@@ -15,9 +15,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 # Matches one or more leading subsection markers like ``(a)(1)(i)``.
-_SUBSECTION_CHAIN_RE = re.compile(
-    r"^\s*((?:\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)\s*)+)"
-)
+_SUBSECTION_CHAIN_RE = re.compile(r"^\s*((?:\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)\s*)+)")
 _SUBSECTION_TOKEN_RE = re.compile(r"\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)")
 
 # Maps subsection prefix values to nesting levels.

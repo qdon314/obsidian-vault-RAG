@@ -125,6 +125,7 @@ def average_precision(retrieved: Sequence[str], relevant: set[str]) -> float:
             precisions.append(hits / i)
     return sum(precisions) / len(relevant) if precisions else 0.0
 
+
 def mean_average_precision(results: Iterable[RetrievalResult]) -> float:
     """
     TODO: Incorporate into eval metrics summary.
@@ -136,6 +137,7 @@ def mean_average_precision(results: Iterable[RetrievalResult]) -> float:
     """
     aps = [average_precision(r.retrieved_chunk_ids, r.relevant_chunk_ids) for r in results]
     return sum(aps) / len(aps) if aps else 0.0
+
 
 def ndcg_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
     """
@@ -268,7 +270,10 @@ def summarize(
             sum(ndcg_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
         )
         critical_recall_at_k_res[k] = (
-            sum(critical_recall_at_k(r.retrieved_chunk_ids, r.critical_chunk_ids, k) for r in results)
+            sum(
+                critical_recall_at_k(r.retrieved_chunk_ids, r.critical_chunk_ids, k)
+                for r in results
+            )
             / n
         )
         weighted_recall_at_k_res[k] = (

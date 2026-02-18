@@ -3,6 +3,7 @@
 Walks a set of documents, writes raw docs to S3, records them in the
 job store, and enqueues SQS messages for workers.
 """
+
 from __future__ import annotations
 
 import logging

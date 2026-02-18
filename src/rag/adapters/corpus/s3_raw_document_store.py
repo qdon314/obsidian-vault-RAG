@@ -10,6 +10,7 @@ S3 layout::
 Each JSON object contains the full document text, metadata, and
 content hash for idempotency checks.
 """
+
 from __future__ import annotations
 
 import json
@@ -37,6 +38,7 @@ class S3RawDocumentStore:
 
     def __post_init__(self) -> None:
         import boto3  # type: ignore[import-untyped]
+
         object.__setattr__(self, "_s3", boto3.client("s3"))
 
     @classmethod

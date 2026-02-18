@@ -364,9 +364,7 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
 
     # Case ingestion
     case_tbl = get_tbl("case_ingestion")
-    doc_types_raw = case_tbl.get(
-        "document_types", ["Inspection Report", "Part 21 Correspondence"]
-    )
+    doc_types_raw = case_tbl.get("document_types", ["Inspection Report", "Part 21 Correspondence"])
     if isinstance(doc_types_raw, str):
         doc_types = tuple(t.strip() for t in doc_types_raw.split(",") if t.strip())
     else:
@@ -374,7 +372,9 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
 
     output_dir_raw = case_tbl.get("output_dir", "corpus/us-nrc/cases")
     case_ingestion = CaseIngestion(
-        output_dir=expand(output_dir_raw) if isinstance(output_dir_raw, str) else Path(output_dir_raw),
+        output_dir=expand(output_dir_raw)
+        if isinstance(output_dir_raw, str)
+        else Path(output_dir_raw),
         document_types=doc_types,
     )
 

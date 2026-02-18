@@ -98,9 +98,7 @@ class TestClassifyCaseDocument:
         )
 
         assert result.category == CaseCategory.ENFORCEMENT
-        assert (
-            result.subcategory == CaseSubcategory.ENFORCEMENT_DEMAND_FOR_INFORMATION
-        )
+        assert result.subcategory == CaseSubcategory.ENFORCEMENT_DEMAND_FOR_INFORMATION
 
     def test_classify_aslb_decision(self):
         """Should classify ASLB adjudication."""
@@ -283,9 +281,7 @@ class TestExtractFacilityInfo:
     def test_extract_facility_from_title(self):
         """Should extract facility name from typical title format."""
         # The regex looks for patterns ending with " - " or start, so adjust format
-        info = extract_facility_info(
-            title="Three Mile Island Nuclear Station - Inspection Report"
-        )
+        info = extract_facility_info(title="Three Mile Island Nuclear Station - Inspection Report")
 
         # May or may not extract depending on regex; check the actual behavior
         assert info["facility_name"] is not None or info["facility_name"] is None
@@ -419,7 +415,7 @@ class TestNormalizeCaseDocumentToMarkdown:
         markdown = normalize_case_document_to_markdown(doc, config)
 
         assert "---" in markdown  # YAML frontmatter
-        assert "accession_number: \"ML12345A678\"" in markdown
+        assert 'accession_number: "ML12345A678"' in markdown
         assert "# ML12345A678 — Test Document" in markdown
 
     def test_full_document_with_content(self):
@@ -440,12 +436,12 @@ class TestNormalizeCaseDocumentToMarkdown:
         markdown = normalize_case_document_to_markdown(doc, config)
 
         # Check frontmatter
-        assert "accession_number: \"ML23456B789\"" in markdown
-        assert "document_date: \"2024-01-15T00:00:00\"" in markdown
-        assert "case_category: \"enforcement\"" in markdown
-        assert "dockets: [\"DOCKET-123\"]" in markdown
-        assert "source_url: \"https://example.com\"" in markdown
-        assert "source_revision: \"rev123\"" in markdown
+        assert 'accession_number: "ML23456B789"' in markdown
+        assert 'document_date: "2024-01-15T00:00:00"' in markdown
+        assert 'case_category: "enforcement"' in markdown
+        assert 'dockets: ["DOCKET-123"]' in markdown
+        assert 'source_url: "https://example.com"' in markdown
+        assert 'source_revision: "rev123"' in markdown
 
         # Check body sections
         assert "# ML23456B789 — Notice of Violation" in markdown
