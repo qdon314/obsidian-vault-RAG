@@ -1,89 +1,525 @@
 {
-    "ECCS": ["10 CFR 50.46", "10 CFR 50.34"],
-    "emergency core cooling": ["10 CFR 50.46"],
-    "emergency core cooling system": ["10 CFR 50.46"],
-    "accumulator": ["10 CFR 50.46", "10 CFR 50.36"],
-    "peak cladding temperature": ["10 CFR 50.46"],
-    "cladding oxidation": ["10 CFR 50.46"],
-    "coolable geometry": ["10 CFR 50.46"],
-    "long-term cooling": ["10 CFR 50.46"],
-    "LOCA": ["10 CFR 50.46"],
-    "loss of coolant accident": ["10 CFR 50.46"],
-    "loss-of-coolant accident": ["10 CFR 50.46"],
-    "technical specification": ["10 CFR 50.36"],
-    "technical specifications": ["10 CFR 50.36"],
-    "tech spec": ["10 CFR 50.36"],
-    "LCO": ["10 CFR 50.36"],
-    "limiting condition for operation": ["10 CFR 50.36"],
-    "surveillance requirement": ["10 CFR 50.36"],
-    "surveillance requirements": ["10 CFR 50.36"],
-    "surveillance testing": ["10 CFR 50.36"],
-    "surveillance test": ["10 CFR 50.36"],
-    "safety limit": ["10 CFR 50.36"],
-    "design feature": ["10 CFR 50.36"],
-    "administrative control": ["10 CFR 50.36"],
-    "unreviewed safety question": ["10 CFR 50.59"],
-    "license amendment": ["10 CFR 50.59", "10 CFR 50.90"],
-    "license amendment request": ["10 CFR 50.90"],
-    "maintenance rule": ["10 CFR 50.65"],
-    "preventive maintenance": ["10 CFR 50.65"],
-    "corrective maintenance": ["10 CFR 50.65"],
-    "maintenance effectiveness": ["10 CFR 50.65"],
-    "risk-informed": ["10 CFR 50.65"],
-    "Part 21": ["10 CFR 21"],
-    "defect reporting": ["10 CFR 21"],
-    "substantial safety hazard": ["10 CFR 21"],
-    "event notification": ["10 CFR 50.72"],
-    "immediate notification": ["10 CFR 50.72"],
-    "four-hour notification": ["10 CFR 50.72"],
-    "eight-hour notification": ["10 CFR 50.72"],
-    "licensee event report": ["10 CFR 50.73"],
-    "LER": ["10 CFR 50.73"],
-    "station blackout": ["10 CFR 50.63"],
-    "SBO": ["10 CFR 50.63"],
-    "alternate AC source": ["10 CFR 50.63"],
-    "ATWS": ["10 CFR 50.62"],
-    "anticipated transient without scram": ["10 CFR 50.62"],
-    "fire protection": ["10 CFR 50.48"],
-    "combustible gas control": ["10 CFR 50.44"],
-    "inerted atmosphere": ["10 CFR 50.44"],
-    "pressurized thermal shock": ["10 CFR 50.61"],
-    "PTS": ["10 CFR 50.61"],
-    "reactor vessel embrittlement": ["10 CFR 50.61"],
-    "quality assurance": ["10 CFR 50.34"],
-    "QA program": ["10 CFR 50.34"],
-    "safety-related": ["10 CFR 50.2"],
-    "design basis accident": ["10 CFR 50.2"],
-    "design basis event": ["10 CFR 50.2"],
-    "emergency plan": ["10 CFR 50.47"],
-    "emergency planning": ["10 CFR 50.47"],
-    "emergency preparedness": ["10 CFR 50.47"],
-    "physical security": ["10 CFR 73.55"],
-    "security plan": ["10 CFR 73.55"],
-    "fitness for duty": ["10 CFR 26"],
-    "access authorization": ["10 CFR 73.56"],
-    "radiation protection": ["10 CFR 20"],
-    "dose limit": ["10 CFR 20"],
-    "ALARA": ["10 CFR 20"],
-    "effluent": ["10 CFR 50.36a"],
-    "environmental monitoring": ["10 CFR 50.36a"],
-    "decommissioning": ["10 CFR 50.82"],
-    "decommissioning fund": ["10 CFR 50.75"],
-    "inservice inspection": ["10 CFR 50.55a"],
-    "ISI": ["10 CFR 50.55a"],
-    "inservice testing": ["10 CFR 50.55a"],
-    "IST": ["10 CFR 50.55a"],
-    "ASME Code": ["10 CFR 50.55a"],
-    "reactor coolant pressure boundary": ["10 CFR 50.2", "10 CFR 50.55a"],
-    "operability": ["10 CFR 50.36"],
-    "operable": ["10 CFR 50.36"],
-    "reportable condition": ["10 CFR 50.72", "10 CFR 50.73"],
-    "corrective action program": ["10 CFR 50.34"],
-    "nonconformance": ["10 CFR 50.34"],
-    "violation": ["10 CFR 2.201"],
-    "civil penalty": ["10 CFR 2.205"],
-    "severity level": ["10 CFR 2.201"],
-    "enforcement action": ["10 CFR 2.201"],
-    "confirmatory order": ["10 CFR 2.202"],
-    "demand for information": ["10 CFR 2.204"]
+  "version": "0.1",
+  "refs": {
+    "cfr.10.21": {"label": "10 CFR 21", "kind": "cfr"},
+    "cfr.10.2.201": {"label": "10 CFR 2.201", "kind": "cfr"},
+    "cfr.10.2.202": {"label": "10 CFR 2.202", "kind": "cfr"},
+    "cfr.10.2.204": {"label": "10 CFR 2.204", "kind": "cfr"},
+    "cfr.10.2.205": {"label": "10 CFR 2.205", "kind": "cfr"},
+    "cfr.10.20": {"label": "10 CFR 20", "kind": "cfr"},
+    "cfr.10.26": {"label": "10 CFR 26", "kind": "cfr"},
+    "cfr.10.50.2": {"label": "10 CFR 50.2", "kind": "cfr"},
+    "cfr.10.50.34": {"label": "10 CFR 50.34", "kind": "cfr"},
+    "cfr.10.50.36": {"label": "10 CFR 50.36", "kind": "cfr"},
+    "cfr.10.50.36a": {"label": "10 CFR 50.36a", "kind": "cfr"},
+    "cfr.10.50.44": {"label": "10 CFR 50.44", "kind": "cfr"},
+    "cfr.10.50.46": {"label": "10 CFR 50.46", "kind": "cfr"},
+    "cfr.10.50.47": {"label": "10 CFR 50.47", "kind": "cfr"},
+    "cfr.10.50.48": {"label": "10 CFR 50.48", "kind": "cfr"},
+    "cfr.10.50.55a": {"label": "10 CFR 50.55a", "kind": "cfr"},
+    "cfr.10.50.59": {"label": "10 CFR 50.59", "kind": "cfr"},
+    "cfr.10.50.61": {"label": "10 CFR 50.61", "kind": "cfr"},
+    "cfr.10.50.62": {"label": "10 CFR 50.62", "kind": "cfr"},
+    "cfr.10.50.63": {"label": "10 CFR 50.63", "kind": "cfr"},
+    "cfr.10.50.65": {"label": "10 CFR 50.65", "kind": "cfr"},
+    "cfr.10.50.72": {"label": "10 CFR 50.72", "kind": "cfr"},
+    "cfr.10.50.73": {"label": "10 CFR 50.73", "kind": "cfr"},
+    "cfr.10.50.75": {"label": "10 CFR 50.75", "kind": "cfr"},
+    "cfr.10.50.82": {"label": "10 CFR 50.82", "kind": "cfr"},
+    "cfr.10.50.90": {"label": "10 CFR 50.90", "kind": "cfr"},
+    "cfr.10.73.55": {"label": "10 CFR 73.55", "kind": "cfr"},
+    "cfr.10.73.56": {"label": "10 CFR 73.56", "kind": "cfr"},
+    "cfr.10.50.appA": {"label": "10 CFR 50 Appendix A", "kind": "cfr_appendix"},
+    "cfr.10.50.appB": {"label": "10 CFR 50 Appendix B", "kind": "cfr_appendix"},
+    "cfr.10.50.appE": {"label": "10 CFR 50 Appendix E", "kind": "cfr_appendix"},
+    "cfr.10.50.appJ": {"label": "10 CFR 50 Appendix J", "kind": "cfr_appendix"},
+    "cfr.10.50.appK": {"label": "10 CFR 50 Appendix K", "kind": "cfr_appendix"},
+    "cfr.10.50.appR": {"label": "10 CFR 50 Appendix R", "kind": "cfr_appendix"}
+  },
+  "terms": [
+    {
+      "id": "term.eccs",
+      "canonical": "ECCS",
+      "aliases": ["emergency core cooling", "emergency core cooling system"],
+      "type": "anchor",
+      "anchors": [
+        {"ref": "cfr.10.50.46", "weight": 1.0},
+        {"ref": "cfr.10.50.34", "weight": 0.4}
+      ],
+      "notes": "Primary anchor is 50.46; 50.34 is supporting licensing basis context."
+    },
+    {
+      "id": "term.accumulator",
+      "canonical": "accumulator",
+      "type": "anchor",
+      "anchors": [
+        {"ref": "cfr.10.50.46", "weight": 0.6},
+        {"ref": "cfr.10.50.36", "weight": 0.4}
+      ]
+    },
+    {
+      "id": "term.peak_cladding_temperature",
+      "canonical": "peak cladding temperature",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}]
+    },
+    {
+      "id": "term.cladding_oxidation",
+      "canonical": "cladding oxidation",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}]
+    },
+    {
+      "id": "term.coolable_geometry",
+      "canonical": "coolable geometry",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}]
+    },
+    {
+      "id": "term.long_term_cooling",
+      "canonical": "long-term cooling",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}]
+    },
+    {
+      "id": "term.loca",
+      "canonical": "LOCA",
+      "aliases": ["loss of coolant accident", "loss-of-coolant accident"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}]
+    },
+    {
+      "id": "term.technical_specification",
+      "canonical": "technical specification",
+      "aliases": ["technical specifications", "tech spec"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.36", "weight": 1.0}]
+    },
+    {
+      "id": "term.lco",
+      "canonical": "LCO",
+      "aliases": ["limiting condition for operation"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.36", "weight": 1.0}]
+    },
+    {
+      "id": "term.surveillance_requirement",
+      "canonical": "surveillance requirement",
+      "aliases": ["surveillance requirements", "surveillance testing", "surveillance test"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.36", "weight": 1.0}]
+    },
+    {
+      "id": "term.safety_limit",
+      "canonical": "safety limit",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.36", "weight": 1.0}]
+    },
+    {
+      "id": "term.design_feature",
+      "canonical": "design feature",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.36", "weight": 0.6}],
+      "notes": "Broad tech spec concept, not uniquely 50.36."
+    },
+    {
+      "id": "term.administrative_control",
+      "canonical": "administrative control",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.36", "weight": 0.6}],
+      "notes": "Broad tech spec concept."
+    },
+    {
+      "id": "term.unreviewed_safety_question",
+      "canonical": "unreviewed safety question",
+      "aliases": ["USQ"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.59", "weight": 1.0}],
+      "notes": "Historical terminology; modern framing is 50.59 screening/evaluation."
+    },
+    {
+      "id": "term.5059_screening",
+      "canonical": "50.59 screening",
+      "aliases": ["screening determination", "screening under 50.59"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.59", "weight": 1.0}]
+    },
+    {
+      "id": "term.5059_evaluation",
+      "canonical": "50.59 evaluation",
+      "aliases": ["evaluation under 50.59", "full evaluation"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.59", "weight": 1.0}]
+    },
+    {
+      "id": "term.design_change",
+      "canonical": "design change",
+      "aliases": ["plant modification", "procedure change", "configuration change"],
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.59", "weight": 0.8}],
+      "notes": "Design/procedure changes often implicate 50.59 but are not exclusively 50.59."
+    },
+    {
+      "id": "term.prior_nrc_approval",
+      "canonical": "prior NRC approval",
+      "aliases": ["requires NRC approval", "NRC approval required"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.59", "weight": 1.0}]
+    },
+    {
+      "id": "term.license_amendment",
+      "canonical": "license amendment",
+      "type": "anchor",
+      "anchors": [
+        {"ref": "cfr.10.50.59", "weight": 0.6},
+        {"ref": "cfr.10.50.90", "weight": 0.4}
+      ]
+    },
+    {
+      "id": "term.license_amendment_request",
+      "canonical": "license amendment request",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.90", "weight": 1.0}]
+    },
+    {
+      "id": "term.maintenance_rule",
+      "canonical": "maintenance rule",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.65", "weight": 1.0}]
+    },
+    {
+      "id": "term.preventive_maintenance",
+      "canonical": "preventive maintenance",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.65", "weight": 0.6}],
+      "notes": "General maintenance term, not uniquely 50.65."
+    },
+    {
+      "id": "term.corrective_maintenance",
+      "canonical": "corrective maintenance",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.65", "weight": 0.6}],
+      "notes": "General maintenance term."
+    },
+    {
+      "id": "term.maintenance_effectiveness",
+      "canonical": "maintenance effectiveness",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.65", "weight": 0.7}]
+    },
+    {
+      "id": "term.risk_informed",
+      "canonical": "risk-informed",
+      "aliases": ["risk informed", "risk-informed decisionmaking", "risk-informed decision making"],
+      "type": "cross_cutting",
+      "anchors": [{"ref": "cfr.10.50.65", "weight": 0.3}],
+      "notes": "Intentionally low-confidence; appears in many regulatory contexts."
+    },
+    {
+      "id": "term.part21",
+      "canonical": "Part 21",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.21", "weight": 1.0}]
+    },
+    {
+      "id": "term.defect_reporting",
+      "canonical": "defect reporting",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.21", "weight": 1.0}]
+    },
+    {
+      "id": "term.substantial_safety_hazard",
+      "canonical": "substantial safety hazard",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.21", "weight": 1.0}]
+    },
+    {
+      "id": "term.event_notification",
+      "canonical": "event notification",
+      "aliases": ["immediate notification", "four-hour notification", "eight-hour notification"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.72", "weight": 1.0}]
+    },
+    {
+      "id": "term.ler",
+      "canonical": "LER",
+      "aliases": ["licensee event report"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.73", "weight": 1.0}]
+    },
+    {
+      "id": "term.station_blackout",
+      "canonical": "station blackout",
+      "aliases": ["SBO"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.63", "weight": 1.0}]
+    },
+    {
+      "id": "term.alternate_ac_source",
+      "canonical": "alternate AC source",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.63", "weight": 1.0}]
+    },
+    {
+      "id": "term.atws",
+      "canonical": "ATWS",
+      "aliases": ["anticipated transient without scram"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.62", "weight": 1.0}]
+    },
+    {
+      "id": "term.fire_protection",
+      "canonical": "fire protection",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.48", "weight": 1.0}]
+    },
+    {
+      "id": "term.combustible_gas_control",
+      "canonical": "combustible gas control",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.44", "weight": 1.0}]
+    },
+    {
+      "id": "term.inerted_atmosphere",
+      "canonical": "inerted atmosphere",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.44", "weight": 1.0}]
+    },
+    {
+      "id": "term.pressurized_thermal_shock",
+      "canonical": "pressurized thermal shock",
+      "aliases": ["PTS"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.61", "weight": 1.0}]
+    },
+    {
+      "id": "term.reactor_vessel_embrittlement",
+      "canonical": "reactor vessel embrittlement",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.61", "weight": 1.0}]
+    },
+    {
+      "id": "term.quality_assurance",
+      "canonical": "quality assurance",
+      "aliases": ["QA program"],
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.34", "weight": 0.6}],
+      "notes": "Broad program concept, not uniquely 50.34. See also Appendix B."
+    },
+    {
+      "id": "term.safety_related",
+      "canonical": "safety-related",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.2", "weight": 0.5}],
+      "notes": "Definitional term used broadly across regulations."
+    },
+    {
+      "id": "term.design_basis_accident",
+      "canonical": "design basis accident",
+      "aliases": ["design basis event"],
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.2", "weight": 0.5}],
+      "notes": "Definitional term used broadly."
+    },
+    {
+      "id": "term.emergency_plan",
+      "canonical": "emergency plan",
+      "aliases": ["emergency planning", "emergency preparedness"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.47", "weight": 1.0}]
+    },
+    {
+      "id": "term.physical_security",
+      "canonical": "physical security",
+      "aliases": ["security plan"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.73.55", "weight": 1.0}]
+    },
+    {
+      "id": "term.fitness_for_duty",
+      "canonical": "fitness for duty",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.26", "weight": 1.0}]
+    },
+    {
+      "id": "term.access_authorization",
+      "canonical": "access authorization",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.73.56", "weight": 1.0}]
+    },
+    {
+      "id": "term.radiation_protection",
+      "canonical": "radiation protection",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.20", "weight": 1.0}]
+    },
+    {
+      "id": "term.dose_limit",
+      "canonical": "dose limit",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.20", "weight": 1.0}]
+    },
+    {
+      "id": "term.alar",
+      "canonical": "ALARA",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.20", "weight": 1.0}]
+    },
+    {
+      "id": "term.effluent",
+      "canonical": "effluent",
+      "aliases": ["environmental monitoring"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.36a", "weight": 1.0}]
+    },
+    {
+      "id": "term.decommissioning",
+      "canonical": "decommissioning",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.82", "weight": 1.0}]
+    },
+    {
+      "id": "term.decommissioning_fund",
+      "canonical": "decommissioning fund",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.75", "weight": 1.0}]
+    },
+    {
+      "id": "term.inservice_inspection",
+      "canonical": "inservice inspection",
+      "aliases": ["ISI"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.55a", "weight": 1.0}]
+    },
+    {
+      "id": "term.inservice_testing",
+      "canonical": "inservice testing",
+      "aliases": ["IST"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.55a", "weight": 1.0}]
+    },
+    {
+      "id": "term.asme_code",
+      "canonical": "ASME Code",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.55a", "weight": 1.0}]
+    },
+    {
+      "id": "term.rcpb",
+      "canonical": "reactor coolant pressure boundary",
+      "type": "anchor",
+      "anchors": [
+        {"ref": "cfr.10.50.2", "weight": 0.4},
+        {"ref": "cfr.10.50.55a", "weight": 0.6}
+      ]
+    },
+    {
+      "id": "term.operability",
+      "canonical": "operability",
+      "aliases": ["operable"],
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.36", "weight": 0.6}],
+      "notes": "Broadly used across tech specs, not uniquely 50.36."
+    },
+    {
+      "id": "term.reportable_condition",
+      "canonical": "reportable condition",
+      "type": "anchor",
+      "anchors": [
+        {"ref": "cfr.10.50.72", "weight": 0.5},
+        {"ref": "cfr.10.50.73", "weight": 0.5}
+      ]
+    },
+    {
+      "id": "term.corrective_action_program",
+      "canonical": "corrective action program",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.34", "weight": 0.5}],
+      "notes": "Spans QA, enforcement, and licensing contexts."
+    },
+    {
+      "id": "term.nonconformance",
+      "canonical": "nonconformance",
+      "type": "contextual",
+      "anchors": [{"ref": "cfr.10.50.34", "weight": 0.5}],
+      "notes": "Spans QA and enforcement contexts."
+    },
+    {
+      "id": "term.violation",
+      "canonical": "violation",
+      "aliases": ["severity level", "enforcement action"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.2.201", "weight": 1.0}]
+    },
+    {
+      "id": "term.civil_penalty",
+      "canonical": "civil penalty",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.2.205", "weight": 1.0}]
+    },
+    {
+      "id": "term.confirmatory_order",
+      "canonical": "confirmatory order",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.2.202", "weight": 1.0}]
+    },
+    {
+      "id": "term.demand_for_information",
+      "canonical": "demand for information",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.2.204", "weight": 1.0}]
+    },
+    {
+      "id": "term.gdc",
+      "canonical": "General Design Criteria",
+      "aliases": ["GDC", "Appendix A", "GDC 17", "GDC 35"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.appA", "weight": 1.0}],
+      "notes": "Appendix A is a top-level anchor for many design-basis questions."
+    },
+    {
+      "id": "term.single_failure_criterion",
+      "canonical": "single failure criterion",
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.appA", "weight": 1.0}]
+    },
+    {
+      "id": "term.qa_appb",
+      "canonical": "Appendix B QA Criteria",
+      "aliases": ["Appendix B", "QA criteria", "quality assurance criteria", "Criterion III", "Criterion V", "Criterion XVI"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.appB", "weight": 1.0}],
+      "notes": "Prefer Appendix B over 50.34 for QA criteria anchors."
+    },
+    {
+      "id": "term.appk_eccs_model",
+      "canonical": "ECCS Evaluation Model",
+      "aliases": ["Appendix K", "evaluation model", "Appendix K model"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.appK", "weight": 1.0}],
+      "notes": "Critical for LOCA/ECCS analysis-method questions."
+    },
+    {
+      "id": "term.appr_fire",
+      "canonical": "Appendix R Fire Protection",
+      "aliases": ["Appendix R", "fire protection appendix r", "safe shutdown"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.appR", "weight": 1.0}]
+    },
+    {
+      "id": "term.appe_emergency",
+      "canonical": "Appendix E Emergency Planning",
+      "aliases": ["Appendix E", "emergency planning appendix e", "emergency planning zone", "EPZ"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.appE", "weight": 1.0}]
+    },
+    {
+      "id": "term.appj_containment_leakage",
+      "canonical": "Containment Leakage",
+      "aliases": ["Appendix J", "leak rate test", "ILRT", "Type A test", "Type B test", "Type C test", "integrated leak rate test", "local leak rate test", "LLRT"],
+      "type": "anchor",
+      "anchors": [{"ref": "cfr.10.50.appJ", "weight": 1.0}],
+      "notes": "Adds high-value containment leakage testing hooks (ILRT/Type A/B/C)."
+    }
+  ]
 }

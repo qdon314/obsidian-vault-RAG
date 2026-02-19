@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 from rag.adapters.query_generation.case_query_generator import CaseQueryGenerator
 from rag.adapters.query_generation.term_mapper import TermMapper
@@ -45,17 +46,54 @@ system pressure is above 1000 psig.
 """
 
 
-def _make_term_mapper(terms: dict[str, list[str]] | None = None) -> TermMapper:
+def _make_term_json(terms: list[dict[str, Any]] | None = None) -> str:
+    """Create a valid term map JSON string."""
     if terms is None:
-        terms = {
-            "ECCS": ["10 CFR 50.46"],
-            "surveillance testing": ["10 CFR 50.36"],
-            "LCO": ["10 CFR 50.36"],
-            "accumulator": ["10 CFR 50.46", "10 CFR 50.36"],
-        }
+        terms = [
+            {
+                "id": "term.eccs",
+                "canonical": "ECCS",
+                "type": "anchor",
+                "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}],
+            },
+            {
+                "id": "term.surv_test",
+                "canonical": "surveillance testing",
+                "type": "anchor",
+                "anchors": [{"ref": "cfr.10.50.36", "weight": 1.0}],
+            },
+            {
+                "id": "term.lco",
+                "canonical": "LCO",
+                "type": "anchor",
+                "anchors": [{"ref": "cfr.10.50.36", "weight": 1.0}],
+            },
+            {
+                "id": "term.accumulator",
+                "canonical": "accumulator",
+                "type": "anchor",
+                "anchors": [
+                    {"ref": "cfr.10.50.46", "weight": 0.6},
+                    {"ref": "cfr.10.50.36", "weight": 0.4},
+                ],
+            },
+        ]
+
+    data = {
+        "version": "0.1",
+        "refs": {
+            "cfr.10.50.46": {"label": "10 CFR 50.46", "kind": "cfr"},
+            "cfr.10.50.36": {"label": "10 CFR 50.36", "kind": "cfr"},
+        },
+        "terms": terms,
+    }
+    return json.dumps(data)
+
+
+def _make_term_mapper(terms: list[dict[str, Any]] | None = None) -> TermMapper:
     with TemporaryDirectory() as td:
         p = Path(td) / "terms.json"
-        p.write_text(json.dumps(terms))
+        p.write_text(_make_term_json(terms))
         return TermMapper.from_json(p)
 
 
@@ -195,9 +233,15 @@ class TestStrategy2TermMapping:
 
     def test_max_5_term_mapping_queries(self):
         # Create 10 terms that all appear >= 2 times
-        many_terms = {
-            f"term{i}": [f"10 CFR 50.{i}"] for i in range(10)
-        }
+        many_terms = [
+            {
+                "id": f"term.term{i}",
+                "canonical": f"term{i}",
+                "type": "anchor",
+                "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}],
+            }
+            for i in range(10)
+        ]
         content_parts = []
         for i in range(10):
             content_parts.append(f"term{i} term{i} term{i}")
@@ -216,6 +260,57 @@ class TestStrategy2TermMapping:
             queries = gen.generate(case_file)
         s2 = [q for q in queries if "term-mapping" in q["tags"]]
         assert len(s2) == 5
+
+    def test_anchor_term_tagged(self):
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s2 = [q for q in queries if "term-mapping" in q["tags"]]
+        eccs_queries = [q for q in s2 if q["technical_term"] == "ECCS"]
+        assert len(eccs_queries) >= 1
+        assert "anchor-term" in eccs_queries[0]["tags"]
+        assert eccs_queries[0]["term_type"] == "anchor"
+
+    def test_contextual_term_tagged(self):
+        terms = [
+            {
+                "id": "term.risk_informed",
+                "canonical": "risk-informed",
+                "type": "contextual",
+                "anchors": [{"ref": "cfr.10.50.46", "weight": 1.0}],
+            }
+        ]
+        body_lines = ["A risk-informed approach was used. " * 3]
+        md = (
+            "---\n"
+            'accession_number: "ML99999A001"\n'
+            'document_type: "Report"\n'
+            "cross_references: []\n"
+            "---\n\n" + "\n".join(body_lines)
+        )
+        mapper = _make_term_mapper(terms)
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td, content=md)
+            queries = gen.generate(case_file)
+        s2 = [q for q in queries if "term-mapping" in q["tags"]]
+        assert len(s2) >= 1
+        assert "contextual-term" in s2[0]["tags"]
+        assert "anchor-term" not in s2[0]["tags"]
+        assert s2[0]["term_type"] == "contextual"
+
+    def test_includes_anchor_refs_field(self):
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s2 = [q for q in queries if "term-mapping" in q["tags"]]
+        for q in s2:
+            assert "anchor_refs" in q
+            assert isinstance(q["anchor_refs"], list)
 
 
 class TestQidUniqueness:

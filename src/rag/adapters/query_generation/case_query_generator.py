@@ -108,14 +108,21 @@ class CaseQueryGenerator:
             qid = f"case-tm-{self._tm_counter[0]:03d}"
             template = _STRATEGY2_TEMPLATES[i % len(_STRATEGY2_TEMPLATES)]
 
+            # Get citation labels from anchors
+            term_map = self.term_mapper.term_map
+            anchor_refs = [a.ref for a in match.anchors]
+            citation_labels = [
+                term_map.refs[ref].label for ref in anchor_refs if ref in term_map.refs
+            ]
+
             # Check overlap: do any of this term's mapped citations appear
             # in the frontmatter cross_references?
             has_overlap = any(
-                _normalize_citation(c) in cross_ref_normalized
-                for c in match.citations
+                _normalize_citation(c) in cross_ref_normalized for c in citation_labels
             )
 
-            tags = ["case-derived", "term-mapping"]
+            # Build tags with term type
+            tags = ["case-derived", "term-mapping", f"{match.term_type.value}-term"]
             if has_overlap:
                 tags.append("overlaps-citation")
 
@@ -128,10 +135,12 @@ class CaseQueryGenerator:
                 "is_unanswerable": False,
                 "expected_answer": None,
                 "unanswerable_reason": None,
-                "relevant_citations": list(match.citations),
+                "relevant_citations": citation_labels,
+                "anchor_refs": anchor_refs,
                 "tags": tags,
                 "source_case": accession,
                 "technical_term": match.term,
+                "term_type": match.term_type.value,
                 "metadata": dict(_METADATA_FILTER),
             }
             if has_overlap:
