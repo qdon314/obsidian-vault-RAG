@@ -17,6 +17,7 @@ import shutil
 import uuid
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -367,6 +368,116 @@ def evaluate_answer_quality(
 # ----------------------------
 
 
+def _evaluate_single_query(
+    *,
+    q: EvalQuery,
+    container: Container,
+    citation_to_ids: dict[str, set[str]],
+    citation_key_to_ids: dict[str, set[str]],
+    top_k: int,
+    keep_k: int | None,
+    token_budget: int,
+    run_generation: bool,
+    use_llm_judge: bool,
+    judge_client: OpenAI | None,
+    judge_model: str,
+    score_ids: str,
+) -> EvalResult:
+    """Evaluate a single query. Thread-safe — no shared mutable state."""
+    relevance = _resolve_relevance_tiers(
+        q,
+        citation_to_ids=citation_to_ids,
+        citation_key_to_ids=citation_key_to_ids,
+    )
+    query_filter = q.get_filter()
+
+    # --- Retrieval only ---
+    if not run_generation:
+        cands = container.retriever.retrieve(q.query, top_k=top_k, where=query_filter)
+        retrieved_ids = [c.chunk.chunk_id for c in cands]
+        retrieval_result = RetrievalResult(
+            qid=q.qid,
+            retrieved_chunk_ids=tuple(retrieved_ids),
+            relevant_chunk_ids=relevance.all_chunk_ids,
+            critical_chunk_ids=relevance.critical_chunk_ids,
+            supporting_chunk_ids=relevance.supporting_chunk_ids,
+            context_chunk_ids=relevance.context_chunk_ids,
+        )
+        return EvalResult(
+            qid=q.qid,
+            query=q.query,
+            retrieval_result=retrieval_result,
+            answer=None,
+            answer_metrics=None,
+            query_type=q.query_type,
+            difficulty=q.difficulty,
+            is_unanswerable=q.is_unanswerable,
+            latency_ms=None,
+            trace_id=None,
+        )
+
+    # --- Full pipeline ---
+    run = run_query(
+        query=q.query,
+        retriever=container.retriever,
+        reranker=container.reranker,
+        context_builder=container.context_builder,
+        generator=container.generator,
+        logger=container.logger,
+        top_k=top_k,
+        keep_k=keep_k,
+        token_budget=token_budget,
+        where=query_filter,
+    )
+
+    if score_ids == "retrieved":
+        chosen_ids = tuple(run.retrieved_chunk_ids)
+    elif score_ids == "reranked":
+        chosen_ids = tuple(run.reranked_chunk_ids)
+    else:
+        raise ValueError("score_ids must be 'retrieved' or 'reranked'")
+
+    answer: Answer = run.answer
+    retrieval_result = RetrievalResult(
+        qid=q.qid,
+        retrieved_chunk_ids=chosen_ids,
+        relevant_chunk_ids=relevance.all_chunk_ids,
+        critical_chunk_ids=relevance.critical_chunk_ids,
+        supporting_chunk_ids=relevance.supporting_chunk_ids,
+        context_chunk_ids=relevance.context_chunk_ids,
+    )
+
+    answer_metrics, groundedness_result, gold_result = evaluate_answer_quality(
+        query=q,
+        answer=answer,
+        retrieved_chunks=run.context_pack.chunks,
+        client=judge_client if use_llm_judge else None,
+        judge_model=judge_model or "",
+        embedder=getattr(container, "embedder", None),
+        use_llm_judge=use_llm_judge,
+    )
+
+    outcome_label = reducers.outcome_label(
+        gold=gold_result,
+        groundedness=groundedness_result,
+    )
+
+    return EvalResult(
+        qid=q.qid,
+        query=q.query,
+        retrieval_result=retrieval_result,
+        answer=answer,
+        answer_metrics=answer_metrics,
+        groundedness_result=groundedness_result,
+        outcome_label=outcome_label,
+        query_type=q.query_type,
+        difficulty=q.difficulty,
+        is_unanswerable=q.is_unanswerable,
+        latency_ms=getattr(run, "latency_ms", None),
+        trace_id=getattr(run, "trace_id", None),
+    )
+
+
 def run_full_eval(
     *,
     eval_queries: list[EvalQuery],
@@ -383,6 +494,7 @@ def run_full_eval(
     judge_model: str | None = None,
     score_ids: str = "reranked",  # "retrieved" or "reranked"
     run_name: str | None = None,
+    max_workers: int = 1,
 ) -> EvalRun:
     container.store.load()
 
@@ -420,123 +532,72 @@ def run_full_eval(
     results: list[EvalResult] = []
     empty_retrieval_count = 0
 
-    for q in eval_queries:
-        relevance = _resolve_relevance_tiers(
-            q,
-            citation_to_ids=citation_to_ids,
-            citation_key_to_ids=citation_key_to_ids,
-        )
-        query_filter = q.get_filter()
-
-        # --- Retrieval only ---
-        if not run_generation:
-            cands = container.retriever.retrieve(q.query, top_k=top_k, where=query_filter)
-            retrieved_ids = [c.chunk.chunk_id for c in cands]
-            if not retrieved_ids:
+    if max_workers <= 1:
+        # Sequential path — preserves exact legacy behavior and stack traces.
+        for q in eval_queries:
+            result = _evaluate_single_query(
+                q=q,
+                container=container,
+                citation_to_ids=citation_to_ids,
+                citation_key_to_ids=citation_key_to_ids,
+                top_k=top_k,
+                keep_k=keep_k,
+                token_budget=token_budget,
+                run_generation=run_generation,
+                use_llm_judge=use_llm_judge,
+                judge_client=judge_client,
+                judge_model=judge_model or "",
+                score_ids=score_ids,
+            )
+            results.append(result)
+            if not result.retrieval_result.retrieved_chunk_ids:
                 empty_retrieval_count += 1
                 if empty_retrieval_count <= 3:
                     logger.warning(
-                        "Query %s returned 0 candidates (filter=%s)",
-                        q.qid,
-                        query_filter,
+                        "Query %s returned 0 candidates", result.qid,
                     )
-            retrieval_result = RetrievalResult(
-                qid=q.qid,
-                retrieved_chunk_ids=tuple(retrieved_ids),
-                relevant_chunk_ids=relevance.all_chunk_ids,
-                critical_chunk_ids=relevance.critical_chunk_ids,
-                supporting_chunk_ids=relevance.supporting_chunk_ids,
-                context_chunk_ids=relevance.context_chunk_ids,
-            )
-            results.append(
-                EvalResult(
-                    qid=q.qid,
-                    query=q.query,
-                    retrieval_result=retrieval_result,
-                    answer=None,
-                    answer_metrics=None,
-                    query_type=q.query_type,
-                    difficulty=q.difficulty,
-                    is_unanswerable=q.is_unanswerable,
-                    latency_ms=None,
-                    trace_id=None,
+    else:
+        # Concurrent path — fan out queries across threads.
+        logger.info("Running eval with %d workers across %d queries", max_workers, len(eval_queries))
+        future_to_idx: dict[Any, int] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for idx, q in enumerate(eval_queries):
+                future = executor.submit(
+                    _evaluate_single_query,
+                    q=q,
+                    container=container,
+                    citation_to_ids=citation_to_ids,
+                    citation_key_to_ids=citation_key_to_ids,
+                    top_k=top_k,
+                    keep_k=keep_k,
+                    token_budget=token_budget,
+                    run_generation=run_generation,
+                    use_llm_judge=use_llm_judge,
+                    judge_client=judge_client,
+                    judge_model=judge_model or "",
+                    score_ids=score_ids,
                 )
-            )
-            continue
+                future_to_idx[future] = idx
 
-        # --- Full pipeline ---
-        run = run_query(
-            query=q.query,
-            retriever=container.retriever,
-            reranker=container.reranker,
-            context_builder=container.context_builder,
-            generator=container.generator,
-            logger=container.logger,
-            top_k=top_k,
-            keep_k=keep_k,
-            token_budget=token_budget,
-            where=query_filter,
-        )
+            # Collect results, logging progress as futures complete.
+            indexed_results: list[tuple[int, EvalResult]] = []
+            for completed, future in enumerate(as_completed(future_to_idx), 1):
+                idx = future_to_idx[future]
+                result = future.result()  # propagates exceptions
+                indexed_results.append((idx, result))
+                if completed % 10 == 0 or completed == len(eval_queries):
+                    logger.info("Eval progress: %d/%d queries", completed, len(eval_queries))
 
-        # retrieval ids used for retrieval metrics
-        if score_ids == "retrieved":
-            chosen_ids = tuple(run.retrieved_chunk_ids)
-        elif score_ids == "reranked":
-            chosen_ids = tuple(run.reranked_chunk_ids)
-        else:
-            raise ValueError("score_ids must be 'retrieved' or 'reranked'")
-
-        if not chosen_ids:
-            empty_retrieval_count += 1
-            if empty_retrieval_count <= 3:
-                logger.warning(
-                    "Query %s returned 0 %s candidates (filter=%s)",
-                    q.qid,
-                    score_ids,
-                    query_filter,
-                )
-
-        answer: Answer = run.answer
-        retrieval_result = RetrievalResult(
-            qid=q.qid,
-            retrieved_chunk_ids=chosen_ids,
-            relevant_chunk_ids=relevance.all_chunk_ids,
-            critical_chunk_ids=relevance.critical_chunk_ids,
-            supporting_chunk_ids=relevance.supporting_chunk_ids,
-            context_chunk_ids=relevance.context_chunk_ids,
-        )
-
-        answer_metrics, groundedness_result, gold_result = evaluate_answer_quality(
-            query=q,
-            answer=answer,
-            retrieved_chunks=run.context_pack.chunks,
-            client=judge_client if use_llm_judge else None,
-            judge_model=judge_model or "",
-            embedder=getattr(container, "embedder", None),
-            use_llm_judge=use_llm_judge,
-        )
-
-        outcome_label = reducers.outcome_label(
-            gold=gold_result,
-            groundedness=groundedness_result,
-        )
-
-        results.append(
-            EvalResult(
-                qid=q.qid,
-                query=q.query,
-                retrieval_result=retrieval_result,
-                answer=answer,
-                answer_metrics=answer_metrics,
-                groundedness_result=groundedness_result,
-                outcome_label=outcome_label,
-                query_type=q.query_type,
-                difficulty=q.difficulty,
-                is_unanswerable=q.is_unanswerable,
-                latency_ms=getattr(run, "latency_ms", None),
-                trace_id=getattr(run, "trace_id", None),
-            )
-        )
+        # Sort by original index to preserve deterministic output order.
+        indexed_results.sort(key=lambda x: x[0])
+        for _, result in indexed_results:
+            results.append(result)
+            if not result.retrieval_result.retrieved_chunk_ids:
+                empty_retrieval_count += 1
+                if empty_retrieval_count <= 3:
+                    logger.warning(
+                        "Query %s returned 0 candidates", result.qid,
+                    )
 
     if empty_retrieval_count > 0:
         logger.warning(
