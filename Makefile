@@ -155,7 +155,7 @@ test:  ## Run tests with pytest
 	$(PYTHON) -m pytest -q
 
 lint:  ## Run ruff linter
-	$(PYTHON) -m ruff check .
+	$(PYTHON) -m ruff check . --fix
 
 fmt:  ## Run ruff formatter
 	$(PYTHON) -m ruff format .
@@ -272,6 +272,9 @@ CORPUS_S3_PREFIX ?= regulatory
 CORPUS_S3_BUCKET ?= $(shell cd infra && terraform output -raw corpus_bucket_name 2>/dev/null || echo "obsidian-rag-artifacts")
 QUERY_SET ?= default
 RUN_NAME ?=
+EVAL_WORKERS ?= 1
+USE_LLM_JUDGE ?= true
+RUN_GENERATION ?= true
 
 ingest-remote:  ## Run distributed ingestion on ECS (auto-scales workers)
 	scripts/ecs_run_ingest.sh \
@@ -284,6 +287,9 @@ ingest-remote:  ## Run distributed ingestion on ECS (auto-scales workers)
 eval-remote:  ## Run eval against remote backends on ECS
 	scripts/ecs_run_eval.sh \
 		--query-set $(QUERY_SET) \
+		--max-workers $(EVAL_WORKERS) \
+		$(if $(RUN_GENERATION),--run-generation,)
+		$(if $(USE_LLM_JUDGE),--use-llm-judge,)
 		$(if $(RUN_NAME),--run-name $(RUN_NAME),)
 
 query-remote:  ## Run ad-hoc query on ECS
