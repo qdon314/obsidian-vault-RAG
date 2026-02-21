@@ -35,6 +35,8 @@ if [[ -n "$RUN_NAME" ]]; then
     CMD_ARGS="$CMD_ARGS --run-name $RUN_NAME"
 fi
 
+CMD_ARGS="$CMD_ARGS $EXTRA_ARGS"
+
 # Retrieve network config from existing service
 NETWORK_CONFIG=$(aws ecs describe-services \
     --cluster "$CLUSTER" \
