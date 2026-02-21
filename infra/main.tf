@@ -140,6 +140,17 @@ resource "aws_ssm_parameter" "rds_dsn" {
   tags        = local.tags
 }
 
+module "efs" {
+  source = "./modules/efs"
+  count  = var.enable_qdrant_efs ? 1 : 0
+
+  name_prefix        = var.project_name
+  subnet_ids         = var.subnet_ids
+  security_group_ids = [aws_security_group.ecs_tasks.id]
+  vpc_id             = data.aws_subnet.first.vpc_id
+  tags               = local.tags
+}
+
 module "ecs" {
   source = "./modules/ecs"
 
@@ -170,6 +181,8 @@ module "ecs" {
   eval_s3_prefix       = var.eval_s3_prefix
   manifests_s3_prefix  = var.manifests_s3_prefix
   qdrant_collection    = var.qdrant_collection
+  qdrant_efs_file_system_id  = var.enable_qdrant_efs ? module.efs[0].file_system_id : ""
+  qdrant_efs_access_point_id = var.enable_qdrant_efs ? module.efs[0].access_point_id : ""
 
   tags = local.tags
 }

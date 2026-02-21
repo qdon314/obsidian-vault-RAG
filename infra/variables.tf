@@ -171,3 +171,9 @@ variable "qdrant_collection" {
   type        = string
   default     = "regulatory"
 }
+
+variable "enable_qdrant_efs" {
+  description = "Enable EFS persistent storage for Qdrant"
+  type        = bool
+  default     = false
+}
