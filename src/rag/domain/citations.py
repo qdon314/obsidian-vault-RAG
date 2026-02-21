@@ -7,7 +7,36 @@ location in the normalized text, and a deterministic confidence score.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+
+# Matches a CFR *section* reference: optional title, "CFR", optional §, section number
+# with optional subsections.  Captures (title, section_with_subsections).
+_CFR_SECTION_NORM_RE = re.compile(
+    r"(\d{1,2})\s+CFR\s+§*\s*(\d+\.\d+\w*(?:\([^)]*\))*)",
+)
+
+
+def normalize_citation_key(raw: str) -> str:
+    """Canonicalize a CFR citation string to the human-readable form.
+
+    Maps common variants (missing §, double §§, collapsed whitespace, title
+    corruption) to the canonical ``{title} CFR §{section}`` format that
+    regulatory chunk metadata already uses.
+
+    Non-section citations (Part refs, Appendix refs, non-CFR strings) are
+    returned stripped and whitespace-collapsed but otherwise unchanged.
+    """
+    text = raw.strip()
+    text = re.sub(r"\s+", " ", text)
+
+    m = _CFR_SECTION_NORM_RE.match(text)
+    if m:
+        title = m.group(1) if m.group(1) != "0" else "10"
+        section = m.group(2)
+        return f"{title} CFR §{section}"
+
+    return text
 
 
 @dataclass(frozen=True, slots=True)
