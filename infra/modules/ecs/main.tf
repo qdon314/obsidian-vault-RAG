@@ -62,7 +62,7 @@ resource "aws_ecs_task_definition" "qdrant" {
       efs_volume_configuration {
         file_system_id     = var.qdrant_efs_file_system_id
         transit_encryption = "ENABLED"
-        dynamic "authorization_configuration" {
+        dynamic "authorization_config" {
           for_each = var.qdrant_efs_access_point_id != "" ? [1] : []
           content {
             access_point_id = var.qdrant_efs_access_point_id
