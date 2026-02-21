@@ -165,3 +165,9 @@ variable "manifests_s3_prefix" {
   type        = string
   default     = "manifests"
 }
+
+variable "qdrant_collection" {
+  description = "Qdrant collection name used by all ECS tasks"
+  type        = string
+  default     = "regulatory"
+}

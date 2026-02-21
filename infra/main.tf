@@ -169,6 +169,7 @@ module "ecs" {
   query_eval_memory    = var.query_eval_memory
   eval_s3_prefix       = var.eval_s3_prefix
   manifests_s3_prefix  = var.manifests_s3_prefix
+  qdrant_collection    = var.qdrant_collection
 
   tags = local.tags
 }

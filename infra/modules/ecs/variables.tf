@@ -14,6 +14,12 @@ variable "qdrant_image" {
   default     = "qdrant/qdrant:v1.13.2"
 }
 
+variable "qdrant_collection" {
+  description = "Qdrant collection name used by all ECS tasks"
+  type        = string
+  default     = "obsidian"
+}
+
 variable "openai_api_key_arn" {
   description = "ARN of the SSM parameter containing the OpenAI API key"
   type        = string

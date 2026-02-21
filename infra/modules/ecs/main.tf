@@ -118,7 +118,7 @@ resource "aws_ecs_task_definition" "app" {
       environment = [
         { name = "RAG_VECTORSTORE__BACKEND", value = "qdrant" },
         { name = "RAG_VECTORSTORE__QDRANT_URL", value = "http://qdrant.${var.cluster_name}.local:6333" },
-        { name = "RAG_VECTORSTORE__QDRANT_COLLECTION", value = "obsidian" },
+        { name = "RAG_VECTORSTORE__QDRANT_COLLECTION", value = var.qdrant_collection },
       ]
       secrets = [
         {
@@ -176,6 +176,7 @@ resource "aws_ecs_task_definition" "ingest_worker" {
       environment = [
         { name = "RAG_VECTORSTORE__BACKEND", value = "qdrant" },
         { name = "RAG_VECTORSTORE__QDRANT_URL", value = "http://qdrant.${var.cluster_name}.local:6333" },
+        { name = "RAG_VECTORSTORE__QDRANT_COLLECTION", value = var.qdrant_collection },
         { name = "RAG_DISTRIBUTED_INGESTION__ENABLED", value = "true" },
         { name = "RAG_DISTRIBUTED_INGESTION__SQS_QUEUE_URL", value = var.sqs_queue_url },
         { name = "RAG_DISTRIBUTED_INGESTION__CORPUS_S3_BUCKET", value = var.s3_bucket_name },
@@ -252,6 +253,7 @@ resource "aws_ecs_task_definition" "ingest_orchestrator" {
       environment = [
         { name = "RAG_VECTORSTORE__BACKEND", value = "qdrant" },
         { name = "RAG_VECTORSTORE__QDRANT_URL", value = "http://qdrant.${var.cluster_name}.local:6333" },
+        { name = "RAG_VECTORSTORE__QDRANT_COLLECTION", value = var.qdrant_collection },
         { name = "RAG_DISTRIBUTED_INGESTION__ENABLED", value = "true" },
         { name = "RAG_DISTRIBUTED_INGESTION__SQS_QUEUE_URL", value = var.sqs_queue_url },
         { name = "RAG_DISTRIBUTED_INGESTION__CORPUS_S3_BUCKET", value = var.s3_bucket_name },
@@ -305,6 +307,7 @@ resource "aws_ecs_task_definition" "query_eval" {
       environment = [
         { name = "RAG_VECTORSTORE__BACKEND", value = "qdrant" },
         { name = "RAG_VECTORSTORE__QDRANT_URL", value = "http://qdrant.${var.cluster_name}.local:6333" },
+        { name = "RAG_VECTORSTORE__QDRANT_COLLECTION", value = var.qdrant_collection },
         { name = "RAG_CHUNK_STORAGE__BACKEND", value = "s3" },
         { name = "RAG_CHUNK_STORAGE__S3_BUCKET", value = var.s3_bucket_name },
         { name = "RAG_CHUNK_STORAGE__S3_PREFIX", value = var.chunk_s3_prefix },
