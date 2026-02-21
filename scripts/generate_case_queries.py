@@ -9,6 +9,7 @@ Usage examples::
     ./scripts/py scripts/generate_case_queries.py
     ./scripts/py scripts/generate_case_queries.py --dry-run
     ./scripts/py scripts/generate_case_queries.py --strategies 1,3 --output queries.jsonl
+    ./scripts/py scripts/generate_case_queries.py --max-total 200
     ./scripts/py scripts/generate_case_queries.py --corpus-dir corpus/us-nrc/cases/2024-01/
 """
 
@@ -61,6 +62,12 @@ def build_argparser() -> argparse.ArgumentParser:
         help="Max queries per case file (default: 50).",
     )
     parser.add_argument(
+        "--max-total",
+        type=int,
+        default=None,
+        help="Max total queries to output (default: unlimited). Applied after strategy filtering.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print statistics without writing the output file.",
@@ -88,6 +95,46 @@ def _filter_by_strategy(
         return queries
     allowed_tags = {_STRATEGY_TAGS[s] for s in strategies}
     return [q for q in queries if any(t in allowed_tags for t in q.get("tags", []))]
+
+
+def _cap_equal_by_strategy(queries: list[dict], max_total: int) -> list[dict]:
+    """Cap total queries while distributing evenly across strategy buckets.
+
+    Each bucket gets ``max_total // num_buckets`` slots.  If a bucket has
+    fewer queries than its share, the surplus is redistributed to the
+    remaining buckets in a second pass.
+    """
+    # Group by first matching strategy tag
+    buckets: dict[str, list[dict]] = {}
+    for q in queries:
+        for tag_name in _STRATEGY_TAGS.values():
+            if tag_name in q.get("tags", []):
+                buckets.setdefault(tag_name, []).append(q)
+                break
+
+    if not buckets:
+        return queries[:max_total]
+
+    # Distribute budget equally, then redistribute surplus from small buckets
+    remaining = max_total
+    per_bucket = remaining // len(buckets)
+    result: list[dict] = []
+    overflow_buckets: list[list[dict]] = []
+
+    for items in buckets.values():
+        if len(items) <= per_bucket:
+            result.extend(items)
+            remaining -= len(items)
+        else:
+            overflow_buckets.append(items)
+
+    # Redistribute remaining budget across overflow buckets
+    if overflow_buckets:
+        per_overflow = remaining // len(overflow_buckets)
+        for items in overflow_buckets:
+            result.extend(items[:per_overflow])
+
+    return result
 
 
 def main() -> None:
@@ -122,6 +169,10 @@ def main() -> None:
 
     # Post-filter by strategy
     filtered = _filter_by_strategy(all_queries, strategies)
+
+    # Apply total cap with equal distribution across strategies
+    if args.max_total is not None and len(filtered) > args.max_total:
+        filtered = _cap_equal_by_strategy(filtered, args.max_total)
 
     # Count by strategy tag
     counts: dict[str, int] = {}
