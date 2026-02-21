@@ -31,6 +31,8 @@ class QueryType(StrEnum):
     TEMPORAL = "temporal"  # Time-based queries
     NEGATION = "negation"  # Questions about what is NOT in the vault
     MULTI_HOP = "multi_hop"  # Requires connecting multiple pieces of information
+    INTERPRETIVE = "interpretive"  # Questions requiring interpretation of concepts
+    SCENARIO = "scenario"  # Hypothetical or scenario-based questions
 
 
 class Difficulty(StrEnum):
