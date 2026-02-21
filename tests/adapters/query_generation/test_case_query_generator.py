@@ -345,3 +345,110 @@ class TestMaxQueriesPerCase:
             case_file = _make_case_file(td)
             queries = gen.generate(case_file)
         assert len(queries) <= 3
+
+
+class TestStrategy3Scenario:
+    def test_generates_scenario_queries_from_matched_terms(self):
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s3 = [q for q in queries if "scenario-based" in q["tags"]]
+        assert len(s3) >= 1
+
+    def test_scenario_field_values(self):
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s3 = [q for q in queries if "scenario-based" in q["tags"]]
+        for q in s3:
+            assert q["difficulty"] == "hard"
+            assert q["query_type"] == "scenario"
+            assert q["requires_synthesis"] is True
+            assert q["source_case"] == "ML99999A001"
+            assert "technical_term" in q
+            assert "anchor_refs" in q
+            assert q["metadata"] == {
+                "filter": {"type": "Eq", "field": "corpus", "value": "regulatory"}
+            }
+
+    def test_uses_category_specific_templates(self):
+        """Inspection category should use inspection templates."""
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s3 = [q for q in queries if "scenario-based" in q["tags"]]
+        # Fixture has case_category: "inspection"
+        # Inspection templates contain "inspection" or "walkdown" or "inspector"
+        assert any(
+            "inspection" in q["query"].lower() or "inspector" in q["query"].lower() or "walkdown" in q["query"].lower()
+            for q in s3
+        ), f"Expected inspection-themed template, got: {[q['query'] for q in s3]}"
+
+    def test_uses_generic_templates_for_unknown_category(self):
+        md = FIXTURE_CASE_MD.replace(
+            'case_category: "inspection"', 'case_category: "unknown"'
+        )
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td, content=md)
+            queries = gen.generate(case_file)
+        s3 = [q for q in queries if "scenario-based" in q["tags"]]
+        assert len(s3) >= 1
+        # Generic templates don't contain "inspection" or "enforcement" etc.
+        for q in s3:
+            assert "inspection" not in q["query"].lower() or "nuclear" in q["query"].lower()
+
+    def test_skips_terms_with_no_resolvable_citations(self):
+        """Terms whose anchor refs don't resolve to labels should be skipped."""
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s3 = [q for q in queries if "scenario-based" in q["tags"]]
+        for q in s3:
+            assert len(q["relevant_citations"]) > 0
+
+    def test_fills_reactor_type_from_frontmatter(self):
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s3 = [q for q in queries if "scenario-based" in q["tags"]]
+        # Fixture has reactor_type: "PWR"
+        # Inspection template index 0 contains {reactor_type}
+        pwr_queries = [q for q in s3 if "PWR" in q["query"]]
+        assert len(pwr_queries) >= 1
+
+    def test_scenario_qids_use_sc_prefix(self):
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        with TemporaryDirectory() as td:
+            case_file = _make_case_file(td)
+            queries = gen.generate(case_file)
+        s3 = [q for q in queries if "scenario-based" in q["tags"]]
+        for q in s3:
+            assert q["qid"].startswith("case-sc-")
+
+    def test_scenario_qids_unique_across_cases(self):
+        mapper = _make_term_mapper()
+        gen = CaseQueryGenerator(term_mapper=mapper)
+        all_sc_qids: list[str] = []
+        for suffix in ("A001", "A002"):
+            md = FIXTURE_CASE_MD.replace("ML99999A001", f"ML99999{suffix}")
+            with TemporaryDirectory() as td:
+                p = Path(td) / f"ML99999{suffix}.md"
+                p.write_text(md)
+                queries = gen.generate(p)
+            all_sc_qids.extend(
+                q["qid"] for q in queries if "scenario-based" in q["tags"]
+            )
+        assert len(all_sc_qids) == len(set(all_sc_qids))

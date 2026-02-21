@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from rag.domain.citations import CitationSpan
+import pytest
+
+from rag.domain.citations import CitationSpan, normalize_citation_key
 
 
 class TestCitationSpan:
@@ -85,3 +87,39 @@ class TestCitationSpan:
             context="...in accordance with 10 CFR 50.46 requirements...",
         )
         assert "in accordance with" in span.context  # type: ignore[operator]
+
+
+class TestNormalizeCitationKey:
+    """Tests for normalize_citation_key covering the design normalization table."""
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            # Already canonical — no-op
+            ("10 CFR §50.36", "10 CFR §50.36"),
+            # Missing § — inserted
+            ("10 CFR 50.36", "10 CFR §50.36"),
+            # Preserve subsection markers
+            ("10 CFR §50.36(c)(2)", "10 CFR §50.36(c)(2)"),
+            ("10 CFR 50.36(c)(2)", "10 CFR §50.36(c)(2)"),
+            # Double § collapsed
+            ("10 CFR §§50.36", "10 CFR §50.36"),
+            # Title-number corruption
+            ("0 CFR §50.55a", "10 CFR §50.55a"),
+            ("0 CFR 50.55a", "10 CFR §50.55a"),
+            # Whitespace normalization
+            ("  10  CFR   §50.36  ", "10 CFR §50.36"),
+            ("10  CFR  50.36", "10 CFR §50.36"),
+            # Part references — passthrough (not section-level)
+            ("10 CFR Part 50", "10 CFR Part 50"),
+            # Appendix references — passthrough
+            ("10 CFR 50 Appendix A", "10 CFR 50 Appendix A"),
+            # Non-CFR strings — passthrough
+            ("docket:50-247", "docket:50-247"),
+            ("adams:ML021910673", "adams:ML021910673"),
+            # Alphanumeric section suffix
+            ("10 CFR 50.55a", "10 CFR §50.55a"),
+        ],
+    )
+    def test_normalization(self, raw: str, expected: str) -> None:
+        assert normalize_citation_key(raw) == expected
