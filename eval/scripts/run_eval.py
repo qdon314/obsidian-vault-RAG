@@ -84,6 +84,12 @@ def main() -> None:
         help="Index manifest: local path or s3://bucket/key URI.",
     )
     parser.add_argument("--no-save", action="store_true", help="Do not write artifacts to disk.")
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=1,
+        help="Number of threads for concurrent query evaluation (default: 1 = sequential)",
+    )
 
     args = parser.parse_args()
     load_dotenv()
@@ -140,6 +146,7 @@ def main() -> None:
         judge_model=args.judge_model if args.use_llm_judge else None,
         score_ids=args.score_ids,
         run_name=args.run_name,
+        max_workers=args.max_workers,
     )
 
     # Persist artifacts

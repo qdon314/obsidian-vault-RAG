@@ -72,6 +72,12 @@ def main() -> None:
     ap.add_argument("--judge-model", type=str, default="gpt-4o-mini")
     ap.add_argument("--score-ids", choices=("retrieved", "reranked"), default="reranked")
     ap.add_argument("--manifest", type=str, default=None, help="Manifest URI (local or s3://).")
+    ap.add_argument(
+        "--max-workers",
+        type=int,
+        default=1,
+        help="Number of threads for concurrent query evaluation (default: 1 = sequential)",
+    )
     args = ap.parse_args()
 
     load_dotenv()
