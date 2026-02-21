@@ -70,12 +70,18 @@ class Enumerator:
 
         logger.info("Enumerating %d docs for job %s", len(docs), job.job_id)
 
-        # 1) Store raw docs in S3 and record in DB
+        # 1) Store raw docs in S3 and record in DB (skip unchanged)
         tasks: list[IngestTask] = []
         messages: list[dict[str, str]] = []
+        skipped = 0
 
         for doc in docs:
             content_hash = sha256(doc.text.encode("utf-8")).hexdigest()
+
+            existing = self.job_store.get_document(corpus_id, doc.doc_id)  # type: ignore[union-attr]
+            if existing is not None and existing.content_sha256 == content_hash:
+                skipped += 1
+                continue
 
             s3_key = self.raw_document_store.store_document(  # type: ignore[union-attr]
                 doc, corpus_id=corpus_id, content_sha256=content_hash
@@ -107,6 +113,22 @@ class Enumerator:
                     "doc_id": doc.doc_id,
                 }
             )
+
+        logger.info(
+            "Enumerated %d docs: %d to process, %d unchanged (skipped)",
+            len(docs),
+            len(tasks),
+            skipped,
+        )
+
+        # All docs unchanged — nothing to do
+        if not tasks:
+            from dataclasses import replace
+
+            self.job_store.update_job_status(  # type: ignore[union-attr]
+                job.job_id, JobStatus.COMPLETED, stats={"docs": 0, "skipped": skipped}
+            )
+            return replace(job, status=JobStatus.COMPLETED)
 
         # 2) Bulk create tasks in DB
         self.job_store.create_tasks(tasks)  # type: ignore[union-attr]

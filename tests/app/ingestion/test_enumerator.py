@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
+
 import pytest
 
 from rag.app.ingestion.enumerator import Enumerator
-from rag.domain.ingestion import JobStatus, TaskStatus
+from rag.domain.ingestion import DocumentRecord, JobStatus, TaskStatus
 from tests.conftest import make_document
 from tests.fakes.fake_ingest_job_store import FakeIngestJobStore
 
@@ -101,6 +103,90 @@ class TestEnumerator:
         # Tasks should be created in DB
         counts = job_store.get_task_counts(job.job_id)
         assert counts[TaskStatus.PENDING] == 3
+
+    def test_enumerate_skips_unchanged_documents(
+        self,
+        job_store: FakeIngestJobStore,
+        raw_store: FakeRawDocumentStore,
+        queue: FakeTaskQueue,
+    ) -> None:
+        docs = [make_document(doc_id=f"doc-{i}", text=f"content {i}") for i in range(3)]
+
+        # Pre-populate doc-0 with matching content_sha256 so it gets skipped
+        content_hash_0 = sha256(b"content 0").hexdigest()
+        job_store.upsert_document(
+            DocumentRecord(
+                corpus_id="test_corpus",
+                doc_id="doc-0",
+                source="test",
+                uri="/test/doc.md",
+                content_sha256=content_hash_0,
+                s3_raw_key="old/key.json",
+                metadata={},
+            )
+        )
+
+        enum = Enumerator(
+            job_store=job_store,
+            raw_document_store=raw_store,
+            task_queue=queue,
+        )
+        job = enum.enumerate(
+            docs=docs,
+            corpus_id="test_corpus",
+            index_id="test_index",
+            chunking_strategy="fixed",
+            embedder_model="dummy",
+            qdrant_collection="test",
+        )
+
+        assert job.status == JobStatus.RUNNING
+        # Only 2 docs should be processed (doc-0 skipped)
+        assert len(raw_store.stored) == 2
+        assert len(queue.sent) == 2
+        counts = job_store.get_task_counts(job.job_id)
+        assert counts[TaskStatus.PENDING] == 2
+
+    def test_enumerate_all_unchanged_completes_immediately(
+        self,
+        job_store: FakeIngestJobStore,
+        raw_store: FakeRawDocumentStore,
+        queue: FakeTaskQueue,
+    ) -> None:
+        docs = [make_document(doc_id=f"doc-{i}", text=f"content {i}") for i in range(2)]
+
+        # Pre-populate all docs as unchanged
+        for i in range(2):
+            content_hash = sha256(f"content {i}".encode()).hexdigest()
+            job_store.upsert_document(
+                DocumentRecord(
+                    corpus_id="test_corpus",
+                    doc_id=f"doc-{i}",
+                    source="test",
+                    uri="/test/doc.md",
+                    content_sha256=content_hash,
+                    s3_raw_key=f"old/key-{i}.json",
+                    metadata={},
+                )
+            )
+
+        enum = Enumerator(
+            job_store=job_store,
+            raw_document_store=raw_store,
+            task_queue=queue,
+        )
+        job = enum.enumerate(
+            docs=docs,
+            corpus_id="test_corpus",
+            index_id="test_index",
+            chunking_strategy="fixed",
+            embedder_model="dummy",
+            qdrant_collection="test",
+        )
+
+        assert job.status == JobStatus.COMPLETED
+        assert len(raw_store.stored) == 0
+        assert len(queue.sent) == 0
 
     def test_enumerate_empty_docs(
         self,
