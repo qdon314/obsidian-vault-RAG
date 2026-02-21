@@ -116,6 +116,25 @@ def main() -> None:
         # ── Build container with remote backends ───────────────────
         container = build_container(cfg=cfg)
 
+        # ── Preflight: verify Qdrant collection has data ──────────
+        container.store.load()
+        point_count = container.store.count()
+        collection_name = getattr(container.store, "collection_name", "unknown")
+        log.info(
+            "Qdrant preflight: collection=%s points=%d backend=%s",
+            collection_name,
+            point_count,
+            type(container.store).__name__,
+        )
+        if point_count == 0:
+            log.error(
+                "Qdrant collection '%s' is empty (0 points). "
+                "This typically means the Qdrant Fargate task restarted and lost data "
+                "(no persistent volume). Re-run ingestion before eval.",
+                collection_name,
+            )
+            raise SystemExit(1)
+
         # ── LLM judge setup ────────────────────────────────────────
         judge_client = None
         if args.use_llm_judge:

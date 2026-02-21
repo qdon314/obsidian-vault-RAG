@@ -28,6 +28,7 @@ from openai import OpenAI
 from rag.app.container import Container
 from rag.app.manifest_validation import validate_index
 from rag.app.query_runner import run_query
+from rag.domain.citations import normalize_citation_key
 from rag.domain.index_manifest import IndexManifest
 from rag.domain.models import Answer, Chunk
 from rag.eval import reducers
@@ -79,15 +80,21 @@ def _store_chunks_for_eval(container: Container) -> list[Chunk]:
     try:
         return container.store.all_chunks()
     except NotImplementedError:
-        pass
+        logger.info("Store does not support all_chunks(); trying chunk_store fallback")
 
     # Fallback: hydrate all chunks from the ChunkStore (distributed mode)
     chunk_store: ChunkStore | None = container.chunk_store
     if chunk_store is not None:
         all_ids = chunk_store.list_all_chunk_ids()
+        logger.info("ChunkStore reports %d chunk IDs", len(all_ids))
         if all_ids:
-            return list(chunk_store.get_chunks(all_ids).values())
+            chunks = list(chunk_store.get_chunks(all_ids).values())
+            logger.info("Hydrated %d chunks from chunk store", len(chunks))
+            return chunks
+    else:
+        logger.warning("No chunk_store configured on container")
 
+    logger.warning("No chunks available for citation index — retrieval metrics will be zero")
     return []
 
 
@@ -97,15 +104,38 @@ def _build_citation_chunk_indexes(
     citation_to_ids: dict[str, set[str]] = defaultdict(set)
     citation_key_to_ids: dict[str, set[str]] = defaultdict(set)
 
+    # Diagnostic counters
+    has_citation = 0
+    has_citation_key = 0
+    corpus_counts: dict[str, int] = defaultdict(int)
+
     for chunk in chunks:
         metadata = chunk.metadata
+        corpus_counts[str(metadata.get("corpus", "unknown"))] += 1
+
         citation = metadata.get("citation")
         if isinstance(citation, str) and citation.strip():
-            citation_to_ids[citation.strip()].add(chunk.chunk_id)
+            has_citation += 1
+            citation_to_ids[normalize_citation_key(citation)].add(chunk.chunk_id)
 
         citation_key = metadata.get("citation_key")
         if isinstance(citation_key, str) and citation_key.strip():
-            citation_key_to_ids[citation_key.strip()].add(chunk.chunk_id)
+            has_citation_key += 1
+            citation_key_to_ids[normalize_citation_key(citation_key)].add(chunk.chunk_id)
+
+    logger.info(
+        "Citation index built: %d chunks total, %d with citation, %d with citation_key, "
+        "%d unique citations, %d unique citation_keys. Corpus breakdown: %s",
+        len(chunks),
+        has_citation,
+        has_citation_key,
+        len(citation_to_ids),
+        len(citation_key_to_ids),
+        dict(corpus_counts),
+    )
+    if citation_key_to_ids:
+        sample = sorted(citation_key_to_ids)[:10]
+        logger.info("Sample citation_key index entries: %s", sample)
 
     return dict(citation_to_ids), dict(citation_key_to_ids)
 
@@ -134,7 +164,8 @@ def _resolve_relevance_tiers(
 
     unresolved_critical_citations: list[str] = []
     for citation in query.relevant_citations | query.critical_citations:
-        chunk_ids = citation_to_ids.get(citation) or citation_key_to_ids.get(citation)
+        normalized = normalize_citation_key(citation)
+        chunk_ids = citation_to_ids.get(normalized) or citation_key_to_ids.get(normalized)
         if chunk_ids:
             critical_ids.update(chunk_ids)
         else:
@@ -142,7 +173,8 @@ def _resolve_relevance_tiers(
 
     unresolved_supporting_citations: list[str] = []
     for citation in query.supporting_citations:
-        chunk_ids = citation_to_ids.get(citation) or citation_key_to_ids.get(citation)
+        normalized = normalize_citation_key(citation)
+        chunk_ids = citation_to_ids.get(normalized) or citation_key_to_ids.get(normalized)
         if chunk_ids:
             supporting_ids.update(chunk_ids)
         else:
@@ -150,7 +182,8 @@ def _resolve_relevance_tiers(
 
     unresolved_context_doc_citations: list[str] = []
     for citation_key in query.relevant_doc_citations | query.context_doc_citations:
-        chunk_ids = citation_key_to_ids.get(citation_key)
+        normalized = normalize_citation_key(citation_key)
+        chunk_ids = citation_key_to_ids.get(normalized)
         if chunk_ids:
             context_ids.update(chunk_ids)
         else:
@@ -352,6 +385,20 @@ def run_full_eval(
     run_name: str | None = None,
 ) -> EvalRun:
     container.store.load()
+
+    # Diagnostic: log store point count to surface empty-collection issues early
+    store_count = container.store.count()
+    logger.info(
+        "Vector store loaded: %s, %d points",
+        type(container.store).__name__,
+        store_count,
+    )
+    if store_count == 0:
+        logger.warning(
+            "Vector store has 0 points — all retrieval results will be empty. "
+            "Verify that ingestion completed and the store is accessible."
+        )
+
     store_chunks = _store_chunks_for_eval(container)
     citation_to_ids, citation_key_to_ids = _build_citation_chunk_indexes(store_chunks)
 
@@ -371,6 +418,7 @@ def run_full_eval(
         raise ValueError("use_llm_judge=True requires judge_client and judge_model")
 
     results: list[EvalResult] = []
+    empty_retrieval_count = 0
 
     for q in eval_queries:
         relevance = _resolve_relevance_tiers(
@@ -384,6 +432,14 @@ def run_full_eval(
         if not run_generation:
             cands = container.retriever.retrieve(q.query, top_k=top_k, where=query_filter)
             retrieved_ids = [c.chunk.chunk_id for c in cands]
+            if not retrieved_ids:
+                empty_retrieval_count += 1
+                if empty_retrieval_count <= 3:
+                    logger.warning(
+                        "Query %s returned 0 candidates (filter=%s)",
+                        q.qid,
+                        query_filter,
+                    )
             retrieval_result = RetrievalResult(
                 qid=q.qid,
                 retrieved_chunk_ids=tuple(retrieved_ids),
@@ -430,6 +486,16 @@ def run_full_eval(
         else:
             raise ValueError("score_ids must be 'retrieved' or 'reranked'")
 
+        if not chosen_ids:
+            empty_retrieval_count += 1
+            if empty_retrieval_count <= 3:
+                logger.warning(
+                    "Query %s returned 0 %s candidates (filter=%s)",
+                    q.qid,
+                    score_ids,
+                    query_filter,
+                )
+
         answer: Answer = run.answer
         retrieval_result = RetrievalResult(
             qid=q.qid,
@@ -470,6 +536,13 @@ def run_full_eval(
                 latency_ms=getattr(run, "latency_ms", None),
                 trace_id=getattr(run, "trace_id", None),
             )
+        )
+
+    if empty_retrieval_count > 0:
+        logger.warning(
+            "Retrieval returned 0 candidates for %d/%d queries",
+            empty_retrieval_count,
+            len(eval_queries),
         )
 
     aggregates = aggregate_results(results)
