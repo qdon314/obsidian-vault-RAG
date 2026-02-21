@@ -54,24 +54,51 @@ resource "aws_ecs_task_definition" "qdrant" {
   memory                   = var.qdrant_memory
   execution_role_arn       = aws_iam_role.task_execution.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "qdrant"
-      image     = var.qdrant_image
-      essential = true
-      portMappings = [
-        { containerPort = 6333, protocol = "tcp" },
-        { containerPort = 6334, protocol = "tcp" }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.qdrant.name
-          "awslogs-region"        = data.aws_region.current.name
-          "awslogs-stream-prefix" = "qdrant"
+  # EFS volume (only when EFS is configured)
+  dynamic "volume" {
+    for_each = var.qdrant_efs_file_system_id != "" ? [1] : []
+    content {
+      name = "qdrant-storage"
+      efs_volume_configuration {
+        file_system_id          = var.qdrant_efs_file_system_id
+        transit_encryption      = "ENABLED"
+        authorization_configuration {
+          access_point_id = var.qdrant_efs_access_point_id
+          iam             = "DISABLED"
         }
       }
     }
+  }
+
+  container_definitions = jsonencode([
+    merge(
+      {
+        name      = "qdrant"
+        image     = var.qdrant_image
+        essential = true
+        portMappings = [
+          { containerPort = 6333, protocol = "tcp" },
+          { containerPort = 6334, protocol = "tcp" }
+        ]
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = aws_cloudwatch_log_group.qdrant.name
+            "awslogs-region"        = data.aws_region.current.name
+            "awslogs-stream-prefix" = "qdrant"
+          }
+        }
+      },
+      var.qdrant_efs_file_system_id != "" ? {
+        mountPoints = [
+          {
+            sourceVolume  = "qdrant-storage"
+            containerPath = "/qdrant/storage"
+            readOnly      = false
+          }
+        ]
+      } : {}
+    )
   ])
 
   tags = var.tags

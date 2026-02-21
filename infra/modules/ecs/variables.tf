@@ -194,3 +194,15 @@ variable "manifests_s3_prefix" {
   type        = string
   default     = "manifests"
 }
+
+variable "qdrant_efs_file_system_id" {
+  description = "EFS file system ID for Qdrant persistent storage (empty = no EFS)"
+  type        = string
+  default     = ""
+}
+
+variable "qdrant_efs_access_point_id" {
+  description = "EFS access point ID for Qdrant storage"
+  type        = string
+  default     = ""
+}
