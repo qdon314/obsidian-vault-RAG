@@ -48,6 +48,22 @@ WORKER_SERVICE="${CLUSTER}-ingest-worker"
 QDRANT_SERVICE="${CLUSTER}-qdrant"
 ORCH_TASK_DEF="${CLUSTER}-ingest-orchestrator"
 
+# ── Guard: no concurrent orchestrator ─────────────────────
+echo ">>> Checking for running orchestrator tasks..."
+RUNNING_TASKS=$(aws ecs list-tasks \
+    --cluster "$CLUSTER" \
+    --family "$ORCH_TASK_DEF" \
+    --desired-status RUNNING \
+    --query 'taskArns[]' \
+    --output text 2>/dev/null || echo "")
+
+if [[ -n "$RUNNING_TASKS" && "$RUNNING_TASKS" != "None" ]]; then
+    echo "ERROR: An orchestrator is already running on cluster $CLUSTER:"
+    echo "  $RUNNING_TASKS"
+    echo "Wait for it to finish or stop it manually before starting a new run."
+    exit 1
+fi
+
 echo "=== Distributed Ingestion ==="
 echo "Cluster:      $CLUSTER"
 echo "Workers:      $WORKERS"
