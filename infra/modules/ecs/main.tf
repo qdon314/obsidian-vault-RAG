@@ -60,11 +60,14 @@ resource "aws_ecs_task_definition" "qdrant" {
     content {
       name = "qdrant-storage"
       efs_volume_configuration {
-        file_system_id          = var.qdrant_efs_file_system_id
-        transit_encryption      = "ENABLED"
-        authorization_configuration {
-          access_point_id = var.qdrant_efs_access_point_id
-          iam             = "DISABLED"
+        file_system_id     = var.qdrant_efs_file_system_id
+        transit_encryption = "ENABLED"
+        dynamic "authorization_configuration" {
+          for_each = var.qdrant_efs_access_point_id != "" ? [1] : []
+          content {
+            access_point_id = var.qdrant_efs_access_point_id
+            iam             = "DISABLED"
+          }
         }
       }
     }
