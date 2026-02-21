@@ -195,126 +195,158 @@ def main() -> None:
     job_store = PostgresIngestJobStore(postgres_dsn=cfg.distributed_ingestion.postgres_dsn)
     job_store.ensure_schema()
 
-    raw_store = S3RawDocumentStore(
-        bucket=cfg.distributed_ingestion.corpus_s3_bucket,
-        prefix=f"{cfg.distributed_ingestion.corpus_s3_prefix}/{args.corpus_id}/raw",
-    )
-    queue = SQSTaskQueue(queue_url=cfg.distributed_ingestion.sqs_queue_url)
+    # ── Acquire corpus-level advisory lock ────────────────────
+    lock_key = int(sha256(args.corpus_id.encode()).hexdigest()[:15], 16)
+    lock_conn = psycopg2.connect(cfg.distributed_ingestion.postgres_dsn)
+    try:
+        with lock_conn.cursor() as cur:
+            cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
+            acquired = cur.fetchone()[0]  # type: ignore[index]
+        lock_conn.commit()
+        if not acquired:
+            log.error(
+                "Another orchestrator is running for corpus '%s'. Exiting.",
+                args.corpus_id,
+            )
+            raise SystemExit(1)
+        log.info("Acquired advisory lock for corpus '%s' (key=%d)", args.corpus_id, lock_key)
+    except SystemExit:
+        lock_conn.close()
+        raise
 
-    enumerator = Enumerator(
-        job_store=job_store,
-        raw_document_store=raw_store,
-        task_queue=queue,
-    )
-
-    ts = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%S")
-    index_id = f"{args.index_name}_{cfg.chunking.backend}_{cfg.embeddings.model}_{ts}"
-
-    job = enumerator.enumerate(
-        docs=docs,
-        corpus_id=args.corpus_id,
-        index_id=index_id,
-        chunking_strategy=cfg.chunking.backend,
-        embedder_model=cfg.embeddings.model,
-        qdrant_collection=args.qdrant_collection or cfg.vectorstore.qdrant_collection,
-    )
-
-    log.info("Job %s created (status=%s, tasks=%d)", job.job_id, job.status.value, len(docs))
-
-    # ── Phase 2: Poll ──────────────────────────────────────────────
-    log.info("Phase 2: Polling for task completion...")
-
-    result = poll_until_complete(
-        job_id=job.job_id,
-        job_store=job_store,
-        total_tasks=len(docs),
-        poll_interval_s=args.poll_interval,
-        timeout_s=args.timeout,
-    )
-
-    if result.timed_out:
-        log.error(
-            "Timed out: %d succeeded, %d failed, %d still in-flight",
-            result.succeeded,
-            result.failed,
-            result.pending + result.running + result.retryable,
+    try:
+        raw_store = S3RawDocumentStore(
+            bucket=cfg.distributed_ingestion.corpus_s3_bucket,
+            prefix=f"{cfg.distributed_ingestion.corpus_s3_prefix}/{args.corpus_id}/raw",
         )
-        job_store.update_job_status(
-            job.job_id,
-            JobStatus.FAILED,
-            stats={
-                "reason": "timeout",
-                "succeeded": result.succeeded,
-                "failed": result.failed,
+        queue = SQSTaskQueue(queue_url=cfg.distributed_ingestion.sqs_queue_url)
+
+        enumerator = Enumerator(
+            job_store=job_store,
+            raw_document_store=raw_store,
+            task_queue=queue,
+        )
+
+        ts = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%S")
+        index_id = f"{args.index_name}_{cfg.chunking.backend}_{cfg.embeddings.model}_{ts}"
+
+        job = enumerator.enumerate(
+            docs=docs,
+            corpus_id=args.corpus_id,
+            index_id=index_id,
+            chunking_strategy=cfg.chunking.backend,
+            embedder_model=cfg.embeddings.model,
+            qdrant_collection=args.qdrant_collection or cfg.vectorstore.qdrant_collection,
+        )
+
+        log.info("Job %s created (status=%s)", job.job_id, job.status.value)
+
+        if job.status == JobStatus.COMPLETED:
+            log.info("All documents unchanged — nothing to do.")
+            return
+
+        # Count actual tasks (excludes skipped docs)
+        task_counts = job_store.get_task_counts(job.job_id)
+        num_tasks = sum(task_counts.values())
+        log.info("Tasks created: %d (skipped %d unchanged docs)", num_tasks, len(docs) - num_tasks)
+
+        # ── Phase 2: Poll ──────────────────────────────────────────────
+        log.info("Phase 2: Polling for task completion...")
+
+        result = poll_until_complete(
+            job_id=job.job_id,
+            job_store=job_store,
+            total_tasks=num_tasks,
+            poll_interval_s=args.poll_interval,
+            timeout_s=args.timeout,
+        )
+
+        if result.timed_out:
+            log.error(
+                "Timed out: %d succeeded, %d failed, %d still in-flight",
+                result.succeeded,
+                result.failed,
+                result.pending + result.running + result.retryable,
+            )
+            job_store.update_job_status(
+                job.job_id,
+                JobStatus.FAILED,
+                stats={
+                    "reason": "timeout",
+                    "succeeded": result.succeeded,
+                    "failed": result.failed,
+                },
+            )
+            raise SystemExit(1)
+
+        log.info("All tasks terminal: %d succeeded, %d failed", result.succeeded, result.failed)
+
+        if result.failed > 0 and not args.force_finalize:
+            log.error(
+                "%d tasks failed. Use --force-finalize to proceed anyway.",
+                result.failed,
+            )
+            job_store.update_job_status(
+                job.job_id,
+                JobStatus.FAILED,
+                stats={
+                    "succeeded": result.succeeded,
+                    "failed": result.failed,
+                },
+            )
+            raise SystemExit(1)
+
+        # ── Phase 3: Finalize ──────────────────────────────────────────
+        log.info("Phase 3: Finalizing job...")
+
+        chunk_count = _count_chunks(cfg.distributed_ingestion.postgres_dsn)
+        log.info("Chunk index: %d chunks", chunk_count)
+
+        manifest = IndexManifest.create(
+            index_name=args.index_name,
+            corpus=args.corpus_id,
+            doc_count=result.succeeded,
+            chunk_count=chunk_count,
+            chunking={"backend": cfg.chunking.backend},
+            embedding={"model": cfg.embeddings.model},
+            store={
+                "type": "s3+qdrant",
+                "bucket": cfg.distributed_ingestion.corpus_s3_bucket,
+                "collection": args.qdrant_collection or cfg.vectorstore.qdrant_collection,
             },
         )
-        raise SystemExit(1)
 
-    log.info("All tasks terminal: %d succeeded, %d failed", result.succeeded, result.failed)
+        bucket = cfg.distributed_ingestion.corpus_s3_bucket
+        corpus_prefix = (cfg.distributed_ingestion.corpus_s3_prefix or "").strip("/")
+        manifests_prefix = os.environ.get("RAG_MANIFESTS_S3_PREFIX", "manifests").strip("/")
+        key_parts = [
+            part for part in (corpus_prefix, manifests_prefix, index_id, "manifest.json") if part
+        ]
+        s3_key = "/".join(key_parts)
 
-    if result.failed > 0 and not args.force_finalize:
-        log.error(
-            "%d tasks failed. Use --force-finalize to proceed anyway.",
-            result.failed,
+        s3 = boto3.client("s3")
+        s3.put_object(
+            Bucket=bucket,
+            Key=s3_key,
+            Body=json.dumps(manifest.to_dict(), indent=2).encode("utf-8"),
+            ContentType="application/json",
         )
+        log.info("Uploaded manifest to s3://%s/%s", bucket, s3_key)
+
         job_store.update_job_status(
             job.job_id,
-            JobStatus.FAILED,
+            JobStatus.COMPLETED,
             stats={
-                "succeeded": result.succeeded,
-                "failed": result.failed,
+                "doc_count": result.succeeded,
+                "chunk_count": chunk_count,
+                "failed_tasks": result.failed,
+                "manifest_s3_key": s3_key,
             },
         )
-        raise SystemExit(1)
-
-    # ── Phase 3: Finalize ──────────────────────────────────────────
-    log.info("Phase 3: Finalizing job...")
-
-    chunk_count = _count_chunks(cfg.distributed_ingestion.postgres_dsn)
-    log.info("Chunk index: %d chunks", chunk_count)
-
-    manifest = IndexManifest.create(
-        index_name=args.index_name,
-        corpus=args.corpus_id,
-        doc_count=result.succeeded,
-        chunk_count=chunk_count,
-        chunking={"backend": cfg.chunking.backend},
-        embedding={"model": cfg.embeddings.model},
-        store={
-            "type": "s3+qdrant",
-            "bucket": cfg.distributed_ingestion.corpus_s3_bucket,
-            "collection": args.qdrant_collection or cfg.vectorstore.qdrant_collection,
-        },
-    )
-
-    bucket = cfg.distributed_ingestion.corpus_s3_bucket
-    corpus_prefix = (cfg.distributed_ingestion.corpus_s3_prefix or "").strip("/")
-    manifests_prefix = os.environ.get("RAG_MANIFESTS_S3_PREFIX", "manifests").strip("/")
-    key_parts = [
-        part for part in (corpus_prefix, manifests_prefix, index_id, "manifest.json") if part
-    ]
-    s3_key = "/".join(key_parts)
-
-    s3 = boto3.client("s3")
-    s3.put_object(
-        Bucket=bucket,
-        Key=s3_key,
-        Body=json.dumps(manifest.to_dict(), indent=2).encode("utf-8"),
-        ContentType="application/json",
-    )
-    log.info("Uploaded manifest to s3://%s/%s", bucket, s3_key)
-
-    job_store.update_job_status(
-        job.job_id,
-        JobStatus.COMPLETED,
-        stats={
-            "doc_count": result.succeeded,
-            "chunk_count": chunk_count,
-            "failed_tasks": result.failed,
-            "manifest_s3_key": s3_key,
-        },
-    )
-    log.info("Job %s marked COMPLETED", job.job_id)
+        log.info("Job %s marked COMPLETED", job.job_id)
+    finally:
+        lock_conn.close()
+        log.info("Released advisory lock for corpus '%s'", args.corpus_id)
 
 
 if __name__ == "__main__":
