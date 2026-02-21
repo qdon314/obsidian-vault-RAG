@@ -171,12 +171,5 @@ aws ecs update-service \
     --desired-count 0 \
     --no-cli-pager > /dev/null
 
-echo ">>> Scaling qdrant service to 0..."
-aws ecs update-service \
-    --cluster "$CLUSTER" \
-    --service "$QDRANT_SERVICE" \
-    --desired-count 0 \
-    --no-cli-pager > /dev/null
-
 echo "=== Done ==="
 exit "${EXIT_CODE:-1}"
