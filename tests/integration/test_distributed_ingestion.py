@@ -92,7 +92,12 @@ class FakeChunkStore:
     def __init__(self):
         self.stored: list[list[Chunk]] = []
 
-    def store_chunks(self, chunks: list[Chunk]) -> None:
+    def store_chunks(
+        self,
+        chunks: list[Chunk],
+        *,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
         """Store chunks."""
         self.stored.append(chunks)
 

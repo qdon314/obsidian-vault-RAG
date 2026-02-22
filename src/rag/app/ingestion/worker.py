@@ -73,7 +73,9 @@ class Worker:
             self.vector_store.upsert(chunks=chunks, vectors=vectors)  # type: ignore[union-attr]
 
             # 5) Write to chunk store (dual-write)
-            self.chunk_store.store_chunks(chunks)  # type: ignore[union-attr]
+            self.chunk_store.store_chunks(  # type: ignore[union-attr]
+                chunks, metadata={"corpus_id": corpus_id}
+            )
 
             # 6) Mark task succeeded
             self.job_store.complete_task(task.task_id)  # type: ignore[union-attr]

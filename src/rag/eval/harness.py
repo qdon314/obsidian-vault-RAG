@@ -77,7 +77,11 @@ def load_eval_queries(path: Path) -> list[EvalQuery]:
     return queries
 
 
-def _store_chunks_for_eval(container: Container) -> list[Chunk]:
+def _store_chunks_for_eval(
+    container: Container,
+    *,
+    corpus_id: str | None = None,
+) -> list[Chunk]:
     try:
         return container.store.all_chunks()
     except NotImplementedError:
@@ -86,8 +90,9 @@ def _store_chunks_for_eval(container: Container) -> list[Chunk]:
     # Fallback: hydrate all chunks from the ChunkStore (distributed mode)
     chunk_store: ChunkStore | None = container.chunk_store
     if chunk_store is not None:
-        all_ids = chunk_store.list_all_chunk_ids()
-        logger.info("ChunkStore reports %d chunk IDs", len(all_ids))
+        meta = {"corpus_id": corpus_id} if corpus_id else None
+        all_ids = chunk_store.list_all_chunk_ids(metadata=meta)
+        logger.info("ChunkStore reports %d chunk IDs (corpus_id=%s)", len(all_ids), corpus_id)
         if all_ids:
             chunks = list(chunk_store.get_chunks(all_ids).values())
             logger.info("Hydrated %d chunks from chunk store", len(chunks))
@@ -495,6 +500,7 @@ def run_full_eval(
     score_ids: str = "reranked",  # "retrieved" or "reranked"
     run_name: str | None = None,
     max_workers: int = 1,
+    corpus_id: str | None = None,
 ) -> EvalRun:
     container.store.load()
 
@@ -511,7 +517,7 @@ def run_full_eval(
             "Verify that ingestion completed and the store is accessible."
         )
 
-    store_chunks = _store_chunks_for_eval(container)
+    store_chunks = _store_chunks_for_eval(container, corpus_id=corpus_id)
     citation_to_ids, citation_key_to_ids = _build_citation_chunk_indexes(store_chunks)
 
     # Validate index manifest (explicit manifest takes precedence over index_dir)

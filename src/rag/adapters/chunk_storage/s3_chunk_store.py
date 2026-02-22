@@ -30,10 +30,17 @@ CREATE TABLE IF NOT EXISTS chunk_index (
     chunk_id    TEXT PRIMARY KEY,
     doc_id      TEXT NOT NULL,
     s3_key      TEXT NOT NULL,
-    line_offset INT  NOT NULL
+    line_offset INT  NOT NULL,
+    corpus_id   TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_chunk_index_doc_id ON chunk_index(doc_id);
 CREATE INDEX IF NOT EXISTS idx_chunk_index_s3_key ON chunk_index(s3_key);
+CREATE INDEX IF NOT EXISTS idx_chunk_index_corpus_id ON chunk_index(corpus_id);
+"""
+
+_MIGRATION_SQL = """
+ALTER TABLE chunk_index ADD COLUMN IF NOT EXISTS corpus_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_chunk_index_corpus_id ON chunk_index(corpus_id);
 """
 
 logger = logging.getLogger(__name__)
@@ -82,11 +89,19 @@ class S3ChunkStore:
         )
 
     def ensure_schema(self) -> None:
-        """Create the ``chunk_index`` table and indexes if they don't exist."""
+        """Create the ``chunk_index`` table and indexes if they don't exist.
+
+        Also runs migrations for existing tables (e.g. adding ``corpus_id``).
+        """
         conn = self._pool.getconn()
         try:
             with conn.cursor() as cur:
                 for stmt in _SCHEMA_SQL.strip().split(";"):
+                    stmt = stmt.strip()
+                    if stmt:
+                        cur.execute(stmt)
+                # Migrate existing tables that lack the corpus_id column.
+                for stmt in _MIGRATION_SQL.strip().split(";"):
                     stmt = stmt.strip()
                     if stmt:
                         cur.execute(stmt)
@@ -171,12 +186,14 @@ class S3ChunkStore:
         if not chunks:
             return
 
+        corpus_id: str | None = (metadata or {}).get("corpus_id")  # type: ignore[assignment]
+
         # Group chunks by doc_id (one shard per document)
         by_doc: dict[str, list[Chunk]] = defaultdict(list)
         for ch in chunks:
             by_doc[ch.doc_id].append(ch)
 
-        index_rows: list[tuple[str, str, str, int]] = []
+        index_rows: list[tuple[str, str, str, int, str | None]] = []
 
         for doc_id, doc_chunks in by_doc.items():
             s3_key = _shard_key(self.prefix, doc_id)
@@ -191,19 +208,20 @@ class S3ChunkStore:
             )
 
             for offset, ch in enumerate(doc_chunks):
-                index_rows.append((ch.chunk_id, ch.doc_id, s3_key, offset))
+                index_rows.append((ch.chunk_id, ch.doc_id, s3_key, offset, corpus_id))
 
         # Bulk upsert to Postgres
         conn = self._pool.getconn()
         try:
             with conn.cursor() as cur:
                 cur.executemany(
-                    "INSERT INTO chunk_index (chunk_id, doc_id, s3_key, line_offset) "
-                    "VALUES (%s, %s, %s, %s) "
+                    "INSERT INTO chunk_index (chunk_id, doc_id, s3_key, line_offset, corpus_id) "
+                    "VALUES (%s, %s, %s, %s, %s) "
                     "ON CONFLICT (chunk_id) DO UPDATE SET "
                     "  doc_id = EXCLUDED.doc_id, "
                     "  s3_key = EXCLUDED.s3_key, "
-                    "  line_offset = EXCLUDED.line_offset",
+                    "  line_offset = EXCLUDED.line_offset, "
+                    "  corpus_id = EXCLUDED.corpus_id",
                     index_rows,
                 )
             conn.commit()
@@ -217,11 +235,24 @@ class S3ChunkStore:
         *,
         metadata: Mapping[str, object] | None = None,
     ) -> list[str]:
-        """List every chunk_id in the Postgres index."""
+        """List chunk_ids in the Postgres index.
+
+        When ``metadata`` contains a ``corpus_id`` key, only chunk IDs
+        belonging to that corpus are returned.  Otherwise all rows are
+        returned (backward-compatible default).
+        """
+        corpus_id: str | None = (metadata or {}).get("corpus_id")  # type: ignore[assignment]
         conn = self._pool.getconn()
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT chunk_id FROM chunk_index ORDER BY chunk_id")
+                if corpus_id is not None:
+                    cur.execute(
+                        "SELECT chunk_id FROM chunk_index "
+                        "WHERE corpus_id = %s ORDER BY chunk_id",
+                        (corpus_id,),
+                    )
+                else:
+                    cur.execute("SELECT chunk_id FROM chunk_index ORDER BY chunk_id")
                 return [row[0] for row in cur.fetchall()]
         finally:
             self._pool.putconn(conn)

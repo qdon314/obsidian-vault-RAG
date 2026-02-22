@@ -42,6 +42,9 @@ class RunSummary:
     avg_quality_score: float | None
     avg_latency_ms: float | None
 
+    # Source indicator for UI badging
+    source: str = "local"  # "local" | "s3"
+
 
 @dataclass(frozen=True, slots=True)
 class QueryTrace:
