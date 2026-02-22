@@ -83,6 +83,12 @@ def main() -> None:
         default=None,
         help="Index manifest: local path or s3://bucket/key URI.",
     )
+    parser.add_argument(
+        "--corpus-id",
+        type=str,
+        default=None,
+        help="Filter chunk store to this corpus ID (must match corpus_id used during ingestion).",
+    )
     parser.add_argument("--no-save", action="store_true", help="Do not write artifacts to disk.")
     parser.add_argument(
         "--max-workers",
@@ -124,11 +130,28 @@ def main() -> None:
     else:
         judge_client = None
 
-    # Load manifest (explicit flag takes precedence over index_dir discovery)
+    # Load manifest: explicit flag > S3 auto-discovery > index_dir fallback (in harness)
     manifest = None
     if args.manifest:
         logger.info("Loading manifest from %s", args.manifest)
         manifest = IndexManifest.load_uri(args.manifest)
+    else:
+        cfg = load_settings()
+        di = cfg.distributed_ingestion
+        if di.corpus_s3_bucket:
+            logger.info(
+                "No --manifest provided; attempting S3 auto-discovery (bucket=%s, prefix=%s)",
+                di.corpus_s3_bucket,
+                di.corpus_s3_prefix,
+            )
+            manifest = IndexManifest.latest_from_s3(
+                bucket=di.corpus_s3_bucket,
+                corpus_prefix=di.corpus_s3_prefix or "",
+            )
+            if manifest is None:
+                logger.warning(
+                    "S3 manifest auto-discovery found nothing; index metadata will be n/a"
+                )
 
     # Run eval
     run = run_full_eval(
@@ -147,6 +170,7 @@ def main() -> None:
         score_ids=args.score_ids,
         run_name=args.run_name,
         max_workers=args.max_workers,
+        corpus_id=args.corpus_id,
     )
 
     # Persist artifacts

@@ -151,12 +151,25 @@ def main() -> None:
                 raise ValueError("OpenAI API key required for LLM judge")
             judge_client = OpenAI(api_key=api_key)
 
-        # ── Load manifest if provided ──────────────────────────────
+        # ── Load manifest: explicit flag > S3 auto-discovery ──────
+        from rag.domain.index_manifest import IndexManifest
+
         manifest = None
         if args.manifest:
-            from rag.domain.index_manifest import IndexManifest
-
             manifest = IndexManifest.load_uri(args.manifest)
+        else:
+            di = cfg.distributed_ingestion
+            log.info(
+                "No --manifest provided; attempting S3 auto-discovery (bucket=%s, prefix=%s)",
+                bucket,
+                di.corpus_s3_prefix,
+            )
+            manifest = IndexManifest.latest_from_s3(
+                bucket=bucket,
+                corpus_prefix=di.corpus_s3_prefix or "",
+            )
+            if manifest is None:
+                log.warning("S3 manifest auto-discovery found nothing; index metadata will be n/a")
 
         # ── Run eval ───────────────────────────────────────────────
         log.info("Running evaluation...")

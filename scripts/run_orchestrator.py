@@ -40,11 +40,17 @@ from rag.domain.models import Document
 log = logging.getLogger("orchestrator")
 
 
-def _count_chunks(dsn: str) -> int:
+def _count_chunks(dsn: str, corpus_id: str | None = None) -> int:
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM chunk_index")
+            if corpus_id is not None:
+                cur.execute(
+                    "SELECT COUNT(*) FROM chunk_index WHERE corpus_id = %s",
+                    (corpus_id,),
+                )
+            else:
+                cur.execute("SELECT COUNT(*) FROM chunk_index")
             return cur.fetchone()[0]  # type: ignore[index]
     finally:
         conn.close()
@@ -299,8 +305,8 @@ def main() -> None:
         # ── Phase 3: Finalize ──────────────────────────────────────────
         log.info("Phase 3: Finalizing job...")
 
-        chunk_count = _count_chunks(cfg.distributed_ingestion.postgres_dsn)
-        log.info("Chunk index: %d chunks", chunk_count)
+        chunk_count = _count_chunks(cfg.distributed_ingestion.postgres_dsn, args.corpus_id)
+        log.info("Chunk index: %d chunks (corpus_id=%s)", chunk_count, args.corpus_id)
 
         manifest = IndexManifest.create(
             index_name=args.index_name,
