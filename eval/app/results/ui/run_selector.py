@@ -37,7 +37,10 @@ def render_run_selector(
     # Build display options
     def format_run(run: RunSummary) -> str:
         """Format run for display."""
-        parts = [run.display_name]
+        name = run.display_name
+        if run.source == "s3":
+            name = f"{run.display_name} [S3]"
+        parts = [name]
 
         if run.overall_recall_at_10 is not None:
             parts.append(f"R@10: {run.overall_recall_at_10:.2f}")
