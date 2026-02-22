@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from eval.app.results.adapters.filesystem_loader import FilesystemRunLoader
+from eval.app.results.adapters.s3_loader import S3RunLoader
 from eval.app.results.domain.models import LoadedRun, RunSummary
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class InMemoryRunRepository:
 
     loader: FilesystemRunLoader
     additional_paths: list[Path] = field(default_factory=list)
+    s3_loader: S3RunLoader | None = None
     _summaries_cache: list[RunSummary] | None = field(default=None)
 
     def list_runs(self, limit: int | None = None) -> list[RunSummary]:
@@ -54,6 +56,13 @@ class InMemoryRunRepository:
         for path in self.additional_paths:
             if path.name == run_id:
                 return self._load_from_path(path)
+
+        # Try S3 loader
+        if self.s3_loader is not None:
+            try:
+                return self.s3_loader.load_run(run_id)
+            except Exception:
+                logger.debug("S3 loader could not load run %s", run_id, exc_info=True)
 
         raise FileNotFoundError(f"Run not found: {run_id}")
 
@@ -104,6 +113,17 @@ class InMemoryRunRepository:
             except Exception as e:
                 logger.warning(f"Failed to load run from {path}: {e}")
                 continue
+
+        # Add runs from S3 loader
+        if self.s3_loader is not None:
+            try:
+                s3_summaries = self.s3_loader.discover_runs()
+                for summary in s3_summaries:
+                    if summary.run_id not in seen_ids:
+                        summaries.append(summary)
+                        seen_ids.add(summary.run_id)
+            except Exception as e:
+                logger.warning(f"Failed to discover S3 runs: {e}")
 
         # Sort by timestamp descending
         summaries.sort(key=lambda s: s.timestamp, reverse=True)

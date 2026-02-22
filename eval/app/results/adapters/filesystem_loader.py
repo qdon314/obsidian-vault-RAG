@@ -131,10 +131,10 @@ class FilesystemRunLoader:
         with metrics_file.open() as f:
             data = json.load(f)
 
-        meta = data.get("meta", {})
-        overall = data.get("overall", {})
-        answer_quality = data.get("answer_quality", {})
-        latency = data.get("latency_ms", {})
+        meta = data.get("meta") or {}
+        overall = data.get("overall") or {}
+        answer_quality = data.get("answer_quality") or {}
+        latency = data.get("latency_ms") or {}
 
         # Parse timestamp from directory name or meta
         timestamp = _parse_timestamp_from_dirname(run_dir.name)

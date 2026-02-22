@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -27,6 +28,7 @@ import streamlit as st
 
 from eval.app.results.adapters.filesystem_loader import FilesystemRunLoader
 from eval.app.results.adapters.repository import InMemoryRunRepository
+from eval.app.results.adapters.s3_loader import S3RunLoader
 from eval.app.results.domain.models import LoadedRun, RunSummary
 from eval.app.results.query_diff import compute_retrieval_diff, natural_sort_key
 from eval.app.results.services.comparison_service import ComparisonService
@@ -58,13 +60,36 @@ DEFAULT_RUNS_DIR = PROJECT_ROOT / "eval" / "runs"
 # Initialize services as cached resources
 @st.cache_resource
 def get_repository() -> InMemoryRunRepository:
-    """Initialize the run repository."""
+    """Initialize the run repository.
+
+    If RAG_EVAL_S3_BUCKET is set (or settings.toml has an S3 bucket),
+    an S3RunLoader is wired in alongside the filesystem loader. Runs
+    from both sources appear in a unified list.
+    """
     runs_dir = DEFAULT_RUNS_DIR
     if not runs_dir.exists():
         runs_dir.mkdir(parents=True, exist_ok=True)
 
     loader = FilesystemRunLoader(runs_dir=runs_dir)
-    return InMemoryRunRepository(loader=loader)
+
+    # Conditionally wire S3 loader
+    s3_loader: S3RunLoader | None = None
+    s3_bucket = os.environ.get("RAG_EVAL_S3_BUCKET", "")
+    s3_prefix = os.environ.get("RAG_EVAL_S3_PREFIX", "eval")
+
+    if s3_bucket:
+        try:
+            s3_cache_dir = runs_dir / ".s3-cache"
+            s3_loader = S3RunLoader(
+                bucket=s3_bucket,
+                prefix=f"{s3_prefix}/runs",
+                cache_dir=s3_cache_dir,
+            )
+            logger.info("S3 run loader enabled: s3://%s/%s/runs", s3_bucket, s3_prefix)
+        except Exception:
+            logger.warning("Failed to initialize S3 run loader", exc_info=True)
+
+    return InMemoryRunRepository(loader=loader, s3_loader=s3_loader)
 
 
 @st.cache_resource
@@ -158,6 +183,10 @@ def main() -> None:
 
         # Info
         st.caption(f"Runs directory: {DEFAULT_RUNS_DIR}")
+        s3_bucket = os.environ.get("RAG_EVAL_S3_BUCKET", "")
+        if s3_bucket:
+            s3_prefix = os.environ.get("RAG_EVAL_S3_PREFIX", "eval")
+            st.caption(f"S3: s3://{s3_bucket}/{s3_prefix}/runs/")
 
     # Discover available runs
     try:
