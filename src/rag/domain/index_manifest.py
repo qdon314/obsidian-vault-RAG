@@ -136,3 +136,80 @@ class IndexManifest:
             return IndexManifest.load(path)
         data = json.loads(path.read_text(encoding="utf-8"))
         return IndexManifest.from_dict(data)
+
+    @staticmethod
+    def latest_from_s3(
+        bucket: str,
+        corpus_prefix: str,
+        manifests_subprefix: str = "manifests",
+    ) -> IndexManifest | None:
+        """Return the most recent manifest from S3, or None if unavailable.
+
+        Searches ``s3://{bucket}/{corpus_prefix}/{manifests_subprefix}/``
+        for index-id subdirectories.  Lexicographic sort on the directory
+        name gives chronological order because ``index_id`` embeds an
+        ISO-8601 timestamp suffix (``%Y%m%dT%H%M%SZ``).
+
+        Returns *None* when S3 is unreachable, the bucket is
+        unconfigured, or no manifests exist.  All failures are logged as
+        warnings so that eval runs degrade gracefully.
+        """
+        import logging
+
+        import boto3  # type: ignore[import-untyped]
+
+        logger = logging.getLogger(__name__)
+
+        # Build listing prefix (same strip/filter/join as run_orchestrator.py)
+        parts = [p for p in (corpus_prefix.strip("/"), manifests_subprefix.strip("/")) if p]
+        search_prefix = "/".join(parts) + "/" if parts else "manifests/"
+
+        try:
+            s3 = boto3.client("s3")
+            paginator = s3.get_paginator("list_objects_v2")
+            pages = paginator.paginate(
+                Bucket=bucket,
+                Prefix=search_prefix,
+                Delimiter="/",
+            )
+
+            index_ids: list[str] = []
+            for page in pages:
+                for entry in page.get("CommonPrefixes", []):
+                    full_prefix = entry["Prefix"]
+                    index_id = full_prefix.rstrip("/").rsplit("/", 1)[-1]
+                    index_ids.append(index_id)
+
+            if not index_ids:
+                logger.warning(
+                    "No manifests found at s3://%s/%s — skipping auto-discovery",
+                    bucket,
+                    search_prefix,
+                )
+                return None
+
+            latest_index_id = sorted(index_ids)[-1]
+            key_parts = [
+                p
+                for p in (
+                    corpus_prefix.strip("/"),
+                    manifests_subprefix.strip("/"),
+                    latest_index_id,
+                    "manifest.json",
+                )
+                if p
+            ]
+            manifest_key = "/".join(key_parts)
+            manifest_uri = f"s3://{bucket}/{manifest_key}"
+
+            logger.info("Auto-discovered latest manifest: %s", manifest_uri)
+            return IndexManifest.load_uri(manifest_uri)
+
+        except Exception:
+            logger.warning(
+                "Failed to auto-discover manifest from s3://%s/%s",
+                bucket,
+                search_prefix,
+                exc_info=True,
+            )
+            return None
