@@ -306,11 +306,7 @@ def classify_case_document(
             reasons=("keyword=LAR",),
         )
 
-    if (
-        _has(t, "Safety Evaluation")
-        or _has(t, "Safety Evaluation Report")
-        or _has(t, "SER")
-    ):
+    if _has(t, "Safety Evaluation") or _has(t, "Safety Evaluation Report") or _has(t, "SER"):
         return CaseClassification(
             category=CaseCategory.LICENSING,
             subcategory=CaseSubcategory.LICENSING_SER,
@@ -488,9 +484,7 @@ def _build_frontmatter(
     if config.source_url:
         lines.append(f"source_url: {json.dumps(config.source_url, ensure_ascii=False)}")
     if config.source_revision:
-        lines.append(
-            f"source_revision: {json.dumps(config.source_revision, ensure_ascii=False)}"
-        )
+        lines.append(f"source_revision: {json.dumps(config.source_revision, ensure_ascii=False)}")
 
     lines.append("---")
     lines.append("")

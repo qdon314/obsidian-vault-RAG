@@ -560,11 +560,14 @@ def run_full_eval(
                 empty_retrieval_count += 1
                 if empty_retrieval_count <= 3:
                     logger.warning(
-                        "Query %s returned 0 candidates", result.qid,
+                        "Query %s returned 0 candidates",
+                        result.qid,
                     )
     else:
         # Concurrent path — fan out queries across threads.
-        logger.info("Running eval with %d workers across %d queries", max_workers, len(eval_queries))
+        logger.info(
+            "Running eval with %d workers across %d queries", max_workers, len(eval_queries)
+        )
         future_to_idx: dict[Any, int] = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for idx, q in enumerate(eval_queries):
@@ -602,7 +605,8 @@ def run_full_eval(
                 empty_retrieval_count += 1
                 if empty_retrieval_count <= 3:
                     logger.warning(
-                        "Query %s returned 0 candidates", result.qid,
+                        "Query %s returned 0 candidates",
+                        result.qid,
                     )
 
     if empty_retrieval_count > 0:

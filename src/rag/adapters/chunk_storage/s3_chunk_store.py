@@ -247,8 +247,7 @@ class S3ChunkStore:
             with conn.cursor() as cur:
                 if corpus_id is not None:
                     cur.execute(
-                        "SELECT chunk_id FROM chunk_index "
-                        "WHERE corpus_id = %s ORDER BY chunk_id",
+                        "SELECT chunk_id FROM chunk_index WHERE corpus_id = %s ORDER BY chunk_id",
                         (corpus_id,),
                     )
                 else:

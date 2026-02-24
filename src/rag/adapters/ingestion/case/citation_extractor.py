@@ -489,7 +489,6 @@ def extract_generic_communications(
 # ---------------------------------------------------------------------------
 
 
-
 @dataclass(frozen=True, slots=True)
 class CitationExtractionResult:
     """Result of running the full citation extraction pipeline on a document.

@@ -70,7 +70,9 @@ class S3RunLoader:
                 Delimiter="/",
             )
         except Exception:
-            logger.warning("Failed to list S3 runs at s3://%s/%s", self.bucket, self.prefix, exc_info=True)
+            logger.warning(
+                "Failed to list S3 runs at s3://%s/%s", self.bucket, self.prefix, exc_info=True
+            )
             return []
 
         summaries: list[RunSummary] = []
@@ -84,7 +86,9 @@ class S3RunLoader:
                     summary = self._load_summary_from_s3(run_id)
                     summaries.append(summary)
                 except Exception:
-                    logger.debug("Skipping S3 run %s: could not load metrics.json", run_id, exc_info=True)
+                    logger.debug(
+                        "Skipping S3 run %s: could not load metrics.json", run_id, exc_info=True
+                    )
                     continue
 
         summaries.sort(key=lambda s: s.timestamp, reverse=True)
@@ -141,10 +145,9 @@ class S3RunLoader:
 
     def _is_cached(self, local_run_dir: Path) -> bool:
         """Check if a run is fully cached (has metrics.json + results.jsonl)."""
-        return (
-            (local_run_dir / "metrics.json").exists()
-            and (local_run_dir / "results.jsonl").exists()
-        )
+        return (local_run_dir / "metrics.json").exists() and (
+            local_run_dir / "results.jsonl"
+        ).exists()
 
     def _download_run(self, run_id: str, local_run_dir: Path) -> None:
         """Download all files for a run from S3 to local cache."""
@@ -160,7 +163,7 @@ class S3RunLoader:
         for page in pages:
             for obj in page.get("Contents", []):
                 s3_key = obj["Key"]
-                relative = s3_key[len(s3_prefix):]
+                relative = s3_key[len(s3_prefix) :]
                 if not relative:
                     continue
 

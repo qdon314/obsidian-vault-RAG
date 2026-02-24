@@ -1,4 +1,5 @@
 """Tests for S3RunLoader — eval run discovery and loading from S3."""
+
 from __future__ import annotations
 
 import json
@@ -31,24 +32,26 @@ def mock_s3_client() -> MagicMock:
 
 def _make_metrics_json(*, run_name: str = "test-run", num_queries: int = 50) -> str:
     """Build a minimal metrics.json blob."""
-    return json.dumps({
-        "meta": {
-            "run_id": "abc-123",
-            "started_at": "2026-02-20T19:49:00+00:00",
-            "run_name": run_name,
-            "run_generation": True,
-            "generator_model": "gpt-4o",
-            "embedder_model": "text-embedding-3-small",
-            "reranker_name": None,
-        },
-        "overall": {
-            "num_queries": num_queries,
-            "recall@10": 0.85,
-            "ndcg@10": 0.78,
-        },
-        "answer_quality": {"avg_quality_score": 0.72},
-        "latency_ms": {"avg": 350.0},
-    })
+    return json.dumps(
+        {
+            "meta": {
+                "run_id": "abc-123",
+                "started_at": "2026-02-20T19:49:00+00:00",
+                "run_name": run_name,
+                "run_generation": True,
+                "generator_model": "gpt-4o",
+                "embedder_model": "text-embedding-3-small",
+                "reranker_name": None,
+            },
+            "overall": {
+                "num_queries": num_queries,
+                "recall@10": 0.85,
+                "ndcg@10": 0.78,
+            },
+            "answer_quality": {"avg_quality_score": 0.72},
+            "latency_ms": {"avg": 350.0},
+        }
+    )
 
 
 class TestDiscoverRuns:
@@ -56,12 +59,16 @@ class TestDiscoverRuns:
         self, mock_s3_client: MagicMock, cache_dir: Path
     ) -> None:
         # Mock paginator to return two "run" prefixes
-        mock_s3_client.get_paginator.return_value = _mock_paginator([{
-            "CommonPrefixes": [
-                {"Prefix": "eval/runs/run_2026_02_20T19-49/"},
-                {"Prefix": "eval/runs/run_2026_02_20T21-05/"},
-            ],
-        }])
+        mock_s3_client.get_paginator.return_value = _mock_paginator(
+            [
+                {
+                    "CommonPrefixes": [
+                        {"Prefix": "eval/runs/run_2026_02_20T19-49/"},
+                        {"Prefix": "eval/runs/run_2026_02_20T21-05/"},
+                    ],
+                }
+            ]
+        )
 
         # Mock download_file to write a metrics.json into the cache
         def fake_download(Bucket, Key, Filename):
@@ -87,11 +94,15 @@ class TestDiscoverRuns:
     def test_skips_prefixes_without_metrics(
         self, mock_s3_client: MagicMock, cache_dir: Path
     ) -> None:
-        mock_s3_client.get_paginator.return_value = _mock_paginator([{
-            "CommonPrefixes": [
-                {"Prefix": "eval/runs/run_2026_02_20T19-49/"},
-            ],
-        }])
+        mock_s3_client.get_paginator.return_value = _mock_paginator(
+            [
+                {
+                    "CommonPrefixes": [
+                        {"Prefix": "eval/runs/run_2026_02_20T19-49/"},
+                    ],
+                }
+            ]
+        )
         # download_file raises — simulating missing metrics.json
         mock_s3_client.download_file.side_effect = Exception("NoSuchKey")
 
@@ -109,11 +120,15 @@ class TestDiscoverRuns:
         self, mock_s3_client: MagicMock, cache_dir: Path
     ) -> None:
         """Run dirs needn't start with 'run_' — ISO timestamps work too."""
-        mock_s3_client.get_paginator.return_value = _mock_paginator([{
-            "CommonPrefixes": [
-                {"Prefix": "runs/2026-02-14T21-05-06/"},
-            ],
-        }])
+        mock_s3_client.get_paginator.return_value = _mock_paginator(
+            [
+                {
+                    "CommonPrefixes": [
+                        {"Prefix": "runs/2026-02-14T21-05-06/"},
+                    ],
+                }
+            ]
+        )
 
         def fake_download(Bucket, Key, Filename):
             Path(Filename).parent.mkdir(parents=True, exist_ok=True)
@@ -153,12 +168,16 @@ class TestLoadRun:
         self, mock_s3_client: MagicMock, cache_dir: Path
     ) -> None:
         # Simulate S3 listing the run's files
-        mock_s3_client.get_paginator.return_value = _mock_paginator([{
-            "Contents": [
-                {"Key": "eval/runs/run_2026_02_20T19-49/metrics.json"},
-                {"Key": "eval/runs/run_2026_02_20T19-49/results.jsonl"},
-            ],
-        }])
+        mock_s3_client.get_paginator.return_value = _mock_paginator(
+            [
+                {
+                    "Contents": [
+                        {"Key": "eval/runs/run_2026_02_20T19-49/metrics.json"},
+                        {"Key": "eval/runs/run_2026_02_20T19-49/results.jsonl"},
+                    ],
+                }
+            ]
+        )
 
         def fake_download(Bucket, Key, Filename):
             Path(Filename).parent.mkdir(parents=True, exist_ok=True)

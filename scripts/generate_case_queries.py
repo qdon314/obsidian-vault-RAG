@@ -87,9 +87,7 @@ def _parse_strategies(raw: str) -> set[int]:
     return nums
 
 
-def _filter_by_strategy(
-    queries: list[dict], strategies: set[int]
-) -> list[dict]:
+def _filter_by_strategy(queries: list[dict], strategies: set[int]) -> list[dict]:
     """Post-filter queries to only include selected strategies."""
     if strategies == {1, 2, 3}:
         return queries

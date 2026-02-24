@@ -77,9 +77,7 @@ def main() -> None:
             queries = load_queries(draft_path)
             if queries:
                 st.session_state["queries"] = queries
-                st.session_state["decisions"] = {
-                    q["qid"]: "pending" for q in queries
-                }
+                st.session_state["decisions"] = {q["qid"]: "pending" for q in queries}
                 st.session_state["edits"] = {}
                 st.success(f"Loaded {len(queries)} queries")
             else:
@@ -113,11 +111,7 @@ def main() -> None:
                 key="status_filter",
             )
             strategy_tags = sorted(
-                {
-                    tag
-                    for q in st.session_state["queries"]
-                    for tag in q.get("tags", [])
-                }
+                {tag for q in st.session_state["queries"] for tag in q.get("tags", [])}
             )
             tag_filter = st.multiselect("Tags", strategy_tags, key="tag_filter")
 
@@ -159,7 +153,9 @@ def main() -> None:
 
     # ── Main content: Query review ──────────────────────────
     if "queries" not in st.session_state:
-        st.info(f"Click **Load queries** in the sidebar to start reviewing.\n\nExpected file: `{DEFAULT_DRAFT_PATH}`")
+        st.info(
+            f"Click **Load queries** in the sidebar to start reviewing.\n\nExpected file: `{DEFAULT_DRAFT_PATH}`"
+        )
         return
 
     queries = st.session_state["queries"]
@@ -172,9 +168,7 @@ def main() -> None:
         filtered = [q for q in filtered if decisions.get(q["qid"]) == status_filter]
     tag_filter = st.session_state.get("tag_filter", [])
     if tag_filter:
-        filtered = [
-            q for q in filtered if set(tag_filter) & set(q.get("tags", []))
-        ]
+        filtered = [q for q in filtered if set(tag_filter) & set(q.get("tags", []))]
 
     st.write(f"Showing {len(filtered)} of {len(queries)} queries")
 
@@ -190,17 +184,13 @@ def _render_query_card(q: dict, idx: int) -> None:
     current_status = decisions.get(qid, "pending")
 
     # Status color indicator
-    status_prefix = {"approved": "+", "rejected": "-", "pending": "?"}.get(
-        current_status, "?"
-    )
+    status_prefix = {"approved": "+", "rejected": "-", "pending": "?"}.get(current_status, "?")
 
     strategy = ", ".join(q.get("tags", []))
     difficulty = q.get("difficulty", "?")
     query_type = q.get("query_type", "?")
 
-    label = (
-        f"[{status_prefix}] {qid} | {query_type} · {difficulty} | {strategy}"
-    )
+    label = f"[{status_prefix}] {qid} | {query_type} · {difficulty} | {strategy}"
 
     with st.expander(label, expanded=(current_status == "pending")):
         # ── Read-only metadata ──
@@ -299,9 +289,7 @@ def _collect_approved() -> list[dict]:
 
         edited_cit = st.session_state.get(f"cit_{q['qid']}")
         if edited_cit is not None:
-            out["relevant_citations"] = [
-                c.strip() for c in edited_cit.split(",") if c.strip()
-            ]
+            out["relevant_citations"] = [c.strip() for c in edited_cit.split(",") if c.strip()]
 
         approved.append(out)
 

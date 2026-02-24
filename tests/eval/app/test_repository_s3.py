@@ -1,4 +1,5 @@
 """Tests for InMemoryRunRepository with S3 loader integration."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -56,10 +57,15 @@ def test_local_run_wins_over_s3_duplicate(tmp_path: Path) -> None:
     run_dir = runs_dir / "run_2026_02_20T19-49"
     run_dir.mkdir()
     import json
-    (run_dir / "metrics.json").write_text(json.dumps({
-        "meta": {"run_id": "abc", "started_at": "2026-02-20T19:49:00+00:00"},
-        "overall": {"num_queries": 50},
-    }))
+
+    (run_dir / "metrics.json").write_text(
+        json.dumps(
+            {
+                "meta": {"run_id": "abc", "started_at": "2026-02-20T19:49:00+00:00"},
+                "overall": {"num_queries": 50},
+            }
+        )
+    )
 
     fs_loader = FilesystemRunLoader(runs_dir=runs_dir)
 

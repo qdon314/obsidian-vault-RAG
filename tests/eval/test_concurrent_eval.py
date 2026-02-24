@@ -56,11 +56,13 @@ def _build_test_container(*, n_chunks: int = 10) -> Container:
 def _make_queries(n: int = 20) -> list[EvalQuery]:
     """Generate N simple eval queries."""
     return [
-        EvalQuery.from_dict({
-            "qid": f"q-{i:03d}",
-            "query": f"What are the requirements of 10 CFR 50.{i % 10}?",
-            "relevant_citations": [f"10 CFR 50.{i % 10}"],
-        })
+        EvalQuery.from_dict(
+            {
+                "qid": f"q-{i:03d}",
+                "query": f"What are the requirements of 10 CFR 50.{i % 10}?",
+                "relevant_citations": [f"10 CFR 50.{i % 10}"],
+            }
+        )
         for i in range(n)
     ]
 
@@ -93,8 +95,10 @@ class TestConcurrentEval:
         seq_by_qid = {r.qid: r for r in sequential.results}
         con_by_qid = {r.qid: r for r in concurrent.results}
         for qid in seq_by_qid:
-            assert seq_by_qid[qid].retrieval_result.retrieved_chunk_ids == \
-                con_by_qid[qid].retrieval_result.retrieved_chunk_ids
+            assert (
+                seq_by_qid[qid].retrieval_result.retrieved_chunk_ids
+                == con_by_qid[qid].retrieval_result.retrieved_chunk_ids
+            )
 
     def test_max_workers_defaults_to_1(self) -> None:
         """run_full_eval should accept no max_workers arg (backward compat)."""

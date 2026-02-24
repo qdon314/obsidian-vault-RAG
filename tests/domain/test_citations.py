@@ -46,7 +46,7 @@ class TestCitationSpan:
             raw="10 CFR 50.46(b)(1)",
             key="cfr:10:50.46(b)(1)",
             start=0,
-        end=18,
+            end=18,
             confidence=0.95,
             source_field="content",
             attrs={"title": 10, "part": 50, "section": "46", "subsections": ["b", "1"]},

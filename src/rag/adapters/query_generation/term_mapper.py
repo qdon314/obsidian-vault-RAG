@@ -247,7 +247,9 @@ class TermMapper:
                 mode = MatchMode(mode_raw) if isinstance(mode_raw, str) else MatchMode.SMART_PHRASE
             except ValueError:
                 valid = [m.value for m in MatchMode]
-                msg = f"Term '{term_id}' has invalid match mode '{mode_raw}', must be one of {valid}"
+                msg = (
+                    f"Term '{term_id}' has invalid match mode '{mode_raw}', must be one of {valid}"
+                )
                 raise ValueError(msg) from None
             match_config = MatchConfig(mode=mode, case_sensitive=bool(case_sensitive))
 

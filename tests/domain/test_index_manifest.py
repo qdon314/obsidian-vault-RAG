@@ -174,10 +174,12 @@ class TestLatestFromS3:
         return mock_s3
 
     def test_returns_latest_by_lexicographic_sort(self) -> None:
-        mock_s3 = self._mock_s3([
-            {"Prefix": "regulatory/manifests/regulatory_unknown_unknown_20260101T000000Z/"},
-            {"Prefix": "regulatory/manifests/regulatory_unknown_unknown_20260220T210549Z/"},
-        ])
+        mock_s3 = self._mock_s3(
+            [
+                {"Prefix": "regulatory/manifests/regulatory_unknown_unknown_20260101T000000Z/"},
+                {"Prefix": "regulatory/manifests/regulatory_unknown_unknown_20260220T210549Z/"},
+            ]
+        )
 
         with patch("boto3.client", return_value=mock_s3):
             result = IndexManifest.latest_from_s3(
@@ -213,9 +215,11 @@ class TestLatestFromS3:
         assert result is None
 
     def test_empty_corpus_prefix_builds_correct_listing_prefix(self) -> None:
-        mock_s3 = self._mock_s3([
-            {"Prefix": "manifests/regulatory_unknown_unknown_20260220T210549Z/"},
-        ])
+        mock_s3 = self._mock_s3(
+            [
+                {"Prefix": "manifests/regulatory_unknown_unknown_20260220T210549Z/"},
+            ]
+        )
 
         with patch("boto3.client", return_value=mock_s3):
             result = IndexManifest.latest_from_s3(

@@ -132,9 +132,7 @@ def main() -> None:
     cfg = settings.load_settings(path=args.settings, require_openai=False)
 
     if not cfg.secrets.nrc_adams_api_key:
-        raise SystemExit(
-            "NRC_ADAMS_API_KEY is required. Set it in your environment or .env file."
-        )
+        raise SystemExit("NRC_ADAMS_API_KEY is required. Set it in your environment or .env file.")
 
     date_from = _parse_date(args.date_from, "--date-from")
     date_to = _parse_date(args.date_to, "--date-to")
@@ -173,9 +171,7 @@ def main() -> None:
     mode = "direct" if args.accession else "discovery"
     log.info("Starting fetch run (mode=%s, output_dir=%s)", mode, output_dir)
 
-    accessions = (
-        [a.strip() for a in args.accession if a.strip()] if args.accession else None
-    )
+    accessions = [a.strip() for a in args.accession if a.strip()] if args.accession else None
 
     report = fetcher.fetch(accessions=accessions)
     _print_report(report, output_dir)

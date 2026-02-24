@@ -386,14 +386,14 @@ class TestStrategy3Scenario:
         # Fixture has case_category: "inspection"
         # Inspection templates contain "inspection" or "walkdown" or "inspector"
         assert any(
-            "inspection" in q["query"].lower() or "inspector" in q["query"].lower() or "walkdown" in q["query"].lower()
+            "inspection" in q["query"].lower()
+            or "inspector" in q["query"].lower()
+            or "walkdown" in q["query"].lower()
             for q in s3
         ), f"Expected inspection-themed template, got: {[q['query'] for q in s3]}"
 
     def test_uses_generic_templates_for_unknown_category(self):
-        md = FIXTURE_CASE_MD.replace(
-            'case_category: "inspection"', 'case_category: "unknown"'
-        )
+        md = FIXTURE_CASE_MD.replace('case_category: "inspection"', 'case_category: "unknown"')
         mapper = _make_term_mapper()
         gen = CaseQueryGenerator(term_mapper=mapper)
         with TemporaryDirectory() as td:
@@ -448,7 +448,5 @@ class TestStrategy3Scenario:
                 p = Path(td) / f"ML99999{suffix}.md"
                 p.write_text(md)
                 queries = gen.generate(p)
-            all_sc_qids.extend(
-                q["qid"] for q in queries if "scenario-based" in q["tags"]
-            )
+            all_sc_qids.extend(q["qid"] for q in queries if "scenario-based" in q["tags"])
         assert len(all_sc_qids) == len(set(all_sc_qids))

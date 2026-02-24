@@ -10,6 +10,7 @@ Documents are converted to domain ``CaseDocument`` objects, normalised
 to Obsidian markdown, and written into year-month subdirectories under
 the configured output directory.
 """
+
 from __future__ import annotations
 
 import logging
@@ -174,8 +175,7 @@ class CaseDocumentFetcher:
                 self._discover_and_fetch(counter=counter)
         except KeyboardInterrupt:
             logger.warning(
-                "Interrupted after processing %d documents "
-                "(fetched=%d skipped=%d failed=%d).",
+                "Interrupted after processing %d documents (fetched=%d skipped=%d failed=%d).",
                 counter.fetched + counter.skipped + counter.failed,
                 counter.fetched,
                 counter.skipped,
@@ -190,9 +190,7 @@ class CaseDocumentFetcher:
         for doc_type in self.config.document_types:
             if self.config.limit is not None and counter.fetched >= self.config.limit:
                 break
-            filters = _build_discovery_filters(
-                doc_type, self.config.date_from, self.config.date_to
-            )
+            filters = _build_discovery_filters(doc_type, self.config.date_from, self.config.date_to)
             for result in self.client.search_documents(
                 "",
                 filters=filters,
