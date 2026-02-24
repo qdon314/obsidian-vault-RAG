@@ -221,6 +221,7 @@ config.py
 # Eval Artifacts
 eval/runs/*
 !eval/runs/baseline/
+eval/runs/.s3-cache/
 
 # Internal Docs
 docs/plans/
@@ -232,4 +233,6 @@ docs/notes/
 
 # Regulatory
 !data/ecfr/
+docs/APS-API-Guide.pdf
 corpus/us-nrc/cases/
+.vscode/launch.json

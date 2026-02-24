@@ -41,12 +41,15 @@
       "name": "Python: eval script (with args)",
       "type": "debugpy",
       "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "program": "${workspaceFolder}/eval/scripts/run_eval.py",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "args": [
         "--queries",
-        "eval/datasets/generated_queries.jsonl",
+        "eval/datasets/regulatory_adversarial.jsonl",
+        "--index",
+        "artifacts/indexes/regulatory",
       ],
         "envFile": "${workspaceFolder}/.env"
     },
@@ -55,9 +58,14 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${file}",
+      "python": "${workspaceFolder}/.venv/bin/python",
       "console": "integratedTerminal",
       "cwd": "${workspaceFolder}",
       "args": [
+        "--per-type",
+        "6",
+        "--limit",
+        "20",
       ],
       "envFile": "${workspaceFolder}/.env"
     },
@@ -71,6 +79,24 @@
         "${file}"
       ],
       "cwd": "${workspaceFolder}"
-    }
+    },
+    {
+      "name": "Python: Fetch NRC Cases",
+      "type": "debugpy",
+      "request": "launch",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "program": "${workspaceFolder}/scripts/fetch_nrc_cases.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "--date-from",
+        "2024-03-11",
+        "--date-to",
+        "2024-03-31",
+        "--document-types",
+        "Inspection Report",
+      ],
+        "envFile": "${workspaceFolder}/.env"
+    },
   ]
 }
