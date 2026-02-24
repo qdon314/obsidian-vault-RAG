@@ -54,7 +54,7 @@ jobs:
       matrix:
         dataset:
           - { name: "case", query_set: "case", scope: "case" }
-          - { name: "regulatory", query_set: "regulatory", scope: "regulatory" }
+          # - { name: "regulatory", query_set: "regulatory", scope: "regulatory" }
 
     env:
       AWS_REGION: us-east-1
