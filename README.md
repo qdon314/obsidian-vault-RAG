@@ -1,62 +1,108 @@
-# Obsidian Vault RAG
+# Regulatory Corpus RAG
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A **production-minded Retrieval-Augmented Generation (RAG) system** focused on **behavioral correctness, regression detection, and operational safety** of LLM-powered systems.
+A **production-grade Retrieval-Augmented Generation system** built for **U.S. Nuclear Regulatory Commission (NRC) regulatory corpora**, where precision, traceability, and correctness are non-negotiable.
 
-This project treats LLMs as **non-deterministic production dependencies** and centers on *owning model behavior over time* rather than prompt tuning or UI polish.
+This project demonstrates how to build RAG systems that treat LLMs as **non-deterministic production dependencies** and center on *owning model behavior over time* rather than prompt tuning or UI polish.
 
 ---
 
 ## Why This Exists
 
-In real systems, most RAG failures are **retrieval failures**, not generation failures.
-If the right evidence is not surfaced, generation quality is irrelevant.
+Most RAG failures are **retrieval failures**, not generation failures. If the right evidence is not surfaced, generation quality is irrelevant.
 
-More importantly, **LLM failures are often silent**:
+In regulatory domains, these failures carry real consequences:
 
-* partial grounding
-* confidently incorrect answers
-* regressions masked by aggregate metrics
+* A missed cross-reference to 10 CFR 50.46 can invalidate compliance analysis
+* Partial grounding in enforcement actions can misrepresent NRC findings
+* Silent regressions in retrieval quality can go undetected across model updates
 
-This project exists to explore how changes in **chunking, embeddings, retrieval, reranking, and context construction** affect downstream answers — and to make those effects **observable, measurable, and gateable** before they reach users.
+This project exists to make those effects **observable, measurable, and gateable** before they reach users.
 
 ---
 
-## What This Project Optimizes For
+## What This Project Demonstrates
 
 This system is explicitly designed around **production concerns**:
 
-* **Behavioral regression detection** (not just offline metrics)
-* **Evidence-bounded answers** (citations, groundedness, abstention)
-* **Go / no-go decisions** for retrieval and model changes
-* **Traceability** across every stage of the pipeline
-* **Operational repeatability** via containers, CI, and deployment manifests
+* **Regulatory corpus ingestion** -- eCFR XML parsing, section normalization, cross-reference extraction, and citation linking for 10 CFR parts
+* **NRC case document ingestion** -- ADAMS API integration, document classification, metadata enrichment, and citation extraction
+* **Behavioral regression detection** -- evaluation as a release gate, not a research artifact
+* **Evidence-bounded answers** -- citations, groundedness, and abstention when evidence is insufficient
+* **Distributed ingestion** -- S3-backed corpus-of-record, SQS task distribution, Postgres state management, ECS worker fleet
+* **Full traceability** -- every query produces a complete trace across retrieval, reranking, context construction, and generation
+* **Operational repeatability** -- containers, CI/CD, Terraform, and scale-to-zero cloud deployment
+
+---
+
+## Architecture Overview
+
+The system follows **Hexagonal Architecture (Ports & Adapters)** with two primary pipelines:
+
+### Regulatory Ingestion Pipeline
+
+```
+eCFR XML / NRC ADAMS API
+  -> Parsing & Normalization
+    -> Citation Extraction & Cross-Reference Linking
+      -> Metadata Enrichment (category, subcategory, docket, regulation refs)
+        -> Chunking (structural, proposition-based)
+          -> Embedding & Indexing (Qdrant + S3 chunk storage)
+```
+
+### Query Pipeline
+
+```mermaid
+flowchart TD
+    A["Retriever.retrieve"] --> B["Reranker.rerank"]
+    B --> C["ContextBuilder.build"]
+    C --> D["Generator.generate"]
+    D --> E["QueryLogger.log (QueryTrace)"]
+```
+
+### Core Design Principles
+
+* **Observability First** -- Every query produces a complete trace of retrieval, reranking, context packing, and generation.
+* **Evaluation as Infrastructure** -- Evaluation is treated as a production dependency, not an experiment.
+* **Behavior Over Outputs** -- The system measures *why* an answer was produced, not just whether it looks correct.
+* **Reproducibility** -- Stable document and chunk IDs enable deterministic comparisons across runs.
+* **Domain-Aware Processing** -- Regulatory text requires specialized parsing, citation extraction, and cross-reference resolution that generic RAG pipelines miss.
+
+---
+
+## Regulatory Corpus Support
+
+### 10 CFR (Code of Federal Regulations)
+
+The system ingests eCFR XML and produces normalized, section-level markdown with:
+
+* Heading hierarchy preservation
+* Cross-reference extraction and linking
+* Metadata enrichment (part, section, effective date, source revision)
+* Canonical citation keys (e.g., `10 CFR 50.46`)
+
+### NRC Case Documents (ADAMS)
+
+Integration with the NRC ADAMS Public Search API provides:
+
+* Automated document fetching by accession number, document type, and docket
+* Rule-based classification into categories (inspection, enforcement, licensing, etc.) and subcategories
+* Citation span extraction with confidence scoring
+* Metadata enrichment with docket numbers, regulation references, and provenance signals
 
 ---
 
 ## Production Safety Model
 
-This system treats evaluation as a **release gate**, not a research artifact.
+Every change to retrieval, chunking, reranking, or generation is evaluated against a **fixed, versioned evaluation dataset**. Changes are blocked if they violate defined safety thresholds.
 
-Every change to retrieval, chunking, reranking, or generation is evaluated against a **fixed, versioned evaluation dataset**.
-
-Changes are blocked if they violate defined safety thresholds.
-
-### Example Gates
-
-* Recall@10 must not regress beyond an acceptable margin
-* Unsupported claims must not increase
-* Groundedness must not regress
-* Abstention rate must remain within bounds
-* P95 latency must remain within budget
-
-Each evaluation run produces a **human-readable decision summary**:
+### Example Gate
 
 ```
-Change: Fixed chunking → proposition-aware chunking
+Change: Fixed chunking -> proposition-aware chunking
 
 Results:
 - Recall@10: +6.1%
@@ -68,7 +114,11 @@ Decision: SHIP
 Rationale: Gains concentrated in multi-hop queries without new hallucination classes
 ```
 
-This framing reflects how production teams reason about LLM behavior.
+### Metrics
+
+* **Retrieval**: Recall@k, Precision@k, Hit Rate@k, MRR, MAP, NDCG@k
+* **Answer Quality**: Correctness, completeness, relevance (LLM-as-judge), hallucination detection, citation coverage, abstention behavior
+* **Safety**: Unsupported claim detection, evidence-bounded response rate, unsafe miss rate
 
 ---
 
@@ -80,172 +130,58 @@ cd obsidian-vault-RAG
 
 python3.11 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[openai]"
+./scripts/pip install -e ".[dev,openai,qdrant]"
 
 echo "OPENAI_API_KEY='sk-your-key'" > .env
-
-python scripts/build_index.py --corpus ~/obsidian-vault --index-name my_index
-python scripts/ask.py --index my_index --q "What are the main concepts?"
 ```
 
----
-
-## Architecture Overview
-
-```
-Documents
-  → Ingestion & Chunking
-    → Embeddings
-      → Vector Retrieval
-        → (Optional) Reranking
-          → Context Building
-            → LLM Generation
-              → Answer + Citations
-              → Query Trace
-```
-
-The system follows **Hexagonal Architecture (Ports & Adapters)** to enable:
-
-* Strict separation of interfaces and implementations
-* Swappable components (OpenAI ↔ local models)
-* Deterministic testing and evaluation
-* Clear ownership boundaries
-
-### Core Design Principles
-
-* **Observability First**
-  Every query produces a complete trace of retrieval, reranking, context packing, and generation.
-
-* **Evaluation as Infrastructure**
-  Evaluation is treated as a production dependency, not an experiment.
-
-* **Behavior Over Outputs**
-  The system measures *why* an answer was produced, not just whether it looks correct.
-
-* **Reproducibility**
-  Stable document and chunk IDs enable deterministic comparisons across runs.
-
----
-
-## CI, Deployment, and Operational Guarantees
-
-The system is designed to be **operated**, not demoed.
-
-* Containerized runtime for reproducible execution
-* Cloud-ready deployment manifests
-* GitHub Actions for:
-
-  * build validation
-  * evaluation execution
-  * regression gating
-* Immutable evaluation artifacts persisted per run
-
-This mirrors how LLM-backed systems are operated in production environments.
-
----
-
-## Evaluation System
-
-### Retrieval Metrics
-
-* Recall@k, Precision@k, Hit Rate@k
-* MRR, MAP
-* NDCG@k
-* Breakdown by query type and difficulty
-
-### Answer Quality & Safety
-
-* Correctness, completeness, relevance (LLM-as-judge)
-* Hallucination detection
-* Citation coverage
-* Unsupported claim detection
-* Abstention behavior
-
-### Running an Evaluation
+### Index a Regulatory Corpus
 
 ```bash
-python -m experiments.run_eval \
-  --queries experiments/eval_queries.jsonl \
-  --run-generation \
-  --use-llm-judge \
-  --top-k 10 \
-  --keep-k 4
+# Normalize and index 10 CFR Part 50 from eCFR XML
+make index-regulatory REGULATORY_XML=data/ecfr/title-10-part-50.xml REGULATORY_PART=50
+
+# Or with dummy embeddings (no API cost)
+make index-regulatory-dummy
 ```
 
-Each run produces:
-
-* aggregate metrics
-* per-query breakdowns
-* trace-level debugging artifacts
-* a ship / block verdict
-
----
-
-## Query Curation & Dataset Ownership
-
-Evaluation datasets are treated as **first-class assets**.
-
-An interactive Streamlit UI supports:
-
-* browsing chunks in context
-* creating single- and multi-hop queries
-* selecting ground-truth chunks
-* annotating difficulty and failure modes
+### Query
 
 ```bash
-pip install -e ".[ui]"
-streamlit run experiments/streamlit_query_curator.py
+make ask QUERY="What are the requirements for emergency core cooling systems under 10 CFR 50.46?"
 ```
 
-This enables continuous evolution of eval datasets alongside the system.
+### Run Evaluations
 
----
-
-## Moving Beyond Personal Notes
-
-While the system supports Obsidian vaults, it is intentionally designed to scale to **harder, adversarial corpora**, including:
-
-* technical documentation + RFCs
-* regulatory or policy text
-* multi-repository codebases
-* time-sensitive or contradictory sources
-
-These domains surface subtle retrieval failures that simpler corpora hide.
-
----
-
-## Programmatic Usage
-
-```python
-from rag.app.container import build_container
-from rag.app.query_runner import run_query
-
-container = build_container()
-
-result = run_query(
-    "What is the main concept?",
-    retriever=container.retriever,
-    reranker=container.reranker,
-    context_builder=container.context_builder,
-    generator=container.generator,
-    logger=container.logger,
-    top_k=8,
-    keep_k=4,
-    token_budget=1500
-)
-
-print(result.answer.text)
+```bash
+./scripts/py eval/scripts/run_eval.py --queries eval/datasets/curated_queries.jsonl
+make verdict
 ```
 
 ---
 
-## Open Questions
+## CI, Deployment, and Operations
 
-* When retrieval improvements justify latency tradeoffs
-* How eval metrics fail under real user distributions
-* Where deterministic heuristics outperform learned rerankers
-* How to surface partial grounding failures earlier
-* When and how to blend semantic and keyword retrieval
+* **CI**: GitHub Actions for lint, typecheck, test, and eval release gating on every PR
+* **Containers**: Multi-stage Docker build with Qdrant sidecar
+* **Cloud**: Terraform-managed AWS deployment (ECS Fargate, ECR, S3, SQS, RDS, SSM)
+* **Scale-to-zero**: Infrastructure persists at near-zero cost; services scale up only when needed
+* **Distributed ingestion**: Enumerator/worker pattern with SQS task distribution and Postgres state
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [User Guide](docs/USER_GUIDE.md) | Setup, indexing, querying, evaluations |
+| [Architecture](docs/ARCHITECTURE.md) | Hexagonal design, data flows, component relationships |
+| [Configuration](docs/CONFIGURATION.md) | Complete settings reference |
+| [Adapters](docs/ADAPTERS.md) | All adapter implementations |
+| [API Reference](docs/API_REFERENCE.md) | Domain models and port interfaces |
+| [Evaluation](docs/evaluation/README.md) | Eval system, metrics, verdict gating |
+| [Deployment](docs/DEPLOYMENT.md) | Docker, CI/CD, AWS deployment |
+| [Distributed Ingestion](docs/operations/distributed-ingestion.md) | Operator runbook |
 
 ---
 

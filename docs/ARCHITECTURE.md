@@ -15,14 +15,15 @@ This document provides a comprehensive overview of the RAG system architecture, 
 
 ## Overview
 
-The Obsidian Vault RAG system implements a **Retrieval-Augmented Generation** pipeline with a focus on observability and evaluation. The architecture follows the **Hexagonal (Ports & Adapters)** pattern, enabling clean separation of concerns and easy component swapping.
+The Regulatory Corpus RAG system implements a **Retrieval-Augmented Generation** pipeline for U.S. nuclear regulatory corpora, with a focus on precision, observability, and evaluation gating. The architecture follows the **Hexagonal (Ports & Adapters)** pattern, enabling clean separation of concerns and easy component swapping.
 
 ### Key Architectural Goals
 
 1. **Observability First**: Every query generates a complete trace with all intermediate results
-2. **Evaluation as First-Class**: Built-in evaluation framework with comprehensive metrics
+2. **Evaluation as First-Class**: Built-in evaluation framework with comprehensive metrics and release gating
 3. **Clean Boundaries**: Protocol-based interfaces allow easy swapping of implementations
 4. **Reproducibility**: Stable IDs for documents and chunks enable deterministic behavior
+5. **Domain-Aware Processing**: Regulatory text requires specialized parsing, citation extraction, and cross-reference resolution
 
 ---
 
@@ -79,19 +80,28 @@ graph TB
 ```mermaid
 graph TB
     subgraph "Input Sources"
-        Vault[Obsidian Vault]
-        Files[Text Files]
+        ECFR[eCFR XML<br/>10 CFR Parts]
+        ADAMS[NRC ADAMS API<br/>Case Documents]
+        Files[Markdown / Text Files]
     end
 
-    subgraph "Ingestion Pipeline"
+    subgraph "Regulatory Ingestion"
+        Parser[eCFR Parser]
+        Normalizer[Section Normalizer]
+        CitExtract[Citation Extractor]
+        CrossRef[Cross-Reference Linker]
+        Classifier[Case Classifier]
+    end
+
+    subgraph "General Ingestion"
         Ingestor[FilesystemIngestor]
         Loaders[Document Loaders]
-        Chunker[FixedChunker]
     end
 
-    subgraph "Embedding & Storage"
+    subgraph "Chunking & Embedding"
+        Chunker[Chunker<br/>structural / proposition / fixed]
         Embedder[Embedder]
-        VectorStore[VectorStore]
+        VectorStore[VectorStore<br/>Qdrant / JSONL]
     end
 
     subgraph "Query Pipeline"
@@ -110,12 +120,13 @@ graph TB
         Answer[Answer + Citations]
     end
 
-    Vault --> Ingestor
+    ECFR --> Parser --> Normalizer --> CrossRef
+    ADAMS --> Classifier --> CitExtract
+    CrossRef --> Ingestor
+    CitExtract --> Ingestor
     Files --> Ingestor
-    Ingestor --> Loaders
-    Loaders --> Chunker
-    Chunker --> Embedder
-    Embedder --> VectorStore
+    Ingestor --> Loaders --> Chunker
+    Chunker --> Embedder --> VectorStore
 
     VectorStore --> Retriever
     Retriever --> Reranker
@@ -353,6 +364,66 @@ graph TB
 | `PropositionAwareContextBuilder` | `ContextBuilder` | Proposition expansion + deduplication |
 | `OpenAIChatGenerator` | `Generator` | GPT-4.1-mini chat completions |
 | `JsonlQueryLogger` | `QueryLogger` | JSONL append logging |
+
+---
+
+## Regulatory Ingestion
+
+The system includes specialized ingestion pipelines for regulatory corpora that go beyond generic document loading.
+
+### eCFR (Code of Federal Regulations)
+
+```mermaid
+flowchart LR
+    XML["eCFR XML"] --> Parse["parse_ecfr_xml()"]
+    Parse --> Sections["RegulatorySection[]"]
+    Sections --> Normalize["normalize_part()"]
+    Normalize --> MD["Canonical Markdown Files"]
+    MD --> Enrich["Metadata Enrichment"]
+    Enrich --> CrossRef["Cross-Reference Extraction"]
+    CrossRef --> Docs["Document[] with regulatory metadata"]
+```
+
+**Key processing stages:**
+
+1. **XML Parsing** (`ecfr_parser.py`): Extracts sections from eCFR XML with part number, section number, heading, and body text
+2. **Normalization** (`normalizer.py`): Writes canonical markdown files (one per section) with consistent formatting and heading structure
+3. **Metadata Enrichment** (`metadata.py`, `enrichment.py`): Attaches regulatory metadata (instrument version, effective date, source revision, CFR part/section references)
+4. **Cross-Reference Extraction** (`cross_references.py`): Identifies and links intra-CFR references (e.g., "see § 50.46(b)")
+
+### NRC Case Documents (ADAMS API)
+
+```mermaid
+flowchart LR
+    API["ADAMS API"] --> Fetch["CaseFetcher"]
+    Fetch --> Raw["AdamsDocument"]
+    Raw --> Classify["Rule-Based Classifier"]
+    Classify --> Cite["Citation Extractor"]
+    Cite --> Norm["Text Normalizer"]
+    Norm --> Case["CaseDocument + CaseMetadata"]
+    Case --> Adapt["DocumentAdapter"]
+    Adapt --> Doc["Domain Document"]
+```
+
+**Key processing stages:**
+
+1. **Fetching** (`fetcher.py`): Searches and retrieves documents from the NRC ADAMS Public Search API by document type, date range, and docket
+2. **Classification** (`normalizer.py`): Rule-based classification into `CaseCategory` (inspection, enforcement, licensing, etc.) and `CaseSubcategory` with confidence scoring
+3. **Citation Extraction** (`citation_extractor.py`): Extracts CFR references, docket numbers, ADAMS accession numbers, NUREG references, and other regulatory citation types as `CitationSpan` objects with canonical keys
+4. **Text Normalization** (`text_normalizer.py`): Cleans OCR artifacts, normalizes whitespace, standardizes formatting
+5. **Document Adaptation** (`document_adapter.py`): Converts `CaseDocument` to the generic `Document` domain model with enriched metadata for downstream indexing
+
+### Domain Models
+
+| Model | Purpose |
+|-------|---------|
+| `CaseDocument` | NRC case document with ADAMS metadata, classification, and citations |
+| `CaseMetadata` | Classification results, extracted references, provenance signals |
+| `CaseClassification` | Category/subcategory with confidence and method |
+| `CaseCategory` | Top-level classification (inspection, enforcement, licensing, ...) |
+| `CaseSubcategory` | Fine-grained subtype within a category |
+| `CitationSpan` | Extracted citation with kind, canonical key, span offsets, and confidence |
+| `FetchReport` | Summary statistics from a case-document fetch run |
 
 ---
 
@@ -630,46 +701,65 @@ Built-in evaluation framework with:
 
 ```
 src/rag/
-├── domain/              # Core data models
-│   ├── models.py        # Document, Chunk, Candidate, Answer, etc.
-│   └── filters.py       # Filter AST for metadata queries
+├── domain/                  # Core data models
+│   ├── models.py            # Document, Chunk, Candidate, Answer, QueryTrace, etc.
+│   ├── case_documents.py    # CaseDocument, CaseMetadata, CaseCategory, CaseSubcategory
+│   ├── citations.py         # CitationSpan, normalize_citation_key
+│   ├── ingestion.py         # IngestJob, IngestTask, DocumentRecord (distributed)
+│   ├── filters.py           # Filter AST for metadata queries
+│   └── errors.py            # Domain exceptions
 │
-├── ports/               # Abstract interfaces (Protocol classes)
-│   ├── chunker.py       # Chunker protocol
-│   ├── embedder.py      # Embedder protocol
-│   ├── retriever.py     # Retriever protocol
-│   ├── reranker.py      # Reranker protocol
+├── ports/                   # Abstract interfaces (Protocol classes)
+│   ├── chunker.py           # Chunker protocol
+│   ├── embedder.py          # Embedder protocol
+│   ├── retriever.py         # Retriever protocol
+│   ├── reranker.py          # Reranker protocol
 │   ├── context_builder.py
 │   ├── generator.py
 │   ├── vector_store.py
 │   ├── logger.py
+│   ├── nrc_adams_client.py  # NRC ADAMS API protocol
+│   ├── ingest_job_store.py  # Distributed ingestion state
+│   ├── raw_document_store.py
+│   ├── task_queue.py        # SQS task distribution
 │   └── ...
 │
-├── adapters/            # Concrete implementations
-│   ├── chunking/        # Fixed, ObsidianStructural, ObsidianProposition
-│   │   └── _markdown.py # Shared markdown parsing infrastructure
-│   ├── embedding/       # OpenAI, Dummy, SQLite cache
-│   ├── generation/      # OpenAI chat
-│   ├── ingestion/       # Filesystem, loaders
-│   ├── chunk_storage/   # S3ChunkStore
-│   ├── retrieval/       # VectorRetriever, HydratingRetriever
-│   ├── reranking/       # Heuristic, NoOp
-│   ├── vectorstores/    # JSONL, in-memory
-│   ├── context_building/ # Simple, PropositionAware
-│   │   └── _shared.py   # Shared utilities (token estimation, dedupe)
+├── adapters/                # Concrete implementations
+│   ├── ingestion/
+│   │   ├── regulatory/      # eCFR parser, normalizer, cross-references, metadata
+│   │   ├── case/            # ADAMS fetcher, classifier, citation extractor, text normalizer
+│   │   ├── loaders/         # ObsidianMarkdownLoader, TextLoader
+│   │   └── filesystem.py    # FilesystemIngestor
+│   ├── query_generation/    # Term mapper, case query generator
+│   ├── chunking/            # Fixed, ObsidianStructural, ObsidianProposition
+│   │   └── _markdown.py     # Shared markdown parsing infrastructure
+│   ├── embedding/           # OpenAI, Dummy, SQLite cache
+│   ├── generation/          # OpenAI chat
+│   ├── chunk_storage/       # S3ChunkStore
+│   ├── retrieval/           # VectorRetriever, BM25, Hybrid, HydratingRetriever
+│   ├── reranking/           # Heuristic, NoOp
+│   ├── vectorstores/        # JSONL, in-memory, Qdrant
+│   ├── context_building/    # Simple, PropositionAware
+│   │   └── _shared.py       # Shared utilities (token estimation, dedupe)
+│   ├── persistence/         # PostgresIngestJobStore
+│   ├── corpus/              # S3RawDocumentStore
 │   ├── logging/
 │   └── filters/
 │
-├── app/                 # Application orchestration
-│   ├── container.py     # Dependency injection
-│   ├── pipeline.py      # Core functions
-│   └── query_runner.py  # Full pipeline with tracing
+├── app/                     # Application orchestration
+│   ├── container.py         # Dependency injection
+│   ├── pipeline.py          # Core functions
+│   ├── query_runner.py      # Full pipeline with tracing
+│   ├── regulatory_pipeline.py  # eCFR normalization + S3 upload workflows
+│   └── ingestion/           # Distributed ingestion (enumerator, worker, worker_loop)
 │
-├── eval/                # Evaluation framework
-│   ├── schema.py        # EvalQuery, QueryType, Difficulty
-│   └── models.py        # EvalResult, RetrievalSummary
+├── eval/                    # Evaluation framework
+│   ├── schema.py            # EvalQuery, QueryType, Difficulty
+│   ├── models.py            # EvalResult, RetrievalSummary
+│   ├── harness.py           # Eval execution engine
+│   └── verdict_thresholds.py # Release gating thresholds
 │
-└── settings.py          # Configuration loading
+└── settings.py              # Configuration loading
 ```
 
 ---

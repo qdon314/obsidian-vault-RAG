@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Complete reference for configuration in the RAG system.
+Complete reference for configuration in the Regulatory Corpus RAG system.
 
 ## Table of Contents
 
@@ -8,6 +8,19 @@ Complete reference for configuration in the RAG system.
 - [Configuration Precedence](#configuration-precedence)
 - [Environment Variables](#environment-variables)
 - [Settings Sections](#settings-sections)
+  - [paths](#paths)
+  - [ingestion](#ingestion)
+  - [chunking](#chunking)
+  - [context](#context)
+  - [embeddings](#embeddings)
+  - [vectorstore](#vectorstore)
+  - [retrieval](#retrieval)
+  - [rerank](#rerank)
+  - [chunk_storage](#chunk_storage)
+  - [distributed_ingestion](#distributed_ingestion)
+  - [nrc_adams](#nrc_adams)
+  - [case_ingestion](#case_ingestion)
+  - [llm](#llm)
 - [Eval Verdict Thresholds](#eval-verdict-thresholds)
 - [CLI Overrides](#cli-overrides)
 
@@ -60,7 +73,7 @@ index_dir = "artifacts/indexes/obsidian"
 
 | Option | Type | Default in `settings.toml` | Notes |
 |--------|------|-----------------------------|-------|
-| `vault_dir` | path | required | Corpus root |
+| `vault_dir` | path | required | Corpus root directory |
 | `artifacts_dir` | path | `artifacts` | Output root |
 | `queries_file` | path | `eval/datasets/curated_queries.jsonl` | Eval/query dataset path |
 | `index_dir` | path | `artifacts/indexes/obsidian` | Default index location |
@@ -259,6 +272,39 @@ enabled = false
 | `max_task_retries` | int | `3` | Retry budget setting (policy hook; not fully enforced yet) |
 
 When `enabled = true`, set `postgres_dsn`, `sqs_queue_url`, and `corpus_s3_bucket`.
+
+### `[nrc_adams]`
+
+```toml
+[nrc_adams]
+base_url = "https://adams-api.nrc.gov/aps/api"
+timeout = 30.0
+page_size = 100
+max_retries = 3
+# subscription_key comes from env var NRC_ADAMS_API_KEY (see .env.example)
+```
+
+| Option | Type | Default | Notes |
+|--------|------|---------|-------|
+| `base_url` | string | `"https://adams-api.nrc.gov/aps/api"` | ADAMS Public Search API base URL |
+| `timeout` | float | `30.0` | Request timeout (seconds) |
+| `page_size` | int | `100` | Results per API page |
+| `max_retries` | int | `3` | Retry attempts for failed requests |
+
+The ADAMS API subscription key is read from the `NRC_ADAMS_API_KEY` environment variable.
+
+### `[case_ingestion]`
+
+```toml
+[case_ingestion]
+output_dir = "corpus/us-nrc/cases"
+document_types = ["Inspection Report", "Special Inspection", "Part 21 Correspondence"]
+```
+
+| Option | Type | Default | Notes |
+|--------|------|---------|-------|
+| `output_dir` | path | `"corpus/us-nrc/cases"` | Directory for fetched case documents |
+| `document_types` | list[string] | `["Inspection Report", ...]` | ADAMS document types to fetch |
 
 ### `[llm]`
 

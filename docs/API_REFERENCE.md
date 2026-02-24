@@ -1,10 +1,11 @@
 # API Reference
 
-Complete reference documentation for all ports (interfaces), domain models, and adapters in the RAG system.
+Complete reference documentation for all ports (interfaces), domain models, and adapters in the Regulatory Corpus RAG system.
 
 ## Table of Contents
 
 - [Domain Models](#domain-models)
+- [Regulatory Domain Models](#regulatory-domain-models)
 - [Ports (Interfaces)](#ports-interfaces)
 - [Filter System](#filter-system)
 - [Evaluation Schema](#evaluation-schema)
@@ -197,6 +198,146 @@ class IngestReport:
     failed: int
     by_extension: Mapping[str, int] = field(default_factory=dict)
 ```
+
+---
+
+## Regulatory Domain Models
+
+### CaseDocument
+
+**Location:** `src/rag/domain/case_documents.py`
+
+An NRC case document fetched from the ADAMS API, with parsed dates and enriched metadata.
+
+```python
+@dataclass(frozen=True, slots=True)
+class CaseDocument:
+    accession_number: str       # e.g. "ML12345A678"
+    title: str
+    document_type: str          # raw ADAMS document type string
+    document_date: datetime | None = None
+    content: str | None = None
+    author_name: str | None = None
+    author_affiliation: str | None = None
+    addressee: str | None = None
+    addressee_affiliation: str | None = None
+    docket_numbers: tuple[str, ...] = ()
+    license_numbers: tuple[str, ...] = ()
+    keywords: tuple[str, ...] = ()
+    url: str | None = None
+    estimated_pages: int | None = None
+    case_metadata: CaseMetadata = field(default_factory=CaseMetadata)
+```
+
+### CaseMetadata
+
+Classification results, extracted regulatory references, and provenance signals.
+
+```python
+@dataclass(frozen=True, slots=True)
+class CaseMetadata:
+    case_category: CaseCategory = CaseCategory.UNKNOWN
+    case_subcategory: CaseSubcategory = CaseSubcategory.UNKNOWN
+    case_category_method: str = "rules"
+    case_category_confidence: float = 0.0
+    case_category_reasons: tuple[str, ...] = ()
+    case_signals: tuple[str, ...] = ()
+    regulation_parts: tuple[str, ...] = ()
+    regulation_sections: tuple[str, ...] = ()
+    dockets: tuple[str, ...] = ()
+    citation_keys: tuple[str, ...] = ()
+    citation_spans: tuple[Mapping[str, object], ...] = ()
+```
+
+**Methods:**
+- `validate()` -- Checks that subcategory matches category
+- `to_dict()` -- Flattens to JSON-safe dict for storage in `Document.metadata`
+
+### CaseCategory / CaseSubcategory
+
+Top-level and fine-grained classification enums for NRC case documents.
+
+```python
+class CaseCategory(StrEnum):
+    UNKNOWN = "unknown"
+    LICENSING = "licensing"
+    INSPECTION = "inspection"
+    ENFORCEMENT = "enforcement"
+    ADJUDICATION = "adjudication"
+    RULEMAKING = "rulemaking"
+    GENERIC_COMMUNICATION = "generic_communication"
+    VENDOR_PART21 = "vendor_part21"
+    DECOMMISSIONING = "decommissioning"
+    INCIDENT = "incident"
+    SECURITY = "security"
+    OPERATIONS = "operations"
+    QUALITY_ASSURANCE = "quality_assurance"
+```
+
+Subcategory values are namespaced by parent category (e.g., `enforcement_notice_of_violation`). Sentinel values `UNKNOWN` and `OTHER` are valid under any category.
+
+### CaseClassification
+
+Result of classifying a case document.
+
+```python
+@dataclass(frozen=True, slots=True)
+class CaseClassification:
+    category: CaseCategory
+    subcategory: CaseSubcategory
+    confidence: float
+    method: str           # "rules" | "llm" | "manual"
+    reasons: tuple[str, ...] = ()
+```
+
+### CitationSpan
+
+**Location:** `src/rag/domain/citations.py`
+
+A single citation extracted from document text, with span offsets and confidence scoring.
+
+```python
+@dataclass(frozen=True, slots=True)
+class CitationSpan:
+    kind: str             # "cfr" | "cfrpart" | "cfrapp" | "docket" | "adams" | "nureg" | "ris" | "gl" | "in"
+    raw: str              # exact matched text
+    key: str              # canonical key (stable, for dedup/linking)
+    start: int            # span start in normalized text
+    end: int              # span end in normalized text
+    confidence: float     # 0.0-1.0 (deterministic scoring)
+    source_field: str     # "title" | "content" | "metadata"
+    context: str | None = None   # short context window for debugging
+    attrs: dict[str, object] = field(default_factory=dict)  # parsed structure
+```
+
+**Canonical key format:** `{kind}:{identifier}` (e.g., `cfr:10:50.46`, `docket:50-247`, `adams:ML12345A678`)
+
+### FetchReport
+
+Summary statistics from a case-document fetch run.
+
+```python
+@dataclass(frozen=True, slots=True)
+class FetchReport:
+    total_requested: int
+    fetched: int
+    skipped: int
+    failed: int
+    by_document_type: Mapping[str, int] = field(default_factory=dict)
+    errors: Sequence[str] = field(default_factory=tuple)
+```
+
+### Distributed Ingestion Models
+
+**Location:** `src/rag/domain/ingestion.py`
+
+| Model | Purpose |
+|-------|---------|
+| `IngestJob` | Top-level job state for a corpus indexing run |
+| `IngestTask` | Single-document task with lease/attempt/error fields |
+| `DocumentRecord` | Corpus-of-record pointer (`s3_raw_key`) and content hash |
+| `JobStatus` | `CREATED`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED` |
+| `TaskStatus` | `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED`, `RETRYABLE` |
 
 ---
 
@@ -483,6 +624,45 @@ class QueryLogger(Protocol):
 - `trace`: QueryTrace object to persist
 
 **Implementations:** `JsonlQueryLogger`
+
+---
+
+### NrcAdamsClient
+
+**Location:** `src/rag/ports/nrc_adams_client.py`
+
+Port for NRC ADAMS Public Search API interactions.
+
+```python
+class NrcAdamsClient(Protocol):
+    def search_documents(
+        self,
+        query: str = "",
+        *,
+        filters: list[dict[str, object]] | None = None,
+        any_filters: list[dict[str, object]] | None = None,
+        sort_by: str = "DocumentDate",
+        sort_desc: bool = True,
+        metadata: Mapping[str, object] | None = None,
+    ) -> Iterator[AdamsSearchResult]:
+        """Search for documents with automatic pagination."""
+        ...
+
+    def get_document(
+        self,
+        accession_number: str,
+        *,
+        metadata: Mapping[str, object] | None = None,
+    ) -> AdamsDocument | None:
+        """Fetch a single document by accession number."""
+        ...
+```
+
+**Data types:**
+- `AdamsSearchResult` -- A single result from an ADAMS search query (accession number, title, document type, date)
+- `AdamsDocument` -- Full document with content, docket numbers, license numbers, keywords
+
+**Implementations:** `HttpAdamsClient` (`src/rag/adapters/ingestion/case/http_client.py`)
 
 ---
 

@@ -41,11 +41,11 @@ You also need:
    # Edit .env and set OPENAI_API_KEY=sk-...
    ```
 
-2. Mount your Obsidian vault (or any markdown corpus). Edit `docker-compose.yml` and uncomment the volume line under the `app` service:
+2. Mount your corpus directory. Edit `docker-compose.yml` and uncomment the volume line under the `app` service:
 
    ```yaml
    volumes:
-     - /path/to/your/vault:/data/vault:ro
+     - /path/to/your/corpus:/data/vault:ro
    ```
 
 3. Start Qdrant:
@@ -92,7 +92,7 @@ docker compose run --rm app help
 docker compose run --rm app build-index --corpus /data/vault --index-name my_index
 
 # Query
-docker compose run --rm app query --q "What is hexagonal architecture?"
+docker compose run --rm app query --q "What are the ECCS acceptance criteria under 10 CFR 50.46?"
 
 # Run arbitrary commands inside the container
 docker compose run --rm app bash
@@ -120,7 +120,7 @@ Environment variables use the pattern `RAG_<SECTION>__<KEY>=<value>` (note the *
 # Vector store configuration
 RAG_VECTORSTORE__BACKEND=qdrant
 RAG_VECTORSTORE__QDRANT_URL=http://qdrant:6333
-RAG_VECTORSTORE__QDRANT_COLLECTION=obsidian
+RAG_VECTORSTORE__QDRANT_COLLECTION=regulatory
 
 # Retrieval tuning
 RAG_RETRIEVAL__TOP_K=12

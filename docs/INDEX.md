@@ -1,6 +1,6 @@
 # Documentation Index
 
-Welcome to the Obsidian Vault RAG system documentation.
+Welcome to the Regulatory Corpus RAG system documentation.
 
 ## Quick Links
 
@@ -14,6 +14,7 @@ Welcome to the Obsidian Vault RAG system documentation.
 | [API Reference](API_REFERENCE.md) | Domain models and ports |
 | [Adapters](ADAPTERS.md) | Implementation details |
 | [Evaluation](evaluation/README.md) | Evaluation system and workflows |
+| [Deployment](DEPLOYMENT.md) | Docker, CI/CD, and AWS deployment |
 
 ---
 
@@ -31,6 +32,7 @@ Welcome to the Obsidian Vault RAG system documentation.
 
 Practical guide for using the system:
 - Installation and setup
+- Regulatory corpus ingestion (eCFR, NRC case documents)
 - Building indexes
 - Querying the system
 - Running evaluations
@@ -40,7 +42,7 @@ Practical guide for using the system:
 ### [Configuration Reference](CONFIGURATION.md)
 
 Complete configuration documentation:
-- settings.toml sections
+- settings.toml sections (including NRC ADAMS and case ingestion)
 - Environment variables
 - CLI overrides
 - Example configurations
@@ -49,9 +51,10 @@ Complete configuration documentation:
 
 System design and patterns:
 - Hexagonal architecture
-- Component relationships
-- Data flow diagrams (Mermaid)
-- Design principles
+- Regulatory ingestion pipeline (eCFR XML, ADAMS API)
+- Query pipeline (retrieve -> rerank -> context build -> generate -> trace)
+- Distributed ingestion architecture
+- Component relationships and data flow diagrams (Mermaid)
 
 ### [Distributed Ingestion Runbook](operations/distributed-ingestion.md)
 
@@ -64,7 +67,7 @@ Operational guidance for distributed ingestion:
 ### [API Reference](API_REFERENCE.md)
 
 Programmatic interface documentation:
-- Domain models (Document, Chunk, Answer, etc.)
+- Domain models (Document, Chunk, Answer, CaseDocument, CitationSpan, etc.)
 - Port interfaces (protocols)
 - Filter system
 - Evaluation schema
@@ -72,12 +75,8 @@ Programmatic interface documentation:
 ### [Adapters Reference](ADAPTERS.md)
 
 Concrete implementation details:
-- Chunking adapters
-- Embedding adapters
-- Vector stores
-- Rerankers
-- Context builders
-- Generators
+- Regulatory ingestion adapters (eCFR parser, normalizer, cross-references, citation extractor)
+- Chunking, embedding, vector store, retrieval, reranking, context building, generation adapters
 
 ### [Evaluation System](evaluation/README.md)
 
@@ -86,6 +85,15 @@ Comprehensive evaluation documentation:
 - [Metrics Reference](evaluation/metrics.md) - Retrieval and answer metrics
 - [Traces and Logging](evaluation/traces_and_logging.md) - Observability and debugging
 - [Results Analyzer](evaluation/results_analyzer.md) - Interactive run analysis UI
+- [Verdict and Release Gating](evaluation/verdict_release_gating.md) - SHIP/BLOCK decision layer
+
+### [Deployment Guide](DEPLOYMENT.md)
+
+Infrastructure and operations:
+- Local development with Docker Compose
+- CI/CD via GitHub Actions (lint, typecheck, test, eval gate)
+- AWS deployment via Terraform (ECS Fargate, ECR, S3, SQS, RDS)
+- Scale-to-zero cost management
 
 ---
 
@@ -95,55 +103,65 @@ Comprehensive evaluation documentation:
 
 ```
 src/rag/
-├── domain/           # Core data models
-├── ports/            # Abstract interfaces
+├── domain/           # Core data models (Document, Chunk, CaseDocument, CitationSpan, ...)
+├── ports/            # Abstract interfaces (Protocol classes)
 ├── adapters/         # Concrete implementations
+│   ├── ingestion/
+│   │   ├── regulatory/   # eCFR XML parser, normalizer, cross-references, metadata enrichment
+│   │   └── case/         # NRC ADAMS case document fetcher, classifier, citation extractor
+│   ├── query_generation/ # Term mapper, case query generator
+│   ├── chunking/         # Fixed, structural, proposition-based
+│   ├── embedding/        # OpenAI, dummy, SQLite cache
+│   ├── retrieval/        # Vector, BM25, hybrid, hydrating
+│   ├── reranking/        # Heuristic, no-op
+│   ├── context_building/ # Simple, proposition-aware
+│   ├── generation/       # OpenAI chat
+│   ├── vectorstores/     # JSONL, in-memory, Qdrant
+│   ├── chunk_storage/    # S3 + Postgres
+│   └── ...
 ├── app/              # Pipeline orchestration
+│   ├── container.py       # Dependency injection
+│   ├── query_runner.py    # Full pipeline with tracing
+│   ├── regulatory_pipeline.py  # eCFR normalization workflows
+│   └── ingestion/         # Distributed ingestion (enumerator, worker)
 ├── eval/             # Evaluation framework
 └── settings.py       # Configuration loading
 ```
 
-### Work Item Specs
-
-Implementation-ready specifications for upcoming features:
-
-| Spec | Description | Priority |
-|------|-------------|----------|
-| [Regulatory Corpus Ingestion](specs/04-regulatory-corpus-ingestion.md) | Regulatory XML ingestion and normalization | P0 |
-| [Dependency Cleanup](specs/05-dependency-cleanup.md) | Remove stale deps and simplify runtime requirements | P1 |
-| [Query Changes Enhancement](specs/06-query-changes-enhancement.md) | Better per-query run diff and diagnostics | P1 |
-| [Production Regulatory RAG](specs/production-regulatory-rag.md) | Production hardening plan for regulatory workflow | P1 |
-| [Agentic Growth System](specs/AGENTIC_GROWTH_SYSTEM_SPEC.md) | Long-horizon capability growth framework | P2 |
-
 ### Key Commands
 
 ```bash
-# Build an index
-./scripts/py scripts/build_index.py --corpus ~/vault --index-name my_index
+# Index regulatory corpus (eCFR)
+make index-regulatory REGULATORY_XML=data/ecfr/title-10-part-50.xml REGULATORY_PART=50
 
 # Query the system
-./scripts/py scripts/ask.py --index my_index --q "What is X?"
+make ask QUERY="What are the requirements for ECCS under 10 CFR 50.46?"
 
 # Run evaluation
 ./scripts/py eval/scripts/run_eval.py --queries eval/datasets/curated_queries.jsonl
 
 # Results analyzer UI
 make results
+
+# Release verdict
+make verdict
 ```
 
 ### Configuration Quick Start
 
 ```toml
 # settings.toml
-[paths]
-vault_dir = "~/obsidian-vault"
+[vectorstore]
+backend = "qdrant"
+qdrant_collection = "regulatory"
+qdrant_url = "http://localhost:6333"
 
 [embeddings]
 backend = "openai"
 model = "text-embedding-3-large"
 
 [retrieval]
-top_k = 8
+top_k = 10
 
 [rerank]
 enabled = true
@@ -157,4 +175,4 @@ keep_k = 4
 - [README](../README.md) - Project overview and quick start
 - [AGENTS.md](../AGENTS.md) - Repository command discipline and agent guidance
 - [Notes: Infrastructure](notes/INFRASTRUCTURE.md) - Deep dive on Docker, CI/CD, Terraform, and AWS architecture
-- [Notes: Distributed Ingestion Tools and Techniques](notes/DISTRIBUTED_INGESTION_TOOLS_AND_TECHNIQUES.md) - Implementation patterns and reliability techniques used in Phase 3
+- [Notes: Distributed Ingestion Tools and Techniques](notes/DISTRIBUTED_INGESTION_TOOLS_AND_TECHNIQUES.md) - Implementation patterns and reliability techniques

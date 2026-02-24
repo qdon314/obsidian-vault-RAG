@@ -1,9 +1,11 @@
 # Adapters Reference
 
-Complete documentation for all adapter implementations in the RAG system. Adapters are concrete implementations of the port interfaces.
+Complete documentation for all adapter implementations in the Regulatory Corpus RAG system. Adapters are concrete implementations of the port interfaces.
 
 ## Table of Contents
 
+- [Regulatory Ingestion Adapters](#regulatory-ingestion-adapters)
+- [Case Document Adapters](#case-document-adapters)
 - [Chunking Adapters](#chunking-adapters)
 - [Embedding Adapters](#embedding-adapters)
 - [Vector Store Adapters](#vector-store-adapters)
@@ -14,6 +16,202 @@ Complete documentation for all adapter implementations in the RAG system. Adapte
 - [Ingestion Adapters](#ingestion-adapters)
 - [Logging Adapters](#logging-adapters)
 - [Chunk Storage Adapters](#chunk-storage-adapters)
+
+---
+
+## Regulatory Ingestion Adapters
+
+Specialized adapters for ingesting and normalizing U.S. nuclear regulatory text (10 CFR).
+
+### eCFR XML Parser
+
+**Location:** `src/rag/adapters/ingestion/regulatory/ecfr_parser.py`
+
+Parses raw eCFR XML into structured `ParsedSection` / `ParsedParagraph` objects without performing any rendering. The eCFR XML hierarchy is `DIV5 (PART) -> DIV8 (SECTION) -> P/FP (paragraph)`.
+
+```python
+@dataclass(frozen=True, slots=True)
+class ParsedSection:
+    section_number: str    # e.g. "50.36"
+    title: str             # human-readable title
+    part_number: str       # e.g. "50"
+    paragraphs: tuple[ParsedParagraph, ...] = ()
+
+@dataclass(frozen=True, slots=True)
+class ParsedParagraph:
+    text: str              # full paragraph text, whitespace normalized
+    level: int             # nesting depth (0 = no subsection prefix)
+    prefix: str | None     # raw prefix value, e.g. "a", "1", "iv"
+    subsection_tokens: tuple[str, ...] = ()  # full chain, e.g. ("a", "1", "i")
+```
+
+**Features:**
+- Extracts sections from `DIV5 TYPE=PART -> DIV8 TYPE=SECTION` elements
+- Classifies paragraph nesting levels using the CFR subsection hierarchy (letter -> digit -> roman -> uppercase)
+- Strips footnotes and superscript tags while preserving body text
+- Returns structured data suitable for rendering by the normalizer
+
+**Usage:**
+```python
+from rag.adapters.ingestion.regulatory.ecfr_parser import parse_ecfr_xml
+
+sections = parse_ecfr_xml(xml_text)
+# Returns: list[ParsedSection] with part numbers, section numbers, titles, and paragraphs
+```
+
+### Section Normalizer
+
+**Location:** `src/rag/adapters/ingestion/regulatory/normalizer.py`
+
+Converts `ParsedSection` objects into canonical markdown files with YAML frontmatter, cross-reference wikilinks, and subsection markers promoted to markdown headings (for structural chunking).
+
+```python
+@dataclass(frozen=True, slots=True)
+class NormalizationConfig:
+    regime: str             # e.g. "us-nrc"
+    instrument: str         # e.g. "10-CFR"
+    instrument_version: str # e.g. "2025-01-17"
+    source_url: str         # eCFR API URL the XML was fetched from
+    source_revision: str    # git-friendly revision identifier
+    effective_date: str     # regulatory effective date
+```
+
+**Output format:**
+```markdown
+---
+regime: "us-nrc"
+instrument: "10-CFR"
+part: "50"
+section: "50.46"
+title: "Acceptance criteria for emergency core cooling systems"
+citation_key: "10 CFR §50.46"
+cross_references: ["10 CFR §50.34", "10 CFR §50.36"]
+---
+
+# 10 CFR §50.46 — Acceptance criteria for emergency core cooling systems
+
+## (a)
+Each boiling or pressurized light-water nuclear power reactor ...
+
+### (a)(1)
+Peak cladding temperature...
+```
+
+**Key behaviors:**
+- Rewrites bare CFR references to wikilinks (`§ 50.36` -> `[[10 CFR §50.36]]`)
+- Extracts cross-references into frontmatter for graph linking
+- Promotes subsection markers `(a)`, `(1)`, `(i)` to markdown headings so the structural chunker can split on them
+
+### Cross-Reference Utilities
+
+**Location:** `src/rag/adapters/ingestion/regulatory/cross_references.py`
+
+Shared building blocks for CFR cross-reference detection and rewriting:
+
+| Function | Purpose |
+|----------|---------|
+| `extract_cross_references(text)` | Return canonical CFR citation keys referenced in text |
+| `rewrite_cross_references_to_wikilinks(text)` | Rewrite bare `§ 50.36` references to `[[10 CFR §50.36]]` wikilinks |
+| `section_sort_key(section)` | Natural sort key for section numbers (`50.2 < 50.10 < 50.10a`) |
+
+### Metadata Enrichment
+
+**Location:** `src/rag/adapters/ingestion/regulatory/metadata.py`
+
+Stamps regulatory-specific metadata onto chunks after structural chunking:
+
+| Metadata Key | Description |
+|--------------|-------------|
+| `citation_key` | Section-level citation (e.g., `10 CFR §50.36`) |
+| `citation` | Chunk-specific citation with subsection markers (e.g., `10 CFR §50.36(c)(2)(ii)`) |
+| `cross_references` | List of other CFR sections referenced by this chunk |
+
+**Usage:**
+```python
+from rag.adapters.ingestion.regulatory.metadata import enrich_regulatory_chunk_metadata
+
+enriched = enrich_regulatory_chunk_metadata(
+    chunk.metadata,
+    section_heading=chunk.section_heading,
+    section_path=chunk.section_path,
+)
+```
+
+Only activates when `corpus == "regulatory"` in chunk metadata. Non-regulatory chunks pass through unchanged.
+
+---
+
+## Case Document Adapters
+
+Adapters for fetching, classifying, and normalizing NRC case documents from the ADAMS Public Search API.
+
+### CaseDocumentFetcher
+
+**Location:** `src/rag/adapters/ingestion/case/fetcher.py`
+
+Orchestrates the full fetch pipeline for NRC case documents. Supports two modes:
+
+| Mode | Description |
+|------|-------------|
+| **Discovery** | Searches ADAMS by document type and date range, then fetches each result |
+| **Direct** | Fetches explicit accession numbers |
+
+```python
+@dataclass(frozen=True, slots=True)
+class CaseDocumentFetcher:
+    client: NrcAdamsClient    # Port dependency
+    config: FetchConfig
+
+    def fetch(self, *, accessions: Sequence[str] | None = None) -> FetchReport: ...
+```
+
+**Pipeline per document:** ADAMS API fetch -> `adams_document_to_case_document()` -> `normalize_case_document_to_markdown()` -> write to `{output_dir}/{YYYY-MM}/{accession}.md`
+
+**Installation:** `./scripts/pip install -e ".[nrc]"`
+
+### Citation Extractor
+
+**Location:** `src/rag/adapters/ingestion/case/citation_extractor.py`
+
+Composable citation span extractors for NRC case documents. Each extractor targets a specific citation type:
+
+| Extractor | Kind | Example Match | Confidence |
+|-----------|------|---------------|------------|
+| `extract_cfr_sections()` | `cfr` | `10 CFR 50.46(b)(1)` | 0.95 |
+| `extract_cfr_parts()` | `cfrpart` | `10 CFR Part 50`, `Part 50` | 0.70-0.90 |
+| `extract_cfr_appendices()` | `cfrapp` | `10 CFR Part 50, Appendix B` | 0.90 |
+| `extract_dockets()` | `docket` | `Docket No. 50-247`, `05000247` | 0.75-0.90 |
+| `extract_adams_accessions()` | `adams` | `ML12345A678` | 0.60-0.90 |
+| `extract_nuregs()` | `nureg` | `NUREG-0800 Rev. 5` | 0.90 |
+| `extract_generic_communications()` | `ris`/`gl`/`in` | `RIS 2004-03`, `Generic Letter 2004-01` | 0.90 |
+
+**High-level API:**
+```python
+from rag.adapters.ingestion.case.citation_extractor import extract_all_citations
+
+result = extract_all_citations(text, high_confidence_only=True, confidence_threshold=0.85)
+# result.spans: deduplicated CitationSpan objects
+# result.unique_keys: frozenset of canonical keys
+# result.by_kind: dict grouped by citation type
+```
+
+### Text Normalizer
+
+**Location:** `src/rag/adapters/ingestion/case/text_normalizer.py`
+
+Cleans raw case document text for downstream processing: OCR artifact removal, whitespace normalization, formatting standardization.
+
+### Document Adapter
+
+**Location:** `src/rag/adapters/ingestion/case/document_adapter.py`
+
+Converts `AdamsDocument` (from the ADAMS API port) to the domain `CaseDocument` with parsed dates and enriched metadata, then to the generic `Document` model for indexing.
+
+### HTTP Client
+
+**Location:** `src/rag/adapters/ingestion/case/http_client.py`
+
+Concrete adapter implementing the `NrcAdamsClient` protocol using `httpx`. Handles pagination, retry, and authentication with the ADAMS Public Search API.
 
 ---
 

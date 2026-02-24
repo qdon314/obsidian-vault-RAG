@@ -1,12 +1,13 @@
 # User Guide
 
-Practical guide to build an index, ask questions, run evaluations, and inspect results.
+Practical guide to ingest regulatory corpora, build indexes, ask questions, run evaluations, and inspect results.
 
 ## Prerequisites
 
 - Python 3.11+
 - Local virtual environment at `.venv`
 - `OPENAI_API_KEY` when using OpenAI embeddings/generation
+- `NRC_ADAMS_API_KEY` when fetching NRC case documents (optional)
 
 ## Setup
 
@@ -20,7 +21,7 @@ source .venv/bin/activate
 2. Install dependencies using repo wrappers.
 
 ```bash
-./scripts/pip install -e ".[dev,openai]"
+./scripts/pip install -e ".[dev,openai,qdrant]"
 ```
 
 3. Set your API key.
@@ -29,7 +30,70 @@ source .venv/bin/activate
 export OPENAI_API_KEY='sk-your-api-key-here'
 ```
 
-## Build an Index
+## Regulatory Corpus Ingestion
+
+### Index eCFR (Code of Federal Regulations)
+
+The primary corpus is 10 CFR, ingested from eCFR XML. This normalizes each section into canonical markdown, enriches metadata with cross-references and citation keys, then chunks and indexes.
+
+```bash
+# Index 10 CFR Part 50 from eCFR XML
+make index-regulatory \
+  REGULATORY_XML=data/ecfr/title-10-part-50.xml \
+  REGULATORY_PART=50
+```
+
+With dummy embeddings (no API cost, for development):
+
+```bash
+make index-regulatory-dummy
+```
+
+#### Normalize Only (No Indexing)
+
+To produce canonical markdown files without embedding and indexing:
+
+```bash
+make normalize-regulatory \
+  REGULATORY_XML=data/ecfr/title-10-part-50.xml \
+  REGULATORY_PART=50
+```
+
+#### Push Normalized Corpus to S3
+
+```bash
+make push-regulatory-s3 \
+  REGULATORY_S3_BUCKET=my-bucket \
+  REGULATORY_S3_PREFIX=regulatory/part-50 \
+  REGULATORY_PART=50
+```
+
+### Fetch NRC Case Documents
+
+Fetch case documents from the NRC ADAMS Public Search API:
+
+```bash
+export NRC_ADAMS_API_KEY='your-key-here'
+./scripts/py scripts/fetch_nrc_cases.py
+```
+
+Configuration in `settings.toml`:
+
+```toml
+[case_ingestion]
+output_dir = "corpus/us-nrc/cases"
+document_types = ["Inspection Report", "Special Inspection", "Part 21 Correspondence"]
+```
+
+### Generate Evaluation Queries from Case Documents
+
+```bash
+./scripts/py scripts/generate_case_queries.py
+```
+
+## Build a General Index
+
+For non-regulatory corpora (markdown, text files):
 
 Use `make` (recommended):
 
@@ -41,7 +105,7 @@ Or run directly with the pinned interpreter:
 
 ```bash
 ./scripts/py scripts/build_index.py \
-  --corpus ~/obsidian-vault \
+  --corpus /path/to/corpus \
   --index-name my_index
 ```
 
@@ -55,7 +119,7 @@ make index-dummy
 
 ```bash
 ./scripts/py scripts/build_index.py \
-  --corpus ~/obsidian-vault \
+  --corpus /path/to/corpus \
   --index-name my_index \
   --target-chars 3500 \
   --hard-max-chars 4800 \
@@ -68,15 +132,15 @@ make index-dummy
 Use `make`:
 
 ```bash
-make ask QUERY="What are the main concepts?"
+make ask QUERY="What are the requirements for ECCS under 10 CFR 50.46?"
 ```
 
 Or:
 
 ```bash
 ./scripts/py scripts/ask.py \
-  --index my_index \
-  --q "What are the main concepts?" \
+  --index regulatory \
+  --q "What emergency core cooling system acceptance criteria apply?" \
   --top-k 10 \
   --token-budget 1800
 ```
@@ -88,7 +152,6 @@ Run an eval set:
 ```bash
 ./scripts/py eval/scripts/run_eval.py \
   --queries eval/datasets/curated_queries.jsonl \
-  --index artifacts/indexes/obsidian \
   --run-generation \
   --use-llm-judge \
   --top-k 10 \
@@ -117,6 +180,14 @@ Equivalent pinned command:
 ./scripts/py -m streamlit run eval/app/results_analyzer.py
 ```
 
+## Curate Evaluation Queries
+
+Launch the query curator UI:
+
+```bash
+make curate
+```
+
 ## Logs and Traces
 
 Query traces are written to:
@@ -128,6 +199,21 @@ View recent traces:
 
 ```bash
 tail -f artifacts/logs/traces.jsonl | jq .
+```
+
+## Remote Operations (ECS)
+
+For distributed ingestion and remote evaluation on AWS:
+
+```bash
+# Distributed ingestion
+make ingest-remote CORPUS_ID=regulatory WORKERS=3
+
+# Remote evaluation
+make eval-remote
+
+# Remote ad-hoc query
+make query-remote QUERY="What does 10 CFR 50.46 require?"
 ```
 
 ## Troubleshooting
