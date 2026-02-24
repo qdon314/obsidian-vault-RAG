@@ -67,24 +67,61 @@ TASK_ARN=$(aws ecs run-task \
 TASK_ID=$(basename "$TASK_ARN")
 echo ">>> Eval task: $TASK_ID"
 
-# Tail logs
-LOG_GROUP="/ecs/${CLUSTER}/query-eval"
-sleep 10
-aws logs tail "$LOG_GROUP" --follow --format short &
-TAIL_PID=$!
+# Poll until task stops (configurable via EVAL_TIMEOUT, default 30 min)
+TIMEOUT="${EVAL_TIMEOUT:-1800}"
+INTERVAL=30
+ELAPSED=0
 
-aws ecs wait tasks-stopped \
-    --cluster "$CLUSTER" \
-    --tasks "$TASK_ARN" 2>/dev/null || true
+while true; do
+    STATUS=$(aws ecs describe-tasks \
+        --cluster "$CLUSTER" \
+        --tasks "$TASK_ARN" \
+        --query 'tasks[0].lastStatus' \
+        --output text --no-cli-pager)
 
-kill $TAIL_PID 2>/dev/null || true
-wait $TAIL_PID 2>/dev/null || true
+    if [[ "$STATUS" == "STOPPED" ]]; then
+        echo ">>> Task stopped after ${ELAPSED}s"
+        break
+    fi
 
+    if [[ $ELAPSED -ge $TIMEOUT ]]; then
+        echo ">>> ERROR: Task did not stop within ${TIMEOUT}s (last status: $STATUS)"
+        exit 1
+    fi
+
+    echo ">>> Task status: $STATUS (${ELAPSED}s / ${TIMEOUT}s)"
+    sleep "$INTERVAL"
+    ELAPSED=$((ELAPSED + INTERVAL))
+done
+
+# Retrieve exit code and stop reason
 EXIT_CODE=$(aws ecs describe-tasks \
     --cluster "$CLUSTER" \
     --tasks "$TASK_ARN" \
     --query 'tasks[0].containers[0].exitCode' \
     --output text --no-cli-pager)
 
-echo ">>> Eval exited with code: $EXIT_CODE"
-exit "${EXIT_CODE:-1}"
+STOP_REASON=$(aws ecs describe-tasks \
+    --cluster "$CLUSTER" \
+    --tasks "$TASK_ARN" \
+    --query 'tasks[0].stoppedReason' \
+    --output text --no-cli-pager)
+
+echo ">>> Eval exited with code: ${EXIT_CODE:-None}"
+if [[ -n "$STOP_REASON" && "$STOP_REASON" != "None" ]]; then
+    echo ">>> Stop reason: $STOP_REASON"
+fi
+
+# Print recent logs (last 100 lines) for visibility
+LOG_GROUP="/ecs/${CLUSTER}/query-eval"
+echo ""
+echo ">>> Recent logs:"
+aws logs tail "$LOG_GROUP" --since 30m --format short 2>/dev/null | tail -100 || true
+echo ""
+
+if [[ "$EXIT_CODE" == "None" || -z "$EXIT_CODE" ]]; then
+    echo ">>> ERROR: Container exit code unavailable (task may have been killed by ECS)"
+    exit 1
+fi
+
+exit "$EXIT_CODE"
