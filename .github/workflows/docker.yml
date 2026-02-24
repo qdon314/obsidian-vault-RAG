@@ -48,8 +48,12 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: obsidian-rag
           IMAGE_TAG: ${{ github.sha }}
+          SHORT_TAG: $(echo "${{ github.sha }}" | cut -c1-7)
         run: |
+          SHORT_TAG=$(echo $IMAGE_TAG | cut -c1-7)
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$SHORT_TAG
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$SHORT_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest

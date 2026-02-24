@@ -1,7 +1,7 @@
 [project]
-name = "rag-obsidian"
+name = "regulatory-corpus-rag"
 version = "0.1.0"
-description = "Local-first RAG system over an Obsidian vault with retrieval logging and grounded generation"
+description = "Production-grade RAG system for U.S. nuclear regulatory corpora with evaluation gating and distributed ingestion"
 readme = "README.md"
 requires-python = ">=3.11"
 
@@ -14,7 +14,9 @@ keywords = [
   "llm",
   "retrieval",
   "embeddings",
-  "obsidian"
+  "regulatory",
+  "nrc",
+  "evaluation",
 ]
 
 dependencies = [

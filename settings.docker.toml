@@ -38,7 +38,7 @@ dummy_dim = 128
 
 [vectorstore]
 backend = "qdrant"
-qdrant_collection = "obsidian"
+qdrant_collection = "regulatory"
 qdrant_url = "http://qdrant:6333"
 
 [retrieval]
