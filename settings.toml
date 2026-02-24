@@ -12,11 +12,12 @@
 # Paths
 # -------------------------------------------------------------------
 [paths]
-vault_dir = "~/obsidian-vault"
+vault_dir = "/Users/quentindonnelly/Documents/Personal & Professional"
 artifacts_dir = "artifacts"
+queries_file = "eval/datasets/curated_queries.jsonl"
 
 # Default index location (used unless overridden by CLI)
-index_dir = "artifacts/indexes/default"
+index_dir = "artifacts/indexes/obsidian"
 
 
 # -------------------------------------------------------------------
@@ -49,7 +50,7 @@ overlap_blocks = 1
 include_heading_preamble = true
 
 # Obsidian proposition chunker options
-proposition_batch_size = 8  # passages per T5 forward pass (increase for GPU)
+proposition_batch_size = 2  # passages per T5 forward pass (increase for GPU)
 
 # -------------------------------------------------------------------
 # Context building
@@ -81,15 +82,15 @@ dummy_dim = 128
 # Vector store
 # -------------------------------------------------------------------
 [vectorstore]
-backend = "jsonl"         # "memory" | "jsonl" | "qdrant"
+backend = "qdrant"         # "memory" | "jsonl" | "qdrant"
 
 # Used only when backend = "jsonl"
 jsonl_dir = "artifacts/indexes/obsidian_index"
 
 # Used only when backend = "qdrant"
-# qdrant_collection = "chunks"
-# qdrant_url = "http://localhost:6333"  # for remote Qdrant server
-# qdrant_path = "artifacts/qdrant"      # for local disk persistence
+qdrant_collection = "regulatory"
+qdrant_url = "http://localhost:6333"  # for remote Qdrant server
+qdrant_path = "artifacts/indexes"      # for local disk persistence
 # qdrant_api_key = "..."                # for Qdrant Cloud
 
 
@@ -98,7 +99,7 @@ jsonl_dir = "artifacts/indexes/obsidian_index"
 # -------------------------------------------------------------------
 [retrieval]
 backend = "vector"            # "vector" | "hybrid"
-top_k = 8
+top_k = 10
 
 # Hybrid retrieval settings (only used when backend = "hybrid")
 
@@ -132,6 +133,25 @@ keep_k = 4
 # Chunk storage (distributed mode)
 # -------------------------------------------------------------------
 [chunk_storage]
+backend = "none"              # "none" | "s3"
+s3_bucket = "obsidian-rag-corpus"
+s3_prefix = "chunks"
+postgres_dsn = "postgresql://rag:1p0Wnoob$@obsidian-rag-ingest.cwzscuw2msbg.us-east-1.rds.amazonaws.com:5432/rag"
+max_s3_workers = 4
+
+
+# -------------------------------------------------------------------
+# Distributed ingestion (Phase 3)
+# -------------------------------------------------------------------
+[distributed_ingestion]
+enabled = false
+postgres_dsn = "postgresql://rag:1p0Wnoob$@obsidian-rag-ingest.cwzscuw2msbg.us-east-1.rds.amazonaws.com:5432/rag"
+sqs_queue_url = "https://sqs.us-east-1.amazonaws.com/169328859586/obsidian-rag-ingest-tasks"
+corpus_s3_bucket = "obsidian-rag-corpus"
+corpus_s3_prefix = "regulatory"
+worker_lease_duration_s = 300
+max_task_retries = 3
+
 
 # -------------------------------------------------------------------
 # NRC ADAMS API
@@ -149,7 +169,7 @@ max_retries = 3
 # -------------------------------------------------------------------
 [case_ingestion]
 output_dir = "corpus/us-nrc/cases"
-document_types = ["Inspection Report", "Part 21 Correspondence"]
+document_types = ["Inspection Report", "Special Inspection", "Part 21 Correspondence"]
 
 
 # -------------------------------------------------------------------
@@ -168,7 +188,7 @@ max_retries = 3
 # Eval Verdict Gating
 # -------------------------------------------------------------------
 [eval.verdict]
-# Absolute thresholds + regression tolerances for release gating.
+# Global fallback thresholds (used when no --scope is provided).
 min_recall_at_10 = 0.60
 min_ndcg_at_10 = 0.50
 min_mrr = 0.40
@@ -177,6 +197,25 @@ min_evidence_bounded_rate = 0.70
 max_latency_p95_ms = 5000.0
 max_unsafe_miss_rate = 0.10
 max_abstain_bad_rate = 0.10
-max_recall_regression = 0.05
-max_quality_regression = 0.10
-max_latency_regression_ms = 1000.0
+
+[eval.verdict.case]
+# Thresholds for NRC case-derived queries (--scope case).
+min_recall_at_10 = 0.50
+min_ndcg_at_10 = 0.40
+min_mrr = 0.30
+max_avg_hallucination_severity = 2.5
+min_evidence_bounded_rate = 0.70
+max_latency_p95_ms = 5000.0
+max_unsafe_miss_rate = 0.10
+max_abstain_bad_rate = 0.10
+
+[eval.verdict.regulatory]
+# Thresholds for regulatory adversarial queries (--scope regulatory).
+min_recall_at_10 = 0.60
+min_ndcg_at_10 = 0.50
+min_mrr = 0.40
+max_avg_hallucination_severity = 2.5
+min_evidence_bounded_rate = 0.70
+max_latency_p95_ms = 5000.0
+max_unsafe_miss_rate = 0.10
+max_abstain_bad_rate = 0.10

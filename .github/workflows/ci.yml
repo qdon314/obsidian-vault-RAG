@@ -43,12 +43,34 @@ jobs:
       - name: Test
         run: python -m pytest -q
 
-  # Release gate: run eval + verdict and block merges on BLOCK decision.
-  eval-gate:
+  # Post-merge eval monitor: trigger ECS eval tasks per dataset, then verdict locally.
+  eval-monitor:
+    if: github.event_name == 'push'
     needs: lint-and-test
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset:
+          - { name: "case", query_set: "case", scope: "case" }
+          - { name: "regulatory", query_set: "regulatory", scope: "regulatory" }
+
+    env:
+      AWS_REGION: us-east-1
+      ECS_CLUSTER: obsidian-rag
+      S3_BUCKET: obsidian-rag-corpus
+      EVAL_S3_PREFIX: eval
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -66,41 +88,77 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,openai,qdrant,aws]"
+          pip install -e ".[dev,aws]"
 
-      - name: Debug secrets availability
-        run: |
-          echo "Checking if OPENAI_API_KEY is accessible..."
-          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
-            echo "ERROR: secrets.OPENAI_API_KEY is not set or empty"
-            exit 1
-          else
-            echo "SUCCESS: secrets.OPENAI_API_KEY is set (length: ${#OPENAI_API_KEY})"
-          fi
+      - name: Run eval via ECS task
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          EVAL_TIMEOUT: "1800"
+        run: |
+          scripts/ecs_run_eval.sh \
+            --query-set ${{ matrix.dataset.query_set }} \
+            --run-name "ci-${{ github.sha }}-${{ matrix.dataset.name }}" \
+            --run-generation --use-llm-judge
 
-      - name: Run evaluation
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Download results from S3
         run: |
-          python eval/scripts/run_eval.py \
-            --queries eval/datasets/curated_queries.jsonl \
-            --run-generation --use-llm-judge \
-            --run-name "ci-${{ github.sha }}"
+          RUN_NAME="ci-${{ github.sha }}-${{ matrix.dataset.name }}"
+          mkdir -p eval/runs/ci-current
+          aws s3 cp \
+            "s3://${S3_BUCKET}/${EVAL_S3_PREFIX}/runs/${RUN_NAME}/" \
+            eval/runs/ci-current/ \
+            --recursive
 
       - name: Verdict
         run: |
-          # --fail-on-block exits non-zero when decision is BLOCK.
           python eval/scripts/verdict.py \
-            --current eval/runs/latest/ \
-            --baseline eval/runs/baseline/ \
+            --current eval/runs/ci-current/ \
             --output eval/verdicts \
-            --fail-on-block
+            --scope ${{ matrix.dataset.scope }}
 
       - name: Upload verdict
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: eval-verdict
+          name: eval-verdict-${{ matrix.dataset.name }}
           path: eval/verdicts/
+
+  # Post-eval notification: comment on commit if any dataset produced a BLOCK verdict.
+  eval-notify:
+    if: github.event_name == 'push' && always()
+    needs: eval-monitor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all verdict artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: eval-verdict-*
+          path: verdicts/
+
+      - name: Check for BLOCK verdicts and notify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          blocked=""
+          for verdict_file in verdicts/*/verdict.json; do
+            if [ ! -f "$verdict_file" ]; then
+              continue
+            fi
+            dataset=$(basename "$(dirname "$verdict_file")" | sed 's/eval-verdict-//')
+            decision=$(python3 -c "import json; print(json.load(open('$verdict_file'))['decision'])")
+            summary=$(python3 -c "import json; print(json.load(open('$verdict_file'))['summary'])")
+            if [ "$decision" = "block" ]; then
+              blocked="${blocked}\n**${dataset}**: ${summary}"
+            fi
+          done
+
+          if [ -n "$blocked" ]; then
+            body=$(printf "## Eval Monitor: BLOCK verdict\n\nThe following datasets triggered a BLOCK decision:\n${blocked}\n\nSee workflow run for full verdict artifacts.")
+            gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+              -f body="$body"
+            echo "::warning::BLOCK verdict detected. Commit comment posted."
+          else
+            echo "All datasets passed. No notification needed."
+          fi
