@@ -123,9 +123,7 @@ def main() -> None:
     eval_prefix = os.environ.get("RAG_EVAL_S3_PREFIX", "eval")
 
     # ── Sync embedding cache from S3 (before container build) ──────
-    cache_db_path = cfg.embeddings.cache_db_path or (
-        cfg.paths.artifacts_dir / "embedding_cache.db"
-    )
+    cache_db_path = cfg.embeddings.cache_db_path or (cfg.paths.artifacts_dir / "embedding_cache.db")
     cache_s3_key = f"{eval_prefix}/embedding-cache/{cfg.embeddings.model}/embedding_cache.db"
     if cfg.embeddings.cache_embeddings:
         _download_cache_from_s3(bucket, cache_s3_key, cache_db_path)
