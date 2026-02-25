@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
+    PayloadSchemaType,
     PointStruct,
     VectorParams,
 )
@@ -123,7 +124,28 @@ class QdrantVectorStore:
                 ),
             )
 
+        self._ensure_payload_indexes()
         self._initialized = True
+
+    def _ensure_payload_indexes(self) -> None:
+        """Create payload indexes for commonly-filtered fields.
+
+        Idempotent — Qdrant silently ignores duplicate index creation.
+        No-op for local/in-memory mode (qdrant-client emits a UserWarning).
+        """
+        indexes: list[tuple[str, PayloadSchemaType]] = [
+            ("doc_id", PayloadSchemaType.KEYWORD),
+            ("language", PayloadSchemaType.KEYWORD),
+            ("chunk_index", PayloadSchemaType.INTEGER),
+            ("tags", PayloadSchemaType.KEYWORD),
+            ("citation", PayloadSchemaType.KEYWORD),
+        ]
+        for field_name, field_schema in indexes:
+            self._client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name=field_name,
+                field_schema=field_schema,
+            )
 
     def upsert(
         self,
