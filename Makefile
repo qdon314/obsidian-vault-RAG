@@ -291,7 +291,7 @@ eval-remote:  ## Run eval against remote backends on ECS
 	scripts/ecs_run_eval.sh \
 		--query-set $(QUERY_SET) \
 		--max-workers $(EVAL_WORKERS) \
-		--top-k 30 \
+		--top-k 20 \
 		--keep-k 10 \
 		$(if $(RUN_GENERATION),--run-generation,) \
 		$(if $(USE_LLM_JUDGE),--use-llm-judge,) \

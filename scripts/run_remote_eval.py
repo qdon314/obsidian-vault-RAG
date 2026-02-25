@@ -187,6 +187,7 @@ def main() -> None:
             judge_model=args.judge_model if args.use_llm_judge else None,
             score_ids=args.score_ids,
             run_name=args.run_name,
+            max_workers=args.max_workers,
         )
 
         # ── Save locally then upload to S3 ─────────────────────────
