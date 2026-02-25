@@ -97,7 +97,7 @@ jobs:
           scripts/ecs_run_eval.sh \
             --query-set ${{ matrix.dataset.query_set }} \
             --run-name "ci-${{ github.sha }}-${{ matrix.dataset.name }}" \
-            --run-generation --use-llm-judge
+            --run-generation --use-llm-judge --max-workers 8
 
       - name: Download results from S3
         run: |
