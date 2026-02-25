@@ -60,6 +60,33 @@ def _upload_directory(local_dir: Path, bucket: str, prefix: str) -> None:
             log.info("Uploaded %s -> s3://%s/%s", path.name, bucket, key)
 
 
+def _download_cache_from_s3(bucket: str, key: str, local_path: Path) -> None:
+    """Download embedding cache from S3. No-op if not found."""
+    s3 = boto3.client("s3")
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        s3.download_file(bucket, key, str(local_path))
+        log.info("Downloaded embedding cache from s3://%s/%s", bucket, key)
+    except s3.exceptions.ClientError as e:
+        if e.response["Error"]["Code"] == "404":
+            log.info("No embedding cache found in S3 (cold start)")
+        else:
+            log.warning("Failed to download embedding cache: %s", e)
+
+
+def _upload_cache_to_s3(local_path: Path, bucket: str, key: str) -> None:
+    """Upload embedding cache to S3. Warns on failure."""
+    if not local_path.exists():
+        return
+    s3 = boto3.client("s3")
+    try:
+        s3.upload_file(str(local_path), bucket, key)
+        size = local_path.stat().st_size
+        log.info("Uploaded embedding cache to s3://%s/%s (%d bytes)", bucket, key, size)
+    except Exception:
+        log.warning("Failed to upload embedding cache to S3", exc_info=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run eval against remote backends.")
     ap.add_argument("--query-set", default="default", help="Name of query set in S3.")
@@ -94,6 +121,14 @@ def main() -> None:
         raise SystemExit(1)
 
     eval_prefix = os.environ.get("RAG_EVAL_S3_PREFIX", "eval")
+
+    # ── Sync embedding cache from S3 (before container build) ──────
+    cache_db_path = cfg.embeddings.cache_db_path or (
+        cfg.paths.artifacts_dir / "embedding_cache.db"
+    )
+    cache_s3_key = f"{eval_prefix}/embedding-cache/{cfg.embeddings.model}/embedding_cache.db"
+    if cfg.embeddings.cache_embeddings:
+        _download_cache_from_s3(bucket, cache_s3_key, cache_db_path)
 
     # ── Download eval queries from S3 ──────────────────────────────
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -195,6 +230,10 @@ def main() -> None:
         run_label = args.run_name or timestamp
         local_run_dir = Path(tmpdir) / "run_output"
         run = save_run(run, output_dir=local_run_dir)
+
+        # ── Upload embedding cache back to S3 ─────────────────────
+        if cfg.embeddings.cache_embeddings:
+            _upload_cache_to_s3(cache_db_path, bucket, cache_s3_key)
 
         s3_run_prefix = f"{eval_prefix}/runs/{run_label}"
         log.info("Uploading results to s3://%s/%s", bucket, s3_run_prefix)
