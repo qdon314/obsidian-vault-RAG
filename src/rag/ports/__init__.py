@@ -4,6 +4,7 @@ from rag.eval.schema import QuerySuggestion
 from .chunk_loader import ChunkLoader
 from .chunk_store import ChunkStore
 from .chunker import Chunker
+from .compressor import PromptCompressor
 from .context_builder import ContextBuilder
 from .embedder import Embedder
 from .eval_store import EvalStore
@@ -32,6 +33,7 @@ __all__ = [
     "Generator",
     "IngestJobStore",
     "Ingestor",
+    "PromptCompressor",
     "QueryLogger",
     "QuerySuggester",
     "QuerySuggestion",

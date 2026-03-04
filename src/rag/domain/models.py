@@ -149,6 +149,47 @@ class ContextPack:
 
 
 # -------------------------
+# Compression
+# -------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class CompressionResult:
+    """
+    Result of a PromptCompressor.compress() call.
+
+    context_pack carries the (possibly compressed) rendered_context with tokens_used_est
+    updated to the post-compression count. The remaining fields are observability metrics
+    recorded in QueryTrace.metadata["scaledown"] and EvalResult.compression.
+    """
+
+    context_pack: ContextPack
+    successful: bool
+    tokens_before: int
+    tokens_after: int
+    savings_pct: float
+    latency_ms: int
+    adapter: str  # "scaledown" | "noop"
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+    def to_metadata_dict(self) -> dict[str, Any]:
+        """Serialize metrics to the dict stored in QueryTrace.metadata['compression'].
+
+        TODO: This serialization logic belongs in the app layer (query_runner), not the domain.
+              Move to a module-level helper in query_runner.py when refactoring trace metadata.
+        """
+        return {
+            "adapter": self.adapter,
+            "successful": self.successful,
+            "tokens_before": self.tokens_before,
+            "tokens_after": self.tokens_after,
+            "savings_pct": round(self.savings_pct, 4),
+            "latency_ms": self.latency_ms,
+            **self.extra,
+        }
+
+
+# -------------------------
 # Output objects
 # -------------------------
 
@@ -179,6 +220,7 @@ class QueryRunResult:
     reranked_chunk_ids: tuple[str, ...]
     packed_chunk_ids: tuple[str, ...]
     latency_ms: int
+    compression: dict[str, Any] | None = None  # metrics from PromptCompressor, if run
 
 
 # -------------------------
