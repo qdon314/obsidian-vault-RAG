@@ -224,9 +224,6 @@ eval/runs/*
 eval/runs/.s3-cache/
 
 # Internal Docs
-docs/plans/
-docs/specs/
-docs/notes/
 
 # Git worktrees
 .worktrees/
