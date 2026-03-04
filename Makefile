@@ -206,7 +206,7 @@ docker-up:  ## Start local stack (Qdrant + app shell)
 docker-down:  ## Tear down local stack and volumes
 	docker compose down -v
 
-image-push: docker-build  ## Build and push pinned image tag to ECR
+image-push:  ## Build and push pinned image tag to ECR (no local save)
 	@test -n "$(AWS_ACCOUNT_ID)" || (echo "Set AWS_ACCOUNT_ID or configure AWS CLI credentials"; exit 1)
 	@aws ecr describe-repositories --region $(AWS_REGION) --repository-names $(ECR_REPO) >/dev/null 2>&1 || \
 		aws ecr create-repository --region $(AWS_REGION) --repository-name $(ECR_REPO) >/dev/null
