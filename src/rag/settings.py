@@ -17,6 +17,7 @@ from rag.config.env_override import apply_env_overrides
 class Secrets:
     openai_api_key: str | None
     nrc_adams_api_key: str | None
+    scaledown_api_key: str | None = None
 
     @staticmethod
     def from_env(*, require_openai: bool) -> Secrets:
@@ -26,6 +27,7 @@ class Secrets:
         return Secrets(
             openai_api_key=key,
             nrc_adams_api_key=os.getenv("NRC_ADAMS_API_KEY"),
+            scaledown_api_key=os.getenv("SCALEDOWN_API_KEY"),
         )
 
 
@@ -153,6 +155,20 @@ class NrcAdams:
 
 
 @dataclass(frozen=True, slots=True)
+class Compression:
+    """Configuration for the prompt compression stage."""
+
+    enabled: bool = False
+    backend: Literal["scaledown", "noop"] = "noop"
+    api_url: str = "https://api.scaledown.xyz/compress/raw/"
+    rate: str = "auto"
+    prompt_template: str = "{query}"
+    timeout_s: float = 10.0
+    max_retries: int = 2
+    fail_open: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class CaseIngestion:
     """Configuration for NRC case document ingestion."""
 
@@ -192,6 +208,7 @@ class Settings:
     distributed_ingestion: DistributedIngestion
     nrc_adams: NrcAdams
     case_ingestion: CaseIngestion
+    compression: Compression
     secrets: Secrets
 
 
@@ -362,6 +379,19 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         max_retries=int(adams_tbl.get("max_retries", 3)),
     )
 
+    # Compression
+    compression_tbl = get_tbl("compression")
+    compression = Compression(
+        enabled=bool(compression_tbl.get("enabled", False)),
+        backend=str(compression_tbl.get("backend", "noop")),  # type: ignore[arg-type]
+        api_url=str(compression_tbl.get("api_url", "https://api.scaledown.xyz/compress/raw/")),
+        rate=str(compression_tbl.get("rate", "auto")),
+        prompt_template=str(compression_tbl.get("prompt_template", "{query}")),
+        timeout_s=float(compression_tbl.get("timeout_s", 10.0)),
+        max_retries=int(compression_tbl.get("max_retries", 2)),
+        fail_open=bool(compression_tbl.get("fail_open", True)),
+    )
+
     # Case ingestion
     case_tbl = get_tbl("case_ingestion")
     doc_types_raw = case_tbl.get("document_types", ["Inspection Report", "Part 21 Correspondence"])
@@ -397,5 +427,6 @@ def load_settings(path: str | Path = "settings.toml", require_openai: bool = Tru
         distributed_ingestion=distributed_ingestion,
         nrc_adams=nrc_adams,
         case_ingestion=case_ingestion,
+        compression=compression,
         secrets=Secrets.from_env(require_openai=require_openai),
     )

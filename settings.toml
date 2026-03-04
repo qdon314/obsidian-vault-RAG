@@ -185,6 +185,21 @@ max_retries = 3
 
 
 # -------------------------------------------------------------------
+# Prompt Compression (ScaleDown)
+# -------------------------------------------------------------------
+[compression]
+enabled = true
+backend = "noop"              # "noop" | "scaledown"
+api_url = "https://api.scaledown.xyz/compress/raw/"
+rate = "auto"
+prompt_template = "{query}"   # {query} is interpolated
+timeout_s = 10.0
+max_retries = 2
+fail_open = true              # fall back to uncompressed on API error
+# api_key comes from env var SCALEDOWN_API_KEY (see .env.example)
+
+
+# -------------------------------------------------------------------
 # Eval Verdict Gating
 # -------------------------------------------------------------------
 [eval.verdict]

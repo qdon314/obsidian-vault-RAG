@@ -54,6 +54,7 @@ def main() -> None:
         context_builder=container.context_builder,
         generator=container.generator,
         logger=container.logger,
+        compressor=container.compressor,
         top_k=top_k,
         token_budget=token_budget,
     )
