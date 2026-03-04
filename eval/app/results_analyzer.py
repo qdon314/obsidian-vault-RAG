@@ -611,6 +611,11 @@ def _render_raw_data_tab(loaded_run: LoadedRun) -> None:
         with st.expander("Latency Statistics", expanded=False):
             st.json(raw["latency_ms"])
 
+    # Compression
+    if raw.get("compression"):
+        with st.expander("Compression Metrics (ScaleDown)", expanded=False):
+            st.json(raw["compression"])
+
     # Full JSON download
     st.divider()
     st.markdown("### Download Raw Data")

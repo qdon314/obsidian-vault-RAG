@@ -63,6 +63,11 @@ def render_metrics_table(
         st.subheader("Latency Statistics")
         _render_latency_table(loaded_run.aggregates.latency_ms)
 
+    # Compression
+    if loaded_run.aggregates.compression:
+        st.subheader("Compression Metrics (ScaleDown)")
+        _render_compression_table(loaded_run.aggregates.compression)
+
 
 def _render_retrieval_table(
     summary: RetrievalSummary,
@@ -172,6 +177,29 @@ def _render_answer_quality_table(answer_quality: dict[str, float]) -> None:
                 f"{answer_quality['hallucinated_on_unanswerable_rate']:.1%}",
                 help="Of queries where context was insufficient, how often did the model hallucinate instead of abstaining",
             )
+
+
+def _render_compression_table(compression: dict[str, float]) -> None:
+    """Render compression statistics."""
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if "success_rate" in compression:
+            st.metric("Success Rate", f"{compression['success_rate']:.1%}")
+        if "savings_pct_avg" in compression:
+            st.metric("Avg Token Savings", f"{compression['savings_pct_avg']:.1%}")
+
+    with col2:
+        if "tokens_before_avg" in compression:
+            st.metric("Avg Tokens Before", f"{compression['tokens_before_avg']:.0f}")
+        if "tokens_after_avg" in compression:
+            st.metric("Avg Tokens After", f"{compression['tokens_after_avg']:.0f}")
+
+    with col3:
+        if "compress_latency_ms_avg" in compression:
+            st.metric("Avg Compress Latency", f"{compression['compress_latency_ms_avg']:.0f} ms")
+        if "compress_latency_ms_p95" in compression:
+            st.metric("P95 Compress Latency", f"{compression['compress_latency_ms_p95']:.0f} ms")
 
 
 def _render_latency_table(latency_ms: dict[str, float]) -> None:
