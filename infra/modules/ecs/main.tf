@@ -344,11 +344,14 @@ resource "aws_ecs_task_definition" "query_eval" {
         { name = "RAG_EVAL_S3_PREFIX", value = var.eval_s3_prefix },
         { name = "RAG_MANIFESTS_S3_PREFIX", value = var.manifests_s3_prefix },
       ]
-      secrets = [
-        { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
-        { name = "RAG_DISTRIBUTED_INGESTION__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
-        { name = "RAG_CHUNK_STORAGE__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
-      ]
+      secrets = concat(
+        [
+          { name = "OPENAI_API_KEY", valueFrom = var.openai_api_key_arn },
+          { name = "RAG_DISTRIBUTED_INGESTION__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+          { name = "RAG_CHUNK_STORAGE__POSTGRES_DSN", valueFrom = var.rds_dsn_arn },
+        ],
+        var.scaledown_api_key_arn != "" ? [{ name = "SCALEDOWN_API_KEY", valueFrom = var.scaledown_api_key_arn }] : [],
+      )
       logConfiguration = {
         logDriver = "awslogs"
         options = {

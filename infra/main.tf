@@ -105,10 +105,11 @@ module "s3" {
 }
 
 module "secrets" {
-  source         = "./modules/secrets"
-  openai_api_key = var.openai_api_key
-  name_prefix    = "/${var.project_name}"
-  tags           = local.tags
+  source            = "./modules/secrets"
+  openai_api_key    = var.openai_api_key
+  scaledown_api_key = var.scaledown_api_key
+  name_prefix       = "/${var.project_name}"
+  tags              = local.tags
 }
 
 module "sqs" {
@@ -156,7 +157,8 @@ module "ecs" {
 
   cluster_name       = var.project_name
   app_image          = "${module.ecr.repository_url}:${var.app_image_tag}"
-  openai_api_key_arn = module.secrets.openai_api_key_arn
+  openai_api_key_arn    = module.secrets.openai_api_key_arn
+  scaledown_api_key_arn = module.secrets.scaledown_api_key_arn
   s3_bucket_arn      = module.s3.bucket_arn
   corpus_bucket_arn  = "arn:aws:s3:::${local.corpus_bucket_name}"
   subnet_ids         = var.subnet_ids

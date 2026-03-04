@@ -189,7 +189,7 @@ max_retries = 3
 # -------------------------------------------------------------------
 [compression]
 enabled = true
-backend = "noop"              # "noop" | "scaledown"
+backend = "scaledown"              # "noop" | "scaledown"
 api_url = "https://api.scaledown.xyz/compress/raw/"
 rate = "auto"
 prompt_template = "{query}"   # {query} is interpolated

@@ -9,3 +9,13 @@ resource "aws_ssm_parameter" "openai_api_key" {
 
   tags = var.tags
 }
+
+resource "aws_ssm_parameter" "scaledown_api_key" {
+  count       = var.scaledown_api_key != "" ? 1 : 0
+  name        = "${var.name_prefix}/scaledown-api-key"
+  description = "ScaleDown API key for prompt compression"
+  type        = "SecureString"
+  value       = var.scaledown_api_key
+
+  tags = var.tags
+}

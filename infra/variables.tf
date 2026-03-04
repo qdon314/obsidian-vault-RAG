@@ -21,6 +21,13 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
+variable "scaledown_api_key" {
+  description = "ScaleDown API key for prompt compression (leave empty to disable)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "subnet_ids" {
   description = "Subnet IDs for ECS tasks"
   type        = list(string)

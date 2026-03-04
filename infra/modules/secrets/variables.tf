@@ -4,6 +4,13 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
+variable "scaledown_api_key" {
+  description = "ScaleDown API key for prompt compression (stored as SecureString)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "name_prefix" {
   description = "Prefix for parameter names"
   type        = string

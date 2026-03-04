@@ -25,6 +25,12 @@ variable "openai_api_key_arn" {
   type        = string
 }
 
+variable "scaledown_api_key_arn" {
+  description = "ARN of the SSM parameter containing the ScaleDown API key (empty = compression disabled)"
+  type        = string
+  default     = ""
+}
+
 variable "s3_bucket_arn" {
   description = "ARN of the S3 bucket for artifact storage"
   type        = string

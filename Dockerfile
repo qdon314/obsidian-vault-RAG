@@ -14,7 +14,7 @@ COPY pyproject.toml ./
 # Phase 1: install dependencies only (cached unless pyproject.toml changes).
 # Stub source tree satisfies setuptools package discovery during metadata build.
 RUN touch README.md && mkdir -p src/rag && touch src/rag/__init__.py \
-    && pip install --no-cache-dir ".[openai,qdrant,distributed]"
+    && pip install --no-cache-dir ".[openai,qdrant,distributed,scaledown]"
 
 # Copy real source code (after deps so source changes don't bust the cache)
 COPY src/ src/
