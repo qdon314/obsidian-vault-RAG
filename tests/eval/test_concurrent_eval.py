@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+from rag.adapters.compression.noop import NoOpCompressor
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
 from rag.adapters.reranking.rerank_noop import NoOpReranker
@@ -50,6 +51,7 @@ def _build_test_container(*, n_chunks: int = 10) -> Container:
         retriever=retriever,
         logger=logger,
         reranker=reranker,
+        compressor=NoOpCompressor(),
     )
 
 

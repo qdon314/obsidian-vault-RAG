@@ -429,6 +429,7 @@ def _evaluate_single_query(
         context_builder=container.context_builder,
         generator=container.generator,
         logger=container.logger,
+        compressor=getattr(container, "compressor", None),
         top_k=top_k,
         keep_k=keep_k,
         token_budget=token_budget,
@@ -480,6 +481,7 @@ def _evaluate_single_query(
         is_unanswerable=q.is_unanswerable,
         latency_ms=getattr(run, "latency_ms", None),
         trace_id=getattr(run, "trace_id", None),
+        compression=getattr(run, "compression", None),
     )
 
 
@@ -734,12 +736,45 @@ def aggregate_results(results: Iterable[EvalResult]) -> EvalAggregates:
             "p95": float(np.percentile(latencies, 95)),
         }
 
+    comp: dict[str, float] | None = None
+    compressed = [
+        r.compression
+        for r in results
+        if r.compression is not None and r.compression.get("adapter") != "noop"
+    ]
+    if compressed:
+        tokens_before = [c["tokens_before"] for c in compressed if "tokens_before" in c]
+        tokens_after = [c["tokens_after"] for c in compressed if "tokens_after" in c]
+        successful = [c for c in compressed if c.get("successful", False)]
+        savings_pcts = [c["savings_pct"] for c in successful if "savings_pct" in c]
+        compress_latencies = [c["latency_ms"] for c in compressed if "latency_ms" in c]
+        comp = {
+            "success_rate": len(successful) / len(compressed),
+        }
+        if tokens_before:
+            comp["tokens_before_avg"] = float(np.mean(tokens_before))
+            comp["tokens_before_p50"] = float(np.percentile(tokens_before, 50))
+            comp["tokens_before_p95"] = float(np.percentile(tokens_before, 95))
+        if tokens_after:
+            comp["tokens_after_avg"] = float(np.mean(tokens_after))
+            comp["tokens_after_p50"] = float(np.percentile(tokens_after, 50))
+            comp["tokens_after_p95"] = float(np.percentile(tokens_after, 95))
+        if savings_pcts:
+            comp["savings_pct_avg"] = float(np.mean(savings_pcts))
+            comp["savings_pct_p50"] = float(np.percentile(savings_pcts, 50))
+            comp["savings_pct_p5"] = float(np.percentile(savings_pcts, 5))  # worst-case tail
+        if compress_latencies:
+            comp["compress_latency_ms_avg"] = float(np.mean(compress_latencies))
+            comp["compress_latency_ms_p50"] = float(np.percentile(compress_latencies, 50))
+            comp["compress_latency_ms_p95"] = float(np.percentile(compress_latencies, 95))
+
     return EvalAggregates(
         overall=overall,
         by_type=type_summaries,
         by_difficulty=difficulty_summaries,
         answer_quality=aq,
         latency_ms=lat,
+        compression=comp,
     )
 
 
@@ -783,6 +818,9 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
             if r.outcome_label is not None:
                 row["outcome_label"] = r.outcome_label.value
 
+            if r.compression is not None:
+                row["compression"] = r.compression
+
             f.write(json.dumps(row) + "\n")
 
     metrics_file = output_dir / "metrics.json"
@@ -797,6 +835,7 @@ def save_run(run: EvalRun, output_dir: Path) -> EvalRun:
         "by_difficulty": {k: v.to_flat_dict() for k, v in run.aggregates.by_difficulty.items()},
         "answer_quality": run.aggregates.answer_quality,
         "latency_ms": run.aggregates.latency_ms,
+        "compression": run.aggregates.compression,
     }
     metrics_file.write_text(json.dumps(metrics_payload, indent=2), encoding="utf-8")
 

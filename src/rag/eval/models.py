@@ -180,6 +180,9 @@ class EvalResult(DataClassJsonMixin):
 
     trace_id: str | None = None  # link to QueryTrace if available
 
+    # Compression metrics (populated when PromptCompressor ran)
+    compression: dict[str, Any] | None = None
+
     @classmethod
     def from_results_dict(cls, data: dict[str, Any]) -> EvalResult:
         """
@@ -236,6 +239,7 @@ class EvalResult(DataClassJsonMixin):
             is_unanswerable=data.get("is_unanswerable", False),
             latency_ms=data.get("latency_ms"),
             trace_id=data.get("trace_id"),
+            compression=data.get("compression"),
         )
 
 
@@ -275,6 +279,7 @@ class EvalAggregates(DataClassJsonMixin):
     # Optional: add later
     answer_quality: dict[str, float] | None = None
     latency_ms: dict[str, float] | None = None
+    compression: dict[str, float] | None = None
 
     @classmethod
     def from_flat_dict(cls, data: dict[str, Any]) -> EvalAggregates:
@@ -299,6 +304,7 @@ class EvalAggregates(DataClassJsonMixin):
             by_difficulty=by_difficulty,
             answer_quality=data.get("answer_quality"),
             latency_ms=data.get("latency_ms"),
+            compression=data.get("compression"),
         )
 
 
