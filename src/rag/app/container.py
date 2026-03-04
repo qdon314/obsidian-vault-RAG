@@ -10,6 +10,7 @@ from rag.adapters.chunking.fixed import FixedChunker
 from rag.adapters.chunking.obsidian_structural import ObsidianStructuralChunker
 from rag.adapters.chunking.proposition.backends import T5Propositionizer
 from rag.adapters.chunking.proposition.chunker import ObsidianPropositionChunker
+from rag.adapters.compression.noop import NoOpCompressor
 from rag.adapters.context_building.simple_context_builder import SimpleContextBuilder
 from rag.adapters.embedding.dummy_embedder import DummyEmbedder
 from rag.adapters.embedding.openai_embedder import OpenAIEmbedder
@@ -31,6 +32,7 @@ from rag.ports import (
     Embedder,
     Generator,
     Ingestor,
+    PromptCompressor,
     QueryLogger,
     Reranker,
     Retriever,
@@ -49,6 +51,7 @@ class Container:
     retriever: Retriever = field(repr=False)
     logger: QueryLogger = field(repr=False)
     reranker: Reranker = field(repr=False)
+    compressor: PromptCompressor = field(repr=False)
     chunk_store: ChunkStore | None = field(default=None, repr=False)
 
 
@@ -328,6 +331,28 @@ def build_container(
     log_path = ovrds.logs_directory or (cfg.paths.artifacts_dir / "logs")
     logger = JsonlQueryLogger(path=log_path / "traces.jsonl")
 
+    # ----- compressor (optional; noop when disabled)
+    compressor: PromptCompressor
+    if cfg.compression.enabled and cfg.compression.backend == "scaledown":
+        if not cfg.secrets.scaledown_api_key:
+            raise RuntimeError(
+                "compression.enabled=true with backend='scaledown' requires "
+                "SCALEDOWN_API_KEY to be set in the environment"
+            )
+        from rag.adapters.compression.scaledown import ScaleDownCompressor
+
+        compressor = ScaleDownCompressor(
+            api_key=cfg.secrets.scaledown_api_key,
+            api_url=cfg.compression.api_url,
+            rate=cfg.compression.rate,
+            prompt_template=cfg.compression.prompt_template,
+            timeout_s=cfg.compression.timeout_s,
+            max_retries=cfg.compression.max_retries,
+            fail_open=cfg.compression.fail_open,
+        )
+    else:
+        compressor = NoOpCompressor()
+
     return Container(
         chunker=chunker,
         context_builder=context_builder,
@@ -338,5 +363,6 @@ def build_container(
         reranker=reranker,
         retriever=retriever,
         logger=logger,
+        compressor=compressor,
         chunk_store=chunk_store,
     )

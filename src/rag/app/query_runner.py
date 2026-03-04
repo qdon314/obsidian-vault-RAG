@@ -5,10 +5,11 @@ import uuid
 from collections.abc import Mapping
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import Any
 
 from rag.domain.filters import Where
 from rag.domain.models import QueryRunResult, QueryTrace
-from rag.ports import ContextBuilder, Generator, QueryLogger, Retriever
+from rag.ports import ContextBuilder, Generator, PromptCompressor, QueryLogger, Retriever
 from rag.ports.reranker import Reranker
 
 
@@ -25,6 +26,7 @@ def run_query(
     token_budget: int,
     where: Where = None,
     metadata: Mapping[str, object] | None = None,
+    compressor: PromptCompressor | None = None,
 ) -> QueryRunResult:
     """
     Execute a full RAG query pipeline: retrieve, rerank, build context, and generate.
@@ -82,6 +84,15 @@ def run_query(
     )
     t_context_ms = int((time.perf_counter() - t1) * 1000)
 
+    # Compression (optional — skipped when no compressor is provided)
+    t_compress_ms = 0
+    compression_meta: dict[str, Any] | None = None
+    if compressor is not None:
+        compression_result = compressor.compress(context, query=query, metadata=metadata)
+        t_compress_ms = compression_result.latency_ms
+        context = compression_result.context_pack
+        compression_meta = compression_result.to_metadata_dict()
+
     # Generation
     t2 = time.perf_counter()
     answer = generator.generate(query, context, metadata=metadata)
@@ -97,6 +108,10 @@ def run_query(
     )
 
     # Fill trace (immutably)
+    extra_meta: dict[str, Any] = {}
+    if compression_meta is not None:
+        extra_meta["compression"] = compression_meta
+
     trace = replace(
         trace,
         retrieved=tuple(retrieved_candidates),
@@ -108,10 +123,12 @@ def run_query(
         reranker=getattr(reranker, "name", None),
         metadata={
             **trace.metadata,
+            **extra_meta,
             "timing_ms": {
                 "retrieval": t_retrieval_ms,
                 "rerank": t_rerank_ms,
                 "context": t_context_ms,
+                "compress": t_compress_ms,
                 "generation": t_gen_ms,
                 "total": total_ms,
             },
@@ -129,4 +146,5 @@ def run_query(
         reranked_chunk_ids=reranked_ids,
         packed_chunk_ids=packed_ids,
         latency_ms=total_ms,
+        compression=compression_meta,
     )
