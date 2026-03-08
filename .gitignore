@@ -234,3 +234,6 @@ eval/runs/.s3-cache/
 docs/APS-API-Guide.pdf
 corpus/us-nrc/cases/
 .vscode/launch.json
+
+# Git worktrees
+.worktrees/
