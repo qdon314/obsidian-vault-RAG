@@ -228,6 +228,10 @@ eval/runs/.s3-cache/
 # Git worktrees
 .worktrees/
 
+# Streamlit Agent Skills
+.claude/skills
+.kilocode/skills
+
 # Regulatory
 !data/ecfr/
 docs/APS-API-Guide.pdf
