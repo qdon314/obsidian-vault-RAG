@@ -225,9 +225,6 @@ eval/runs/.s3-cache/
 
 # Internal Docs
 
-# Git worktrees
-.worktrees/
-
 # Streamlit Agent Skills
 .claude/skills
 .kilocode/skills
