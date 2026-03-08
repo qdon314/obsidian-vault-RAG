@@ -38,10 +38,15 @@ def load_bundle(run_id: str, run_dir_str: str) -> RunBundle:
     return build_bundle(Path(run_dir_str))
 
 
-def run_selector_widget(runs: list[tuple[str, Path]]) -> tuple[str, Path] | None:
+def run_selector_widget(
+    runs: list[tuple[str, Path]],
+    *,
+    key: str = "run_a",
+    label: str = "Select run",
+) -> tuple[str, Path] | None:
     if not runs:
         st.warning("No runs found in eval/runs/")
         return None
     names = [name for name, _ in runs]
-    idx = st.selectbox("Select run", range(len(names)), format_func=lambda i: names[i])
+    idx = st.selectbox(label, range(len(names)), format_func=lambda i: names[i], key=key)
     return runs[idx]
