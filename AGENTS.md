@@ -48,8 +48,3 @@ All configuration in [`settings.toml`](settings.toml). CLI flags override settin
 - MyPy: `mypy_path = ["src"]` with explicit package bases
 - Tests: fixtures in [`tests/conftest.py`](tests/conftest.py), naming checks softened
 
-## Git
-
-- Do NOT auto-commit
-- Do NOT add "Co-authored-by" attribution
-- Provide suggested commits at end of work

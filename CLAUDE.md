@@ -155,6 +155,5 @@ When finishing implementation work, respond with:
 2. Files changed
 3. Validation run (and what was not run)
 4. Risks or follow-ups
-5. Suggested commits
 
 Keep responses concise, explicit, and evidence-based.
