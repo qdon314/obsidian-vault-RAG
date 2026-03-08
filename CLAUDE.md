@@ -147,13 +147,6 @@ Never fabricate successful execution when validation was skipped or blocked.
 - Redact sensitive values in terminal excerpts and summaries.
 - Treat `.env`, `settings.toml`, and Terraform vars as sensitive sources.
 
-## Git and Commit Policy
-
-- Do not auto-commit.
-- Do not add `Co-authored-by` lines.
-- At the end of implementation, provide suggested commits (grouped logically by file set + commit message).
-- User is final reviewer and committer.
-
 ## Response / Output Contract
 
 When finishing implementation work, respond with:
