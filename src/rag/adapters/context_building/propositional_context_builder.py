@@ -255,10 +255,6 @@ class PropositionAwareContextBuilder:
     ) -> str:
         """Render the final context string sent to the LLM."""
         lines: list[str] = []
-        lines.append(
-            "You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.\n"
-        )
-        lines.append("If the answer is not supported by the CONTEXT, say you don't know.\n")
         lines.append("CONTEXT:\n")
 
         score_by_id: dict[str, float] = {}
