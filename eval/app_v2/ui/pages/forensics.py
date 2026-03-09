@@ -3,6 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from eval.app_v2.engine.domain.models import AnalyzedQuery, RunBundle
+from eval.app_v2.ui.widgets.chunk_viewer import render_retrieved_chunks
 from eval.app_v2.ui.widgets.diagnostic_card import render_diagnostic_detail
 
 
@@ -11,6 +12,37 @@ def _find_query(bundle: RunBundle, qid: str) -> AnalyzedQuery | None:
         if aq.record.qid == qid:
             return aq
     return None
+
+
+def _render_compression_context(trace_raw_data: dict, *, key_prefix: str = "") -> None:
+    """Render before/after context text areas when compression metadata is present."""
+    compression = (trace_raw_data.get("metadata") or {}).get("compression") or {}
+    context_before: str | None = compression.get("context_before")
+    context_after: str | None = compression.get("context_after")
+
+    if not context_before and not context_after:
+        return
+
+    with st.expander("Context window (compression)", expanded=False):
+        tab_before, tab_after = st.tabs(["Before", "After"])
+        with tab_before:
+            st.text_area(
+                "",
+                value=context_before or "— not captured —",
+                height=300,
+                disabled=True,
+                key=f"{key_prefix}_ctx_before",
+                label_visibility="collapsed",
+            )
+        with tab_after:
+            st.text_area(
+                "",
+                value=context_after or "— not captured —",
+                height=300,
+                disabled=True,
+                key=f"{key_prefix}_ctx_after",
+                label_visibility="collapsed",
+            )
 
 
 def render(bundle: RunBundle | None) -> None:
@@ -50,6 +82,11 @@ def render(bundle: RunBundle | None) -> None:
 
     # Diagnostic detail
     render_diagnostic_detail(aq)
+
+    # Chunk content
+    render_retrieved_chunks(r, r.trace, key_prefix=qid)
+    if r.trace is not None:
+        _render_compression_context(r.trace.raw_data, key_prefix=qid)
 
     # Answer section
     if r.answer_text:
