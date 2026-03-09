@@ -66,16 +66,12 @@ class ScaleDownCompressor:
                 data: dict = response.json()
                 latency_ms = int((time.perf_counter() - t0) * 1000)
 
-                compressed_text: str = data.get("compressed_prompt", "")
-                tokens_after = int(data.get("compressed_prompt_tokens", tokens_before))
-                original_tokens = int(data.get("original_prompt_tokens", tokens_before))
-                token_savings = int(data.get("token_savings", original_tokens - tokens_after))
-                savings_pct = float(
-                    data.get(
-                        "savings_pct",
-                        token_savings / original_tokens if original_tokens > 0 else 0.0,
-                    )
-                )
+                results: dict = data.get("results", {})
+                compressed_text: str = results.get("compressed_prompt", "")
+                tokens_after = int(results.get("compressed_prompt_tokens", tokens_before))
+                original_tokens = int(results.get("original_prompt_tokens", tokens_before))
+                compression_ratio = float(results.get("compression_ratio", 1.0))
+                savings_pct = 1.0 - compression_ratio
 
                 updated_pack = replace(
                     context_pack,
@@ -83,20 +79,25 @@ class ScaleDownCompressor:
                     metadata={**dict(context_pack.metadata), "tokens_used_est": tokens_after},
                 )
 
-                # Capture remaining response fields as extra metadata
-                known_keys = {
+                known_results_keys = {
                     "compressed_prompt",
+                    "original_prompt",
                     "original_prompt_tokens",
                     "compressed_prompt_tokens",
-                    "token_savings",
-                    "savings_pct",
+                    "compression_ratio",
+                    "success",
                 }
-                extra = {k: v for k, v in data.items() if k not in known_keys}
+                known_top_keys = {"results", "successful"}
+                extra: dict = {
+                    **{k: v for k, v in results.items() if k not in known_results_keys},
+                    **{k: v for k, v in data.items() if k not in known_top_keys},
+                    "compression_ratio": compression_ratio,
+                }
 
                 return CompressionResult(
                     context_pack=updated_pack,
                     successful=True,
-                    tokens_before=tokens_before,
+                    tokens_before=original_tokens,
                     tokens_after=tokens_after,
                     savings_pct=savings_pct,
                     latency_ms=latency_ms,
