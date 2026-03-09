@@ -248,15 +248,14 @@ class TestSimpleContextBuilderRenderedContext:
         assert chunk_text in pack.rendered_context
 
     def test_rendered_context_has_instructions(self):
-        """Rendered context includes system instructions."""
+        """Rendered context includes the CONTEXT section header."""
         builder = SimpleContextBuilder()
         candidates = [make_candidate()]
 
         pack = builder.build("query", candidates, token_budget=10000)
 
         assert "CONTEXT" in pack.rendered_context
-        # Should mention using context to answer
-        assert "context" in pack.rendered_context.lower()
+        assert "[1]" in pack.rendered_context
 
     def test_rendered_context_numbers_chunks(self):
         """Rendered context numbers the chunks."""

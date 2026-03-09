@@ -107,10 +107,6 @@ class SimpleContextBuilder:
         self, chunks: Sequence[Chunk], ordered_scores: Sequence[Candidate] | None = None
     ) -> str:
         lines: list[str] = []
-        lines.append(
-            "You are given CONTEXT chunks from a document corpus. Answer the QUESTION using only the CONTEXT.\n"
-        )
-        lines.append("If the answer is not supported by the CONTEXT, say you don't know.\n")
         lines.append("CONTEXT:\n")
 
         for i, ch in enumerate(chunks, start=1):
