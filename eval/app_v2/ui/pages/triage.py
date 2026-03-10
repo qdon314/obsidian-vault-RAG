@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 import streamlit as st
+
+from eval.app_v2.engine.domain.enums import Severity
+from eval.app_v2.engine.domain.models import RunBundle
+from eval.app_v2.engine.services.filter import apply_facet_filters
+from eval.app_v2.ui.widgets.chunk_stats_panel import render_chunk_stats_panel
 from eval.app_v2.ui.widgets.diagnostic_card import render_diagnostic_card
 from eval.app_v2.ui.widgets.facet_panel import render_facet_panel
 from eval.app_v2.ui.widgets.metric_cards import (
@@ -8,10 +13,6 @@ from eval.app_v2.ui.widgets.metric_cards import (
     render_kpi_cards,
     render_severity_bar,
 )
-
-from eval.app_v2.engine.domain.enums import Severity
-from eval.app_v2.engine.domain.models import RunBundle
-from eval.app_v2.engine.services.filter import apply_facet_filters
 
 _TOP_N = 10
 
@@ -74,3 +75,6 @@ def render(bundle: RunBundle | None) -> None:
         st.success("No critical or moderate queries.")
     for aq in critical_sorted[:_TOP_N]:
         render_diagnostic_card(aq, show_forensics_link=True)
+
+    st.divider()
+    render_chunk_stats_panel(bundle)

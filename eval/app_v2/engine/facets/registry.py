@@ -1,8 +1,9 @@
 # eval/app_v2/engine/facets/registry.py
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 from eval.app_v2.engine.domain.models import QueryRecord
 

@@ -1,6 +1,6 @@
 # tests/eval/app_v2/engine/test_facets.py
-from eval.app_v2.engine.facets.registry import FACETS, FacetDef
 from eval.app_v2.engine.domain.models import QueryRecord
+from eval.app_v2.engine.facets.registry import FACETS, FacetDef
 
 
 def _record(query_type="factual", difficulty="easy", is_unanswerable=False):

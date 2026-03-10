@@ -5,8 +5,8 @@ from eval.app_v2.engine.derived.stage_attribution import classify_query
 
 __all__ = [
     "analyze_queries",
-    "build_query_diagnostic",
     "build_health",
+    "build_query_diagnostic",
     "build_slice_table",
     "classify_query",
 ]

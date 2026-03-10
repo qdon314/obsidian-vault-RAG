@@ -1,7 +1,7 @@
 # tests/eval/app_v2/engine/test_filter.py
-from eval.app_v2.engine.services.filter import apply_facet_filters
 from eval.app_v2.engine.derived.diagnostics import analyze_queries
 from eval.app_v2.engine.domain.models import QueryRecord
+from eval.app_v2.engine.services.filter import apply_facet_filters
 
 
 def _r(qid, qtype, difficulty):

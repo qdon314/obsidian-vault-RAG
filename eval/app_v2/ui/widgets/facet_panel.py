@@ -37,7 +37,7 @@ def render_facet_panel(queries: list[AnalyzedQuery]) -> dict[str, str | bool | N
             values = _collect_values(queries, facet)
             if not values:
                 continue
-            opts = ["(all)"] + values
+            opts = ["(all)", *values]
             choice = st.selectbox(facet.label, opts, key=f"facet_{facet.key}")
             selections[facet.key] = None if choice == "(all)" else choice
 

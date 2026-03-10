@@ -132,6 +132,9 @@ ask-dummy:  ## Ask using DummyEmbedder
 results:  ## Launch results analyzer app
 	$(PYTHON) -m streamlit run eval/app/results_analyzer.py
 
+resultsv2:  ## Launch results analyzer app
+	$(PYTHON) -m streamlit run eval/app_v2/app.py
+
 curate:  ## Launch query curator app
 	$(PYTHON) -m streamlit run eval/app/query_curator.py
 
@@ -275,7 +278,7 @@ CORPUS_S3_PREFIX ?= regulatory
 CORPUS_S3_BUCKET ?= $(shell cd infra && terraform output -raw corpus_bucket_name 2>/dev/null || echo "obsidian-rag-artifacts")
 QUERY_SET ?= default
 RUN_NAME ?=
-EVAL_WORKERS ?= 1
+EVAL_WORKERS ?= 8
 USE_LLM_JUDGE ?= true
 RUN_GENERATION ?= true
 
@@ -291,8 +294,8 @@ eval-remote:  ## Run eval against remote backends on ECS
 	scripts/ecs_run_eval.sh \
 		--query-set $(QUERY_SET) \
 		--max-workers $(EVAL_WORKERS) \
-		--top-k 20 \
-		--keep-k 10 \
+		--top-k 100 \
+		--keep-k 50 \
 		$(if $(RUN_GENERATION),--run-generation,) \
 		$(if $(USE_LLM_JUDGE),--use-llm-judge,) \
 		$(if $(RUN_NAME),--run-name $(RUN_NAME),)

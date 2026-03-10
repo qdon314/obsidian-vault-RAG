@@ -128,12 +128,20 @@ class ComparisonService:
         for qid in common_qids:
             a_recall = _compute_recall_at_k(a_results[qid], k=10)
             b_recall = _compute_recall_at_k(b_results[qid], k=10)
+            recall_delta = b_recall - a_recall
 
-            delta = b_recall - a_recall
+            am_a = a_results[qid].answer_metrics
+            am_b = b_results[qid].answer_metrics
+            quality_delta = (
+                am_b.quality_score - am_a.quality_score
+                if am_a is not None and am_b is not None
+                and am_a.quality_score is not None and am_b.quality_score is not None
+                else 0.0
+            )
 
-            if delta > self.change_threshold:
+            if recall_delta > self.change_threshold or quality_delta > self.change_threshold:
                 improved.append(qid)
-            elif delta < -self.change_threshold:
+            elif recall_delta < -self.change_threshold or quality_delta < -self.change_threshold:
                 regressed.append(qid)
             else:
                 unchanged.append(qid)

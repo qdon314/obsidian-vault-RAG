@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-from eval.app_v2.engine.derived.contributors import contributor_queries_for_code
-from eval.app_v2.engine.domain.enums import DiagnosticCode
 from eval.app_v2.engine.domain.models import RunBundle
 from eval.app_v2.ui.widgets.diagnostic_card import render_diagnostic_card
 

@@ -163,6 +163,10 @@ class QueryDeltaSummary:
     groundedness: DeltaDirection
     latency: DeltaDirection
     severity: DeltaDirection
+    quality: DeltaDirection = DeltaDirection.INSUFFICIENT
+    hallucination: DeltaDirection = DeltaDirection.INSUFFICIENT
+    correctness: DeltaDirection = DeltaDirection.INSUFFICIENT
+    completeness: DeltaDirection = DeltaDirection.INSUFFICIENT
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,6 +177,9 @@ class ComparedQuery:
     ndcg_delta: float | None
     latency_delta_ms: float | None
     quality_delta: float | None
+    correctness_delta: float | None
+    completeness_delta: float | None
+    hallucination_severity_delta: float | None
     diagnostic_before: QueryDiagnostic | None
     diagnostic_after: QueryDiagnostic | None
     delta_summary: QueryDeltaSummary

@@ -3,14 +3,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+from rag.app.query_runner import run_query
 from rag.domain.models import (
     Answer,
-    Candidate,
     CompressionResult,
     ContextPack,
     QueryTrace,
 )
-from rag.app.query_runner import run_query
 
 
 def _make_pack(text: str, tokens: int = 100) -> ContextPack:
