@@ -125,7 +125,7 @@ Rationale: Gains concentrated in multi-hop queries without new hallucination cla
 ## Quick Start
 
 ```bash
-git clone https://github.com/your-username/obsidian-vault-RAG.git
+git clone https://github.com/qdon314/obsidian-vault-RAG.git
 cd obsidian-vault-RAG
 
 python3.11 -m venv .venv
