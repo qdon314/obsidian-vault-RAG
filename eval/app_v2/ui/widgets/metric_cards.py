@@ -6,37 +6,136 @@ from eval.app_v2.engine.domain.enums import Severity
 from eval.app_v2.engine.domain.models import RunHealthSummary
 
 _SEVERITY_COLORS = {
-    Severity.OK:       "#2ecc71",
-    Severity.MINOR:    "#f39c12",
+    Severity.OK: "#2ecc71",
+    Severity.MINOR: "#f39c12",
     Severity.MODERATE: "#e67e22",
     Severity.CRITICAL: "#e74c3c",
 }
 
+_FMT_PCT = lambda v: f"{v:.1%}" if v is not None else "—"  # noqa: E731
+_FMT_F2 = lambda v: f"{v:.2f}" if v is not None else "—"  # noqa: E731
+_FMT_F3 = lambda v: f"{v:.3f}" if v is not None else "—"  # noqa: E731
+_FMT_MS = lambda v: f"{v:.0f} ms" if v is not None else "—"  # noqa: E731
+_FMT_0_5 = lambda v: f"{v:.2f} / 5" if v is not None else "—"  # noqa: E731
+
 
 def render_kpi_cards(health: RunHealthSummary) -> None:
-    """Render headline KPI metric cards from a RunHealthSummary."""
+    """Render headline KPI metric cards from a RunHealthSummary.
+
+    Displays up to four rows of metrics, each shown conditionally:
+      Row 1 — Core retrieval (always)
+      Row 2 — Extended retrieval (when tiered metrics present)
+      Row 3 — Answer quality (when answer quality present)
+      Row 4 — Safety & latency (when present)
+    """
+    # ── Row 1: Core retrieval (always shown) ─────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Recall@10", f"{health.headline_recall_at_10:.1%}")
-    c2.metric("NDCG@10",   f"{health.headline_ndcg_at_10:.1%}")
-    c3.metric(
-        "Avg Quality",
-        f"{health.avg_quality_score:.2f}" if health.avg_quality_score is not None else "—",
+    c1.metric("Recall@10", _FMT_PCT(health.headline_recall_at_10))
+    c2.metric("NDCG@10", _FMT_PCT(health.headline_ndcg_at_10))
+    c3.metric("MRR", _FMT_F3(health.headline_mrr))
+    c4.metric("MAP", _FMT_F3(health.headline_map))
+
+    # ── Row 2: Extended retrieval (shown when at least one value was computed) ──
+    has_extended = any([
+        health.headline_hit_rate_at_10 is not None,
+        health.headline_precision_at_10 is not None,
+        health.headline_critical_recall_at_10 is not None,
+        health.headline_weighted_recall_at_10 is not None,
+    ])
+    if has_extended:
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric(
+            "Hit Rate@10",
+            _FMT_PCT(health.headline_hit_rate_at_10),
+            help="Fraction of queries where at least one relevant chunk was retrieved in top-10",
+        )
+        d2.metric("Precision@10", _FMT_PCT(health.headline_precision_at_10))
+        d3.metric(
+            "Critical Recall@10",
+            _FMT_PCT(health.headline_critical_recall_at_10),
+            help="Recall computed only against critical-tier relevant chunks",
+        )
+        d4.metric(
+            "Weighted Recall@10",
+            _FMT_PCT(health.headline_weighted_recall_at_10),
+            help="Tiered recall: critical×1.0, supporting×0.5, context×0.2",
+        )
+
+    # ── Row 3: Answer quality (shown when answer quality data present) ────────
+    has_quality = any(
+        [
+            health.avg_quality_score is not None,
+            health.median_quality_score is not None,
+            health.avg_correctness is not None,
+            health.avg_hallucination_severity is not None,
+        ]
     )
-    c4.metric(
-        "Avg Latency",
-        f"{health.avg_latency_ms:.0f} ms" if health.avg_latency_ms is not None else "—",
+    if has_quality:
+        e1, e2, e3, e4 = st.columns(4)
+        e1.metric(
+            "Avg Quality",
+            _FMT_F2(health.avg_quality_score),
+            help="Composite quality score (0–1): correctness×0.45 + hallucination×0.30 + citation_coverage×0.15 + …",
+        )
+        e2.metric("Median Quality", _FMT_F2(health.median_quality_score))
+        e3.metric(
+            "Avg Correctness",
+            _FMT_0_5(health.avg_correctness),
+            help="LLM judge correctness score (0–5)",
+        )
+        e4.metric(
+            "Avg Hallucination",
+            _FMT_0_5(health.avg_hallucination_severity),
+            help="Hallucination severity score (0=none, 5=fatal). Lower is better.",
+        )
+
+    # ── Row 4: Safety & latency (shown when either is present) ───────────────
+    has_safety = any(
+        [
+            health.evidence_bounded_rate is not None,
+            health.hallucinated_on_unanswerable_rate is not None,
+            health.avg_citation_coverage is not None,
+        ]
     )
+    has_latency = any(
+        [
+            health.p50_latency_ms is not None,
+            health.p95_latency_ms is not None,
+        ]
+    )
+    if has_safety or has_latency:
+        f1, f2, f3, f4 = st.columns(4)
+        f1.metric(
+            "Evidence Bounded",
+            _FMT_PCT(health.evidence_bounded_rate),
+            help="Fraction of answers where every claim is supported by retrieved context",
+        )
+        f2.metric(
+            "Halluc. on Unanswerable",
+            _FMT_PCT(health.hallucinated_on_unanswerable_rate),
+            help="Of queries where context was insufficient, how often the model hallucinated instead of abstaining",
+        )
+        f3.metric(
+            "P50 Latency",
+            _FMT_MS(health.p50_latency_ms),
+        )
+        f4.metric(
+            "P95 Latency",
+            _FMT_MS(health.p95_latency_ms),
+        )
 
 
 def render_severity_bar(health: RunHealthSummary) -> None:
     """Horizontal breakdown: OK | MINOR | MODERATE | CRITICAL counts."""
     total = sum(health.severity_counts.values()) or 1
     cols = st.columns(4)
-    for col, sev in zip(cols, [Severity.OK, Severity.MINOR, Severity.MODERATE, Severity.CRITICAL], strict=True):
+    for col, sev in zip(
+        cols, [Severity.OK, Severity.MINOR, Severity.MODERATE, Severity.CRITICAL], strict=True
+    ):
         n = health.severity_counts.get(sev, 0)
         col.markdown(
             f"<div style='background:{_SEVERITY_COLORS[sev]};padding:8px;border-radius:4px;"
-            f"text-align:center'><b>{sev.upper()}</b><br>{n} ({n/total:.0%})</div>",
+            f"text-align:center'><b>{sev.upper()}</b><br>{n} ({n / total:.0%})</div>",
             unsafe_allow_html=True,
         )
 

@@ -17,6 +17,52 @@ from eval.app_v2.ui.widgets.metric_cards import (
 _TOP_N = 10
 
 
+def _render_retrieval_metrics_table(bundle: RunBundle) -> None:
+    """Render a compact retrieval metrics table matching the V1 'Metrics' tab."""
+    import pandas as pd
+
+    overall = bundle.aggregates.overall
+    k_values = sorted(overall.recall_at_k.keys())
+    if not k_values:
+        st.info("No retrieval metrics available.")
+        return
+
+    metrics = ["Recall", "Precision", "Hit Rate", "NDCG"]
+    include_tiered = bool(
+        overall.critical_recall_at_k
+        or overall.weighted_recall_at_k
+        or overall.critical_hit_rate_at_k
+    )
+    if include_tiered:
+        metrics.extend(["Critical Recall", "Weighted Recall", "Critical Hit Rate"])
+
+    data: dict[str, list[str]] = {"Metric": metrics}
+    for k in k_values:
+        col_values = [
+            f"{overall.recall_at_k.get(k, 0):.3f}",
+            f"{overall.precision_at_k.get(k, 0):.3f}",
+            f"{overall.hit_rate_at_k.get(k, 0):.3f}",
+            f"{overall.ndcg_at_k.get(k, 0):.3f}",
+        ]
+        if include_tiered:
+            col_values.extend(
+                [
+                    f"{overall.critical_recall_at_k.get(k, 0):.3f}",
+                    f"{overall.weighted_recall_at_k.get(k, 0):.3f}",
+                    f"{overall.critical_hit_rate_at_k.get(k, 0):.3f}",
+                ]
+            )
+        data[f"@{k}"] = col_values
+
+    df = pd.DataFrame(data)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("MRR", f"{overall.mrr:.3f}")
+    c2.metric("MAP", f"{overall.map:.3f}")
+    c3.metric("Avg Retrieved", f"{overall.avg_retrieved:.1f}")
+
+
 def render(bundle: RunBundle | None) -> None:
     st.header("Triage")
 
@@ -26,8 +72,13 @@ def render(bundle: RunBundle | None) -> None:
 
     h = bundle.health
 
-    # KPI cards
+    # KPI cards (now up to 4 rows depending on data available)
     render_kpi_cards(h)
+
+    # Full retrieval metrics table (collapsible)
+    with st.expander("Full retrieval metrics table", expanded=False):
+        _render_retrieval_metrics_table(bundle)
+
     st.divider()
 
     # Severity bar
@@ -63,12 +114,13 @@ def render(bundle: RunBundle | None) -> None:
 
     # Top-N critical/moderate queries
     critical = [
-        aq for aq in filtered_queries
+        aq
+        for aq in filtered_queries
         if aq.diagnostic.severity in (Severity.CRITICAL, Severity.MODERATE)
     ]
-    critical_sorted = sorted(critical, key=lambda aq: (
-        0 if aq.diagnostic.severity == Severity.CRITICAL else 1
-    ))
+    critical_sorted = sorted(
+        critical, key=lambda aq: 0 if aq.diagnostic.severity == Severity.CRITICAL else 1
+    )
 
     st.subheader(f"Top {_TOP_N} queries needing attention")
     if not critical_sorted:

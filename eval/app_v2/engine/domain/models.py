@@ -28,6 +28,7 @@ from rag.eval.verdict import Verdict
 @dataclass(frozen=True, slots=True)
 class RunConfig:
     """Normalized subset of EvalRunMeta used for config-change detection."""
+
     retriever: str | None
     index_name: str | None
     reranker_model: str | None
@@ -41,6 +42,7 @@ class RunConfig:
 @dataclass(frozen=True, slots=True)
 class QueryTrace:
     """Normalized trace for a single query, joined from traces.jsonl."""
+
     trace_id: str
     reranked_chunk_ids: tuple[str, ...] | None
     packed_chunk_ids: tuple[str, ...] | None
@@ -132,10 +134,31 @@ class RunHealthSummary:
     worst_slice: SliceKey | None
     verdict_status: Literal["SHIP", "BLOCK"] | None
 
+    # Extended retrieval metrics (None = not computed for this run)
+    headline_mrr: float | None = None
+    headline_map: float | None = None
+    headline_hit_rate_at_10: float | None = None
+    headline_precision_at_10: float | None = None
+    headline_critical_recall_at_10: float | None = None
+    headline_weighted_recall_at_10: float | None = None
+
+    # Answer quality aggregates
+    avg_correctness: float | None = None
+    avg_hallucination_severity: float | None = None
+    avg_citation_coverage: float | None = None
+    evidence_bounded_rate: float | None = None
+    hallucinated_on_unanswerable_rate: float | None = None
+    median_quality_score: float | None = None
+
+    # Latency percentiles
+    p50_latency_ms: float | None = None
+    p95_latency_ms: float | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class VerdictSummary:
     """Thin wrapper around Verdict for display in RunBundle."""
+
     decision: Literal["SHIP", "BLOCK"]
     failed_check_names: tuple[str, ...]
     raw: Verdict
@@ -156,6 +179,7 @@ class RunBundle:
 
 
 # ── Comparison models ─────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True, slots=True)
 class QueryDeltaSummary:
@@ -196,6 +220,7 @@ class ComparisonBundle:
 
 
 # ── Trend models ──────────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True, slots=True)
 class ConfigFieldChange:

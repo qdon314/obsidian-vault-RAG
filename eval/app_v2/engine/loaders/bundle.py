@@ -76,7 +76,9 @@ def _build_query_record(
         packed_chunk_ids=packed,
         per_query_recall_at_k={10: recall_10},
         per_query_precision_at_k={10: len(hits_at_10) / 10 if retrieved else 0.0},
-        per_query_ndcg_at_k={10: recall_10},  # simplified; replace with ndcg from result if available
+        per_query_ndcg_at_k={
+            10: recall_10
+        },  # simplified; replace with ndcg from result if available
         per_query_hit_rate_at_k={10: hit_rate_10},
         answer_text=result.answer.text if result.answer else None,
         answer_metrics=result.answer_metrics,
@@ -121,10 +123,12 @@ def build_bundle(run_dir: Path) -> RunBundle:
     if traces_artifact and traces_artifact.payload:
         traces = traces_artifact.payload
     elif results:
-        all_warnings.append(BundleWarning(
-            code=BundleWarningCode.MISSING_TRACES,
-            message="traces.jsonl not found; pipeline drill-down unavailable",
-        ))
+        all_warnings.append(
+            BundleWarning(
+                code=BundleWarningCode.MISSING_TRACES,
+                message="traces.jsonl not found; pipeline drill-down unavailable",
+            )
+        )
 
     verdict_summary: VerdictSummary | None = None
     if verdict_artifact and verdict_artifact.payload:
@@ -135,18 +139,36 @@ def build_bundle(run_dir: Path) -> RunBundle:
         meta = EvalRunMeta()
     if aggregates is None:
         from rag.eval.models import RetrievalSummary
+
         aggregates = EvalAggregates(overall=RetrievalSummary(num_queries=0, avg_retrieved=0.0))
 
     records = [_build_query_record(r, traces) for r in results]
     analyzed = analyze_queries(records)
 
-    recall_10 = aggregates.overall.recall_at_k.get(10, 0.0)
-    ndcg_10 = aggregates.overall.ndcg_at_k.get(10, 0.0)
     slice_table = build_slice_table(analyzed, group_by=["query_type", "difficulty"])
     worst_slice = slice_table.rows[0].key if slice_table.rows else None
 
     verdict_flag = verdict_summary.decision if verdict_summary else None
-    health = build_health(analyzed, recall_10, ndcg_10, verdict_status=verdict_flag, worst_slice=worst_slice)
+    health = build_health(
+        analyzed, aggregates, verdict_status=verdict_flag, worst_slice=worst_slice
+    )
+
+    # Warn when MRR is zero yet at least one query retrieved something at rank 1.
+    # MRR=0 while recall@1>0 is a logical contradiction (you found something first,
+    # so reciprocal rank must be 1.0), which indicates an incomplete artifact.
+    # We deliberately do NOT warn when all queries genuinely missed — that is a valid 0.
+    recall_at_1 = aggregates.overall.recall_at_k.get(1, 0.0)
+    if aggregates.overall.num_queries > 0 and aggregates.overall.mrr == 0.0 and recall_at_1 > 0.0:
+        all_warnings.append(
+            BundleWarning(
+                code=BundleWarningCode.HEALTH_PARTIAL,
+                message=(
+                    "MRR is 0.0 but recall@1 > 0; metrics artifact may be incomplete "
+                    f"(recall@1={recall_at_1:.3f})"
+                ),
+                artifact_name="metrics.json",
+            )
+        )
 
     run_id = meta.run_id or run_dir.name
     timestamp = _parse_timestamp(run_dir.name)

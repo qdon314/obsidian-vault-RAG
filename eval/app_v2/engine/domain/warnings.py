@@ -6,14 +6,15 @@ from enum import StrEnum
 
 
 class BundleWarningCode(StrEnum):
-    MISSING_TRACES           = "missing_traces"
-    MISSING_VERDICT          = "missing_verdict"
-    PARTIAL_TRACE_PARSE      = "partial_trace_parse"
-    PARTIAL_RESULTS_PARSE    = "partial_results_parse"
-    SCHEMA_VERSION_UNKNOWN   = "schema_version_unknown"
-    TRACE_TEXT_REDACTED      = "trace_text_redacted"
-    ORPHAN_TRACE             = "orphan_trace"
+    MISSING_TRACES = "missing_traces"
+    MISSING_VERDICT = "missing_verdict"
+    PARTIAL_TRACE_PARSE = "partial_trace_parse"
+    PARTIAL_RESULTS_PARSE = "partial_results_parse"
+    SCHEMA_VERSION_UNKNOWN = "schema_version_unknown"
+    TRACE_TEXT_REDACTED = "trace_text_redacted"
+    ORPHAN_TRACE = "orphan_trace"
     MISSING_TRACE_FOR_RESULT = "missing_trace_for_result"
+    HEALTH_PARTIAL = "health_partial"
 
 
 @dataclass(frozen=True, slots=True)

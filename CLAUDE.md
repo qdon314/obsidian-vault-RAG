@@ -33,7 +33,8 @@ Never run `python`, `pip`, `pytest`, `ruff`, or `streamlit` directly.
 
 Do:
 
-- Use `rg`/`rg --files` for search.
+- Use LSP for code navigation (definitions, references, types, call hierarchy) — prefer it over grep for anything symbol-related.
+- Use `rg`/`rg --files` for text/pattern search (comments, strings, config values, filenames).
 - Validate with the smallest relevant test scope first.
 - Keep domain models immutable (`dataclasses.replace()` for modifications).
 - Thread optional `metadata` through port calls when extending behavior.
@@ -101,6 +102,27 @@ flowchart TD
     C --> D["Generator.generate"]
     D --> E["QueryLogger.log (QueryTrace)"]
 ```
+
+## Code Intelligence (LSP)
+
+Prefer LSP over Grep/Glob/Read for all symbol navigation:
+
+| Task | LSP operation |
+|------|--------------|
+| Jump to definition | `goToDefinition` |
+| Find all call sites | `findReferences` |
+| Type info without opening file | `hover` |
+| List symbols in a file | `documentSymbol` |
+| Find a class/function by name | `workspaceSymbol` |
+| Concrete adapters for a port | `goToImplementation` |
+| What calls this function | `incomingCalls` |
+| What does this function call | `outgoingCalls` |
+
+Before renaming or changing a function signature, use `findReferences` to locate all call sites first.
+
+After editing code, check LSP diagnostics before moving on — fix type errors and missing imports in the same turn.
+
+Use `rg` only when LSP doesn't apply: free-text search, comments, string literals, config values.
 
 ## Context Awareness Requirements
 
