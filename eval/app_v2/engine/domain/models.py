@@ -139,6 +139,7 @@ class RunHealthSummary:
     headline_map: float | None = None
     headline_hit_rate_at_10: float | None = None
     headline_precision_at_10: float | None = None
+    headline_capped_recall_at_10: float | None = None
     headline_critical_recall_at_10: float | None = None
     headline_weighted_recall_at_10: float | None = None
 

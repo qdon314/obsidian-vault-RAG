@@ -41,7 +41,7 @@ def render_kpi_cards(health: RunHealthSummary) -> None:
     has_extended = any(
         [
             health.headline_hit_rate_at_10 is not None,
-            health.headline_precision_at_10 is not None,
+            health.headline_capped_recall_at_10 is not None,
             health.headline_critical_recall_at_10 is not None,
             health.headline_weighted_recall_at_10 is not None,
         ]
@@ -53,7 +53,11 @@ def render_kpi_cards(health: RunHealthSummary) -> None:
             _FMT_PCT(health.headline_hit_rate_at_10),
             help="Fraction of queries where at least one relevant chunk was retrieved in top-10",
         )
-        d2.metric("Precision@10", _FMT_PCT(health.headline_precision_at_10))
+        d2.metric(
+            "Capped Recall@10",
+            _FMT_PCT(health.headline_capped_recall_at_10),
+            help="Recall with denominator capped at k — interpretable when ground truth sets exceed k",
+        )
         d3.metric(
             "Critical Recall@10",
             _FMT_PCT(health.headline_critical_recall_at_10),

@@ -51,6 +51,10 @@ def build_health(
     hit_rate_at_10: float | None = overall.hit_rate_at_k.get(10) if has_queries else None
     precision_at_10: float | None = overall.precision_at_k.get(10) if has_queries else None
 
+    capped_recall_at_10: float | None = None
+    if overall.capped_recall_at_k:
+        capped_recall_at_10 = overall.capped_recall_at_k.get(10)
+
     critical_recall_at_10: float | None = None
     if overall.critical_recall_at_k:
         critical_recall_at_10 = overall.critical_recall_at_k.get(10)
@@ -110,6 +114,7 @@ def build_health(
         headline_map=map_,
         headline_hit_rate_at_10=hit_rate_at_10,
         headline_precision_at_10=precision_at_10,
+        headline_capped_recall_at_10=capped_recall_at_10,
         headline_critical_recall_at_10=critical_recall_at_10,
         headline_weighted_recall_at_10=weighted_recall_at_10,
         # Answer quality

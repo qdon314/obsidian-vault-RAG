@@ -59,6 +59,24 @@ def recall_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
     return hits / float(len(relevant))
 
 
+def capped_recall_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
+    """
+    Compute Recall@K with denominator capped at k.
+
+    When the ground truth set is larger than k (e.g. a section-level citation
+    resolving to 80 chunks with k=10), standard recall is bounded by k/|relevant|
+    regardless of retrieval quality.  Capping the denominator at min(|relevant|, k)
+    asks instead: "of the top-k slots available, how many landed on relevant chunks?"
+
+    Equals standard recall when |relevant| <= k.
+    """
+    if not relevant:
+        return 0.0
+    topk = retrieved[:k]
+    hits = sum(1 for cid in topk if cid in relevant)
+    return hits / float(min(len(relevant), k))
+
+
 def precision_at_k(retrieved: Sequence[str], relevant: set[str], k: int) -> float:
     """
     Compute Precision@K for a single query.
@@ -235,6 +253,7 @@ def summarize(
             num_queries=0,
             avg_retrieved=0.0,
             recall_at_k=dict.fromkeys(ks, 0.0),
+            capped_recall_at_k=dict.fromkeys(ks, 0.0),
             precision_at_k=dict.fromkeys(ks, 0.0),
             hit_rate_at_k=dict.fromkeys(ks, 0.0),
             ndcg_at_k=dict.fromkeys(ks, 0.0),
@@ -249,6 +268,7 @@ def summarize(
     avg_retrieved = sum(len(r.retrieved_chunk_ids) for r in results) / n
 
     recall_at_k_res = {}
+    capped_recall_at_k_res = {}
     precision_at_k_res = {}
     hit_rate_at_k_res = {}
     ndcg_at_k_res = {}
@@ -259,6 +279,13 @@ def summarize(
     for k in ks:
         recall_at_k_res[k] = (
             sum(recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
+        )
+        capped_recall_at_k_res[k] = (
+            sum(
+                capped_recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k)
+                for r in results
+            )
+            / n
         )
         precision_at_k_res[k] = (
             sum(precision_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
@@ -306,6 +333,7 @@ def summarize(
         num_queries=n,
         avg_retrieved=avg_retrieved,
         recall_at_k=recall_at_k_res,
+        capped_recall_at_k=capped_recall_at_k_res,
         precision_at_k=precision_at_k_res,
         hit_rate_at_k=hit_rate_at_k_res,
         ndcg_at_k=ndcg_at_k_res,

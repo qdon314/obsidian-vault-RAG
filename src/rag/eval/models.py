@@ -88,6 +88,7 @@ class RetrievalSummary(DataClassJsonMixin):
 
     # Per-K metrics
     recall_at_k: dict[int, float] = field(default_factory=dict)
+    capped_recall_at_k: dict[int, float] = field(default_factory=dict)
     precision_at_k: dict[int, float] = field(default_factory=dict)
     hit_rate_at_k: dict[int, float] = field(default_factory=dict)
     ndcg_at_k: dict[int, float] = field(default_factory=dict)
@@ -111,6 +112,8 @@ class RetrievalSummary(DataClassJsonMixin):
         }
         for k, v in self.recall_at_k.items():
             out[f"recall@{k}"] = float(v)
+        for k, v in self.capped_recall_at_k.items():
+            out[f"capped_recall@{k}"] = float(v)
         for k, v in self.precision_at_k.items():
             out[f"precision@{k}"] = float(v)
         for k, v in self.hit_rate_at_k.items():
@@ -134,6 +137,7 @@ class RetrievalSummary(DataClassJsonMixin):
             num_queries=int(data.get("num_queries", 0)),
             avg_retrieved=float(data.get("avg_retrieved", 0.0)),
             recall_at_k=_parse_flattened_metrics(data, "recall"),
+            capped_recall_at_k=_parse_flattened_metrics(data, "capped_recall"),
             precision_at_k=_parse_flattened_metrics(data, "precision"),
             hit_rate_at_k=_parse_flattened_metrics(data, "hit_rate"),
             ndcg_at_k=_parse_flattened_metrics(data, "ndcg"),
