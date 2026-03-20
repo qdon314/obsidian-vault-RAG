@@ -17,7 +17,7 @@ _CLASS_COLORS = {
 
 
 def _render_aggregate_deltas(cb: ComparisonBundle) -> None:
-    st.subheader("Aggregate deltas (B − A)")
+    st.subheader("Aggregate deltas (B - A)")
     cols = st.columns(len(cb.aggregate_deltas) or 1)
     for col, (metric, delta) in zip(cols, cb.aggregate_deltas.items(), strict=False):
         if delta is None:

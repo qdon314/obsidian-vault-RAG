@@ -1,10 +1,8 @@
 # tests/eval/app_v2/engine/test_filter.py
-from rag.eval.answer_metrics import AnswerQualityMetrics
-
 from eval.app_v2.engine.derived.diagnostics import analyze_queries
-from eval.app_v2.engine.domain.enums import DiagnosticCode
 from eval.app_v2.engine.domain.models import QueryRecord
 from eval.app_v2.engine.services.filter import apply_facet_filters
+from rag.eval.answer_metrics import AnswerQualityMetrics
 
 
 def _r(qid, qtype="factual", difficulty="easy", recall_10=1.0, quality_score=None, latency_ms=None):

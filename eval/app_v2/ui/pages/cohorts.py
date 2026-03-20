@@ -43,7 +43,7 @@ def render(bundle: RunBundle | None) -> None:
         return
 
     # ── Full cohort table ──────────────────────────────────────────────────────
-    st.subheader(f"All cohorts: {' × '.join(selected_dims)}")
+    st.subheader(f"All cohorts: {' x '.join(selected_dims)}")
     import pandas as pd
     rows = []
     for row in table.rows:

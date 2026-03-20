@@ -1,8 +1,7 @@
 # tests/eval/app_v2/engine/test_facets.py
-from rag.eval.answer_metrics import AnswerQualityMetrics
-
 from eval.app_v2.engine.domain.models import QueryRecord
 from eval.app_v2.engine.facets.registry import FACETS, FacetDef, get_facet
+from rag.eval.answer_metrics import AnswerQualityMetrics
 
 
 def _record(

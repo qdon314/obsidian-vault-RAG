@@ -17,16 +17,18 @@ _FMT_F2 = lambda v: f"{v:.2f}" if v is not None else "—"  # noqa: E731
 _FMT_F3 = lambda v: f"{v:.3f}" if v is not None else "—"  # noqa: E731
 _FMT_MS = lambda v: f"{v:.0f} ms" if v is not None else "—"  # noqa: E731
 _FMT_0_5 = lambda v: f"{v:.2f} / 5" if v is not None else "—"  # noqa: E731
+_FMT_RATIO = lambda v: f"{v:.2f} x " if v is not None else "N/A"  # noqa: E731
 
 
 def render_kpi_cards(health: RunHealthSummary) -> None:
     """Render headline KPI metric cards from a RunHealthSummary.
 
-    Displays up to four rows of metrics, each shown conditionally:
+    Displays up to five rows of metrics, each shown conditionally:
       Row 1 — Core retrieval (always)
       Row 2 — Extended retrieval (when tiered metrics present)
       Row 3 — Answer quality (when answer quality present)
       Row 4 — Safety & latency (when present)
+      Row 5 — Compression efficiency (when compression adapter was used)
     """
     # ── Row 1: Core retrieval (always shown) ─────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
@@ -36,12 +38,14 @@ def render_kpi_cards(health: RunHealthSummary) -> None:
     c4.metric("MAP", _FMT_F3(health.headline_map))
 
     # ── Row 2: Extended retrieval (shown when at least one value was computed) ──
-    has_extended = any([
-        health.headline_hit_rate_at_10 is not None,
-        health.headline_precision_at_10 is not None,
-        health.headline_critical_recall_at_10 is not None,
-        health.headline_weighted_recall_at_10 is not None,
-    ])
+    has_extended = any(
+        [
+            health.headline_hit_rate_at_10 is not None,
+            health.headline_precision_at_10 is not None,
+            health.headline_critical_recall_at_10 is not None,
+            health.headline_weighted_recall_at_10 is not None,
+        ]
+    )
     if has_extended:
         d1, d2, d3, d4 = st.columns(4)
         d1.metric(
@@ -58,7 +62,7 @@ def render_kpi_cards(health: RunHealthSummary) -> None:
         d4.metric(
             "Weighted Recall@10",
             _FMT_PCT(health.headline_weighted_recall_at_10),
-            help="Tiered recall: critical×1.0, supporting×0.5, context×0.2",
+            help="Tiered recall: critical x 1.0, supporting x 0.5, context x 0.2",
         )
 
     # ── Row 3: Answer quality (shown when answer quality data present) ────────
@@ -75,13 +79,13 @@ def render_kpi_cards(health: RunHealthSummary) -> None:
         e1.metric(
             "Avg Quality",
             _FMT_F2(health.avg_quality_score),
-            help="Composite quality score (0–1): correctness×0.45 + hallucination×0.30 + citation_coverage×0.15 + …",
+            help="Composite quality score (0 - 1): correctness x 0.45 + hallucination x 0.30 + citation_coverage x 0.15 + …",
         )
         e2.metric("Median Quality", _FMT_F2(health.median_quality_score))
         e3.metric(
             "Avg Correctness",
             _FMT_0_5(health.avg_correctness),
-            help="LLM judge correctness score (0–5)",
+            help="LLM judge correctness score (0 - 5)",
         )
         e4.metric(
             "Avg Hallucination",
@@ -122,6 +126,18 @@ def render_kpi_cards(health: RunHealthSummary) -> None:
         f4.metric(
             "P95 Latency",
             _FMT_MS(health.p95_latency_ms),
+        )
+
+    # ── Row 5: Compression efficiency (shown when compression adapter was used) ──
+    if health.avg_compression_ratio is not None:
+        g1, _g2, _g3, _g4 = st.columns(4)
+        g1.metric(
+            "Avg Compression Ratio",
+            _FMT_RATIO(health.avg_compression_ratio),
+            help=(
+                "Average ratio of compressed tokens to original tokens (lower = more compressed). "
+                "N/A when no compression adapter was used."
+            ),
         )
 
 

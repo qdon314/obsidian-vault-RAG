@@ -86,6 +86,14 @@ def build_health(
     p50_latency: float | None = lat_dict.get("p50")
     p95_latency: float | None = lat_dict.get("p95")
 
+    # Compression efficiency — derived from savings_pct_avg (ratio = 1 - savings_pct)
+    compression_dict = aggregates.compression or {}
+    avg_compression_ratio: float | None = None
+    if compression_dict:
+        savings = compression_dict.get("savings_pct_avg")
+        if savings is not None:
+            avg_compression_ratio = 1.0 - savings
+
     return RunHealthSummary(
         headline_recall_at_10=recall_at_10,
         headline_ndcg_at_10=ndcg_at_10,
@@ -114,4 +122,6 @@ def build_health(
         # Latency percentiles
         p50_latency_ms=p50_latency,
         p95_latency_ms=p95_latency,
+        # Compression
+        avg_compression_ratio=avg_compression_ratio,
     )

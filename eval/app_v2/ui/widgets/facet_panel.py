@@ -6,6 +6,8 @@ Reads FACETS and renders the correct widget per value_type automatically.
 
 from __future__ import annotations
 
+import contextlib
+
 import streamlit as st
 
 from eval.app_v2.engine.domain.models import AnalyzedQuery
@@ -35,10 +37,8 @@ def _collect_numeric_range(
     for aq in queries:
         v = facet.extract(aq.record)
         if v is not None:
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 values.append(float(v))
-            except (TypeError, ValueError):
-                pass
     if not values:
         return None
     lo, hi = min(values), max(values)

@@ -154,6 +154,9 @@ class RunHealthSummary:
     p50_latency_ms: float | None = None
     p95_latency_ms: float | None = None
 
+    # Compression efficiency (None = compression did not run)
+    avg_compression_ratio: float | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class VerdictSummary:
