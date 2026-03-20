@@ -17,6 +17,7 @@ def test_build_bundle_produces_run_bundle():
     assert len(bundle.queries) > 0
     assert bundle.health.headline_recall_at_10 >= 0.0
 
+
 @pytest.mark.skipif(not REAL_RUN.exists(), reason="no real run dir")
 def test_build_bundle_queries_have_diagnostics():
     from eval.app_v2.engine.domain.models import AnalyzedQuery

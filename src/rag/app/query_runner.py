@@ -88,7 +88,7 @@ def run_query(
     t_compress_ms = 0
     compression_meta: dict[str, Any] | None = None
     if compressor is not None:
-        context_before = context.rendered_context          # capture before overwrite
+        context_before = context.rendered_context  # capture before overwrite
         compression_result = compressor.compress(context, query=query, metadata=metadata)
         t_compress_ms = compression_result.latency_ms
         context = compression_result.context_pack

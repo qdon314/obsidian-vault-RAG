@@ -3,6 +3,7 @@
 S3 mode: set EVAL_S3_BUCKET and EVAL_S3_PREFIX env vars to load runs from S3.
 Runs are cached locally in EVAL_S3_CACHE_DIR (default: ~/.cache/eval-runs).
 """
+
 from __future__ import annotations
 
 import os
@@ -67,6 +68,7 @@ def main() -> None:
     s3 = _s3_config()
     if s3:
         import boto3  # type: ignore[import-untyped]
+
         bucket, prefix, cache_dir = s3
         client = boto3.client("s3")
         runs = discover_runs_s3(client, bucket, prefix, cache_dir)
@@ -79,7 +81,11 @@ def main() -> None:
             st.caption(f"Source: s3://{s3[0]}/{s3[1]}")
         page = st.radio("Page", ALL_PAGE_NAMES)
         selected = run_selector_widget(runs) if page != "Trends" else None
-        selected_b = run_selector_widget(runs, key="run_b", label="Compare to (B)") if page == "Compare" else None
+        selected_b = (
+            run_selector_widget(runs, key="run_b", label="Compare to (B)")
+            if page == "Compare"
+            else None
+        )
 
     if page == "Trends":
         trends_page(runs)

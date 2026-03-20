@@ -78,20 +78,20 @@ def render_retrieved_chunks(
         ns = f"{key_prefix}_" if key_prefix else ""
 
         st.markdown("#### Retrieved stage")
-        tab_m, tab_miss, tab_e = st.tabs([
-            f"Matched ✓ ({len(matched)})",
-            f"Missed ✗ ({len(missed)})",
-            f"Extra ({len(extra)})",
-        ])
+        tab_m, tab_miss, tab_e = st.tabs(
+            [
+                f"Matched ✓ ({len(matched)})",
+                f"Missed ✗ ({len(missed)})",
+                f"Extra ({len(extra)})",
+            ]
+        )
 
         with tab_m:
             _render_chunk_group(matched, chunk_texts, key_prefix=f"{ns}ret_matched")
 
         with tab_miss:
             if missed:
-                st.caption(
-                    "These relevant chunks were not retrieved — no text is available."
-                )
+                st.caption("These relevant chunks were not retrieved — no text is available.")
             _render_chunk_group(missed, {}, key_prefix=f"{ns}ret_missed")
 
         with tab_e:

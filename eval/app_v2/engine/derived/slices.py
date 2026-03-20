@@ -35,9 +35,13 @@ def build_slice_table(
         recall_vals = [aq.record.per_query_recall_at_k.get(10) for aq in members]
         ndcg_vals = [aq.record.per_query_ndcg_at_k.get(10) for aq in members]
         metrics: dict[str, float | None] = {
-            "recall@10": sum(v for v in recall_vals if v is not None) / len(recall_vals) if recall_vals else None,
-            "ndcg@10":   sum(v for v in ndcg_vals if v is not None) / len(ndcg_vals) if ndcg_vals else None,
-            "size":      float(len(members)),
+            "recall@10": sum(v for v in recall_vals if v is not None) / len(recall_vals)
+            if recall_vals
+            else None,
+            "ndcg@10": sum(v for v in ndcg_vals if v is not None) / len(ndcg_vals)
+            if ndcg_vals
+            else None,
+            "size": float(len(members)),
         }
         rows.append(SliceMetricRow(key=slice_key, size=len(members), metrics=metrics))
 

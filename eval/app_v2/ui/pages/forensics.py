@@ -100,7 +100,7 @@ def render(bundle: RunBundle | None) -> None:
     st.divider()
     with st.expander("Per-query retrieval metrics", expanded=False):
         mc1, mc2, mc3, mc4 = st.columns(4)
-        mc1.metric("Recall@10",    f"{r.per_query_recall_at_k.get(10, 0):.1%}")
+        mc1.metric("Recall@10", f"{r.per_query_recall_at_k.get(10, 0):.1%}")
         mc2.metric("Precision@10", f"{r.per_query_precision_at_k.get(10, 0):.1%}")
-        mc3.metric("NDCG@10",      f"{r.per_query_ndcg_at_k.get(10, 0):.1%}")
-        mc4.metric("Latency",      f"{r.latency_ms} ms" if r.latency_ms else "—")
+        mc3.metric("NDCG@10", f"{r.per_query_ndcg_at_k.get(10, 0):.1%}")
+        mc4.metric("Latency", f"{r.latency_ms} ms" if r.latency_ms else "—")

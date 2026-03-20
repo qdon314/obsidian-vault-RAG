@@ -34,6 +34,7 @@ def render_chunk_stats_panel(bundle: RunBundle) -> None:
             for s in display
         ]
         import pandas as pd
+
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
         if len(stats) > _MAX_CHUNKS:
             st.caption(f"Showing {_MAX_CHUNKS} of {len(stats)} chunks.")

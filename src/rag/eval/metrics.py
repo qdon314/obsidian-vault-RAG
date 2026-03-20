@@ -281,10 +281,7 @@ def summarize(
             sum(recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results) / n
         )
         capped_recall_at_k_res[k] = (
-            sum(
-                capped_recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k)
-                for r in results
-            )
+            sum(capped_recall_at_k(r.retrieved_chunk_ids, r.relevant_chunk_ids, k) for r in results)
             / n
         )
         precision_at_k_res[k] = (

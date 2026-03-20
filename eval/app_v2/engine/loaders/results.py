@@ -29,11 +29,13 @@ class ResultsLoader:
             try:
                 results.append(EvalResult.from_results_dict(json.loads(line)))
             except Exception as exc:
-                warnings.append(BundleWarning(
-                    code=BundleWarningCode.PARTIAL_RESULTS_PARSE,
-                    message=f"Row {i} parse error: {exc}",
-                    artifact_name=self.artifact_name,
-                ))
+                warnings.append(
+                    BundleWarning(
+                        code=BundleWarningCode.PARTIAL_RESULTS_PARSE,
+                        message=f"Row {i} parse error: {exc}",
+                        artifact_name=self.artifact_name,
+                    )
+                )
         return LoadedArtifact(
             artifact_name=self.artifact_name,
             payload=tuple(results),

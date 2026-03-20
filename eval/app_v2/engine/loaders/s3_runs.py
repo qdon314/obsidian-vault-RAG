@@ -7,6 +7,7 @@ Usage pattern (download-then-load):
     local_dir = sync_run_from_s3(client, bucket, s3_prefix=runs[0][2], cache_dir=Path("/tmp/eval-cache"))
     bundle = build_bundle(local_dir)
 """
+
 from __future__ import annotations
 
 import re

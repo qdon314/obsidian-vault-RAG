@@ -46,14 +46,13 @@ def _make_bundle(
     recall: float = 0.8,
 ) -> RunBundle:
     from rag.eval.models import EvalAggregates, RetrievalSummary
+
     return RunBundle(
         run_id=run_id,
         display_name=run_id,
         timestamp=ts,
         config=config or _make_config(),
-        aggregates=EvalAggregates(
-            overall=RetrievalSummary(num_queries=10, avg_retrieved=10.0)
-        ),
+        aggregates=EvalAggregates(overall=RetrievalSummary(num_queries=10, avg_retrieved=10.0)),
         queries=(),
         health=_make_health(recall),
         verdict=None,
@@ -93,7 +92,9 @@ def test_single_run_produces_no_events():
 def test_custom_tracked_fields_ignores_others():
     runs = [
         _make_bundle("r1", _T0, _make_config(top_k=10, generator_model="gpt-3")),
-        _make_bundle("r2", _T0 + timedelta(days=1), _make_config(top_k=20, generator_model="gpt-4")),
+        _make_bundle(
+            "r2", _T0 + timedelta(days=1), _make_config(top_k=20, generator_model="gpt-4")
+        ),
     ]
     # Only track generator_model — top_k change should be ignored
     events = detect_config_change_events(runs, tracked_fields={"generator_model"})
@@ -162,8 +163,6 @@ def test_build_trend_bundle_diagnostic_rate_series_sums_to_one():
     runs = [_make_bundle("r1", _T0)]
     bundle = build_trend_bundle(runs)
     from eval.app_v2.engine.domain.enums import DiagnosticCode
-    total_rate = sum(
-        (bundle.diagnostic_rate_series[c][0] or 0.0)
-        for c in DiagnosticCode
-    )
+
+    total_rate = sum((bundle.diagnostic_rate_series[c][0] or 0.0) for c in DiagnosticCode)
     assert abs(total_rate - 1.0) < 1e-9

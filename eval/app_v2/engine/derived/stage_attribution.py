@@ -11,6 +11,7 @@ Decision order (see design doc):
 6. Generation
 7. Fallback
 """
+
 from __future__ import annotations
 
 from eval.app_v2.engine.domain.enums import (
@@ -25,19 +26,19 @@ from eval.app_v2.engine.domain.models import QueryRecord
 
 # Severity per code — single source of truth
 _SEVERITY: dict[DiagnosticCode, Severity] = {
-    DiagnosticCode.DATA_INSUFFICIENT:              Severity.MODERATE,
-    DiagnosticCode.TRACE_MISSING:                  Severity.MINOR,
+    DiagnosticCode.DATA_INSUFFICIENT: Severity.MODERATE,
+    DiagnosticCode.TRACE_MISSING: Severity.MINOR,
     DiagnosticCode.FAILED_ABSTAIN_ON_UNANSWERABLE: Severity.CRITICAL,
-    DiagnosticCode.BAD_ABSTAIN_ON_ANSWERABLE:      Severity.MODERATE,
-    DiagnosticCode.RETRIEVAL_MISS:                 Severity.MODERATE,
-    DiagnosticCode.RETRIEVAL_PARTIAL:              Severity.MINOR,
-    DiagnosticCode.RERANK_DROPPED_RELEVANT:        Severity.MODERATE,
-    DiagnosticCode.RERANK_DEGRADED_RANK:           Severity.MINOR,
-    DiagnosticCode.PACKING_OMITTED_RELEVANT:       Severity.MODERATE,
-    DiagnosticCode.PACKING_TRUNCATED_RELEVANT:     Severity.MODERATE,
-    DiagnosticCode.UNSUPPORTED_ANSWER:             Severity.CRITICAL,
-    DiagnosticCode.GROUNDED_ANSWER:                Severity.OK,
-    DiagnosticCode.NO_CLEAR_FAILURE:               Severity.OK,
+    DiagnosticCode.BAD_ABSTAIN_ON_ANSWERABLE: Severity.MODERATE,
+    DiagnosticCode.RETRIEVAL_MISS: Severity.MODERATE,
+    DiagnosticCode.RETRIEVAL_PARTIAL: Severity.MINOR,
+    DiagnosticCode.RERANK_DROPPED_RELEVANT: Severity.MODERATE,
+    DiagnosticCode.RERANK_DEGRADED_RANK: Severity.MINOR,
+    DiagnosticCode.PACKING_OMITTED_RELEVANT: Severity.MODERATE,
+    DiagnosticCode.PACKING_TRUNCATED_RELEVANT: Severity.MODERATE,
+    DiagnosticCode.UNSUPPORTED_ANSWER: Severity.CRITICAL,
+    DiagnosticCode.GROUNDED_ANSWER: Severity.OK,
+    DiagnosticCode.NO_CLEAR_FAILURE: Severity.OK,
 }
 
 
@@ -78,7 +79,9 @@ def classify_query(record: QueryRecord) -> tuple[DiagnosticCode, Severity]:
     # 5. Packing — check if relevant survived rerank but lost in packing
     if record.packed_chunk_ids is not None:
         packed_set = frozenset(record.packed_chunk_ids)
-        reranked_set = frozenset(record.reranked_chunk_ids) if record.reranked_chunk_ids else retrieved
+        reranked_set = (
+            frozenset(record.reranked_chunk_ids) if record.reranked_chunk_ids else retrieved
+        )
         survived_rerank = hits & reranked_set
         if survived_rerank and not (survived_rerank & packed_set):
             code = DiagnosticCode.PACKING_OMITTED_RELEVANT
@@ -115,7 +118,12 @@ def derive_stage_statuses(
     hits = relevant & retrieved
 
     if not relevant:
-        return RetrievalStatus.UNKNOWN, RerankStatus.UNKNOWN, PackingStatus.UNKNOWN, GenerationStatus.UNKNOWN
+        return (
+            RetrievalStatus.UNKNOWN,
+            RerankStatus.UNKNOWN,
+            PackingStatus.UNKNOWN,
+            GenerationStatus.UNKNOWN,
+        )
 
     if not hits:
         ret = RetrievalStatus.MISS

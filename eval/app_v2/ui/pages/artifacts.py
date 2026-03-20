@@ -18,7 +18,9 @@ def render(bundle: RunBundle | None) -> None:
     if bundle.warnings:
         st.subheader(f"Loader warnings ({len(bundle.warnings)})")
         for w in bundle.warnings:
-            st.warning(f"`{w.code}` — {w.message}" + (f" [{w.artifact_name}]" if w.artifact_name else ""))
+            st.warning(
+                f"`{w.code}` — {w.message}" + (f" [{w.artifact_name}]" if w.artifact_name else "")
+            )
     else:
         st.success("No loader warnings.")
 

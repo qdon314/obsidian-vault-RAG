@@ -28,11 +28,15 @@ class VerdictLoader:
     def load(self, run_dir: Path) -> LoadedArtifact:
         warnings: list[BundleWarning] = []
         if not self._verdict_path.exists():
-            warnings.append(BundleWarning(
-                code=BundleWarningCode.MISSING_VERDICT,
-                message=f"No verdict file at {self._verdict_path}",
-            ))
-            return LoadedArtifact(artifact_name=self.artifact_name, payload=None, warnings=tuple(warnings))
+            warnings.append(
+                BundleWarning(
+                    code=BundleWarningCode.MISSING_VERDICT,
+                    message=f"No verdict file at {self._verdict_path}",
+                )
+            )
+            return LoadedArtifact(
+                artifact_name=self.artifact_name, payload=None, warnings=tuple(warnings)
+            )
         try:
             data = json.loads(self._verdict_path.read_text())
             verdict = verdict_from_dict(data)
@@ -45,8 +49,12 @@ class VerdictLoader:
             )
             return LoadedArtifact(artifact_name=self.artifact_name, payload=summary, warnings=())
         except Exception as exc:
-            warnings.append(BundleWarning(
-                code=BundleWarningCode.MISSING_VERDICT,
-                message=f"Verdict parse error: {exc}",
-            ))
-            return LoadedArtifact(artifact_name=self.artifact_name, payload=None, warnings=tuple(warnings))
+            warnings.append(
+                BundleWarning(
+                    code=BundleWarningCode.MISSING_VERDICT,
+                    message=f"Verdict parse error: {exc}",
+                )
+            )
+            return LoadedArtifact(
+                artifact_name=self.artifact_name, payload=None, warnings=tuple(warnings)
+            )

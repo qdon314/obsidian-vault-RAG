@@ -53,11 +53,13 @@ class TracesLoader:
                 row = json.loads(line)
                 tid = row.get("trace_id") or row.get("id")
                 if not tid:
-                    warnings.append(BundleWarning(
-                        code=BundleWarningCode.ORPHAN_TRACE,
-                        message=f"Row {i} has no trace_id",
-                        artifact_name=self.artifact_name,
-                    ))
+                    warnings.append(
+                        BundleWarning(
+                            code=BundleWarningCode.ORPHAN_TRACE,
+                            message=f"Row {i} has no trace_id",
+                            artifact_name=self.artifact_name,
+                        )
+                    )
                     continue
                 traces[tid] = QueryTrace(
                     trace_id=tid,
@@ -66,11 +68,13 @@ class TracesLoader:
                     raw_data=row,
                 )
             except Exception as exc:
-                warnings.append(BundleWarning(
-                    code=BundleWarningCode.PARTIAL_TRACE_PARSE,
-                    message=f"Row {i} parse error: {exc}",
-                    artifact_name=self.artifact_name,
-                ))
+                warnings.append(
+                    BundleWarning(
+                        code=BundleWarningCode.PARTIAL_TRACE_PARSE,
+                        message=f"Row {i} parse error: {exc}",
+                        artifact_name=self.artifact_name,
+                    )
+                )
         return LoadedArtifact(
             artifact_name=self.artifact_name,
             payload=traces,

@@ -19,7 +19,7 @@ def render(runs: list[tuple[str, Path]]) -> None:
         return
 
     names = [name for name, _ in runs]
-    default_selection = names[:min(5, len(names))]
+    default_selection = names[: min(5, len(names))]
     selected_names = st.multiselect("Select runs to compare", names, default=default_selection)
 
     if len(selected_names) < 2:
@@ -37,6 +37,7 @@ def render(runs: list[tuple[str, Path]]) -> None:
         series = trend.metric_series[metric_name]
         if any(v is not None for v in series):
             import pandas as pd
+
             chart_data = {
                 "Run": run_labels,
                 metric_name: [v if v is not None else 0.0 for v in series],
@@ -56,18 +57,23 @@ def render(runs: list[tuple[str, Path]]) -> None:
     # ── Diagnostic failure-mode rates ─────────────────────────────────────────
     st.subheader("Failure mode rates over time")
     failure_codes = [
-        c for c in DiagnosticCode
+        c
+        for c in DiagnosticCode
         if c not in (DiagnosticCode.GROUNDED_ANSWER, DiagnosticCode.NO_CLEAR_FAILURE)
     ]
     active_codes = [
-        c for c in failure_codes
+        c
+        for c in failure_codes
         if any((v or 0.0) > 0.0 for v in trend.diagnostic_rate_series.get(c, ()))
     ]
     if active_codes:
         import pandas as pd
+
         rate_data: dict[str, list[str] | list[float]] = {"Run": run_labels}
         for code in active_codes:
-            rate_data[code.value] = [v if v is not None else 0.0 for v in trend.diagnostic_rate_series[code]]
+            rate_data[code.value] = [
+                v if v is not None else 0.0 for v in trend.diagnostic_rate_series[code]
+            ]
         df_rates = pd.DataFrame(rate_data).set_index("Run")
         st.line_chart(df_rates)
     else:
@@ -82,16 +88,18 @@ def render(runs: list[tuple[str, Path]]) -> None:
     # ── Run summary table ──────────────────────────────────────────────────────
     st.subheader("Run summary")
     import pandas as pd
+
     rows = [
         {
             "Run": run.display_name,
             "recall@10": f"{run.health.headline_recall_at_10:.3f}",
             "ndcg@10": f"{run.health.headline_ndcg_at_10:.3f}",
-            "Avg latency": f"{run.health.avg_latency_ms:.0f} ms" if run.health.avg_latency_ms else "—",
+            "Avg latency": f"{run.health.avg_latency_ms:.0f} ms"
+            if run.health.avg_latency_ms
+            else "—",
             "Verdict": run.health.verdict_status or "—",
             "Config changes": sum(
-                1 for e in trend.config_change_events
-                if e.to_run_id == run.run_id
+                1 for e in trend.config_change_events if e.to_run_id == run.run_id
             ),
         }
         for run in trend.runs
@@ -105,17 +113,20 @@ def render(runs: list[tuple[str, Path]]) -> None:
 def _render_correlation(trend: TrendBundle) -> None:
     """Scatter chart: latency vs recall@10, coloured by severity, across all selected runs."""
     import pandas as pd
+
     rows = []
     for run in trend.runs:
         for aq in run.queries:
             r = aq.record
             if r.latency_ms is not None:
-                rows.append({
-                    "latency_ms": r.latency_ms,
-                    "recall@10": r.per_query_recall_at_k.get(10, 0.0),
-                    "severity": aq.diagnostic.severity.value,
-                    "run": run.display_name,
-                })
+                rows.append(
+                    {
+                        "latency_ms": r.latency_ms,
+                        "recall@10": r.per_query_recall_at_k.get(10, 0.0),
+                        "severity": aq.diagnostic.severity.value,
+                        "run": run.display_name,
+                    }
+                )
 
     st.subheader("Latency vs recall@10 (per query)")
     if not rows:

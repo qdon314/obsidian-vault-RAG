@@ -16,9 +16,7 @@ class TestCappedRecallAtK:
         """When |relevant| <= k, capped recall == standard recall."""
         retrieved = ["a", "b", "c", "d", "e"]
         relevant = {"a", "c"}  # 2 relevant, k=5 → denominator is 2 either way
-        assert capped_recall_at_k(retrieved, relevant, k=5) == recall_at_k(
-            retrieved, relevant, k=5
-        )
+        assert capped_recall_at_k(retrieved, relevant, k=5) == recall_at_k(retrieved, relevant, k=5)
 
     def test_caps_denominator_when_relevant_exceeds_k(self) -> None:
         """The core fix: denominator is k, not |relevant|."""

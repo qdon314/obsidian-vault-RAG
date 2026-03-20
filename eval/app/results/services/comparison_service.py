@@ -134,8 +134,10 @@ class ComparisonService:
             am_b = b_results[qid].answer_metrics
             quality_delta = (
                 am_b.quality_score - am_a.quality_score
-                if am_a is not None and am_b is not None
-                and am_a.quality_score is not None and am_b.quality_score is not None
+                if am_a is not None
+                and am_b is not None
+                and am_a.quality_score is not None
+                and am_b.quality_score is not None
                 else 0.0
             )
 

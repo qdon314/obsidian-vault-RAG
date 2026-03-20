@@ -13,16 +13,18 @@ from eval.app_v2.engine.domain.models import (
     TrendBundle,
 )
 
-_DEFAULT_TRACKED_FIELDS: frozenset[str] = frozenset({
-    "retriever",
-    "index_name",
-    "reranker_model",
-    "reranker_top_n",
-    "generator_model",
-    "embedder_model",
-    "top_k",
-    "token_budget",
-})
+_DEFAULT_TRACKED_FIELDS: frozenset[str] = frozenset(
+    {
+        "retriever",
+        "index_name",
+        "reranker_model",
+        "reranker_top_n",
+        "generator_model",
+        "embedder_model",
+        "top_k",
+        "token_budget",
+    }
+)
 
 
 def detect_config_change_events(
@@ -43,12 +45,14 @@ def detect_config_change_events(
             if prev_cfg.get(f) != curr_cfg.get(f)
         )
         if changes:
-            events.append(ConfigChangeEvent(
-                from_run_id=prev.run_id,
-                to_run_id=curr.run_id,
-                timestamp=curr.timestamp,
-                changes=changes,
-            ))
+            events.append(
+                ConfigChangeEvent(
+                    from_run_id=prev.run_id,
+                    to_run_id=curr.run_id,
+                    timestamp=curr.timestamp,
+                    changes=changes,
+                )
+            )
     return tuple(events)
 
 

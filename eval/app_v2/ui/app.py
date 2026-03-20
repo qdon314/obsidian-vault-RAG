@@ -64,6 +64,7 @@ def load_bundle_from_s3(
 ) -> RunBundle:
     """Download run from S3 to local cache, then build and return a RunBundle."""
     import boto3  # type: ignore[import-untyped]
+
     client = boto3.client("s3")
     local_dir = sync_run_from_s3(client, bucket, s3_prefix, Path(cache_dir_str))
     return build_bundle(local_dir)

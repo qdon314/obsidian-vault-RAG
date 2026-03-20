@@ -47,6 +47,7 @@ def render(bundle: RunBundle | None) -> None:
         # Exact mapping depends on check name conventions in verdict.py
         # For now, show worst queries regardless of code
         from eval.app_v2.engine.derived.contributors import worst_queries
+
         worst = worst_queries(bundle.queries, limit=10)
         for aq in worst:
             render_diagnostic_card(aq, show_forensics_link=True)

@@ -1,4 +1,5 @@
 """Tests for ScaleDownCompressor response parsing."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -107,6 +108,7 @@ class TestScaleDownCompressorParsing:
     def test_fail_open_on_error(self):
         """On network error, returns original pack with successful=False."""
         import httpx
+
         compressor = self._compressor()
         pack = _make_pack()
 

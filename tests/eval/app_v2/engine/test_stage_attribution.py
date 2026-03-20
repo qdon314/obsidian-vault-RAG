@@ -5,18 +5,28 @@ from eval.app_v2.engine.domain.models import QueryRecord
 
 
 def _record(**kwargs) -> QueryRecord:
-    defaults = { 
-        "qid": "q1", "query": "test", "query_type": None, "difficulty": None,
-        "is_unanswerable": False, "requires_synthesis": False, "tags": (),
+    defaults = {
+        "qid": "q1",
+        "query": "test",
+        "query_type": None,
+        "difficulty": None,
+        "is_unanswerable": False,
+        "requires_synthesis": False,
+        "tags": (),
         "relevant_chunk_ids": frozenset(["c1"]),
         "retrieved_chunk_ids": ("c1",),
-        "reranked_chunk_ids": None, "packed_chunk_ids": None,
+        "reranked_chunk_ids": None,
+        "packed_chunk_ids": None,
         "per_query_recall_at_k": {10: 1.0},
         "per_query_precision_at_k": {10: 1.0},
         "per_query_ndcg_at_k": {10: 1.0},
         "per_query_hit_rate_at_k": {10: 1.0},
-        "answer_text": None, "answer_metrics": None, "groundedness": None,
-        "latency_ms": None, "trace_id": None, "trace": None,
+        "answer_text": None,
+        "answer_metrics": None,
+        "groundedness": None,
+        "latency_ms": None,
+        "trace_id": None,
+        "trace": None,
     }
     defaults.update(kwargs)
     return QueryRecord(**defaults)

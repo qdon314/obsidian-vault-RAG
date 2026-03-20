@@ -6,8 +6,8 @@ from eval.app_v2.engine.domain.enums import Severity
 from eval.app_v2.engine.domain.models import AnalyzedQuery
 
 _SEV_BADGE = {
-    Severity.OK:       "🟢",
-    Severity.MINOR:    "🟡",
+    Severity.OK: "🟢",
+    Severity.MINOR: "🟡",
     Severity.MODERATE: "🟠",
     Severity.CRITICAL: "🔴",
 }
@@ -53,15 +53,15 @@ def render_diagnostic_detail(aq: AnalyzedQuery) -> None:
     with st.expander("Stage status breakdown", expanded=True):
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Retrieval", d.retrieval_status)
-        c2.metric("Rerank",    d.rerank_status)
-        c3.metric("Packing",   d.packing_status)
+        c2.metric("Rerank", d.rerank_status)
+        c3.metric("Packing", d.packing_status)
         c4.metric("Generation", d.generation_status)
 
     with st.expander("Retrieval sets", expanded=False):
         retrieved_set = frozenset(r.retrieved_chunk_ids)
         matched = r.relevant_chunk_ids & retrieved_set
-        missed  = r.relevant_chunk_ids - retrieved_set
-        extra   = retrieved_set - r.relevant_chunk_ids
+        missed = r.relevant_chunk_ids - retrieved_set
+        extra = retrieved_set - r.relevant_chunk_ids
         st.markdown(f"- **Relevant:** {sorted(r.relevant_chunk_ids)}")
         st.markdown(f"- **Retrieved:** {list(r.retrieved_chunk_ids[:10])}")
         st.markdown(f"- **Matched:** {sorted(matched)}")
@@ -71,4 +71,5 @@ def render_diagnostic_detail(aq: AnalyzedQuery) -> None:
     if r.trace:
         with st.expander("Trace — pipeline drill-down", expanded=False):
             import json
+
             st.json(json.dumps(r.trace.raw_data, indent=2, default=str))

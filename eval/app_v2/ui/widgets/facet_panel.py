@@ -88,6 +88,7 @@ def render_facet_panel(
             raw_step = (hi - lo) / 100
             # Round to 4 sig-figs of the raw step to keep the slider tidy
             import math
+
             magnitude = 10 ** math.floor(math.log10(raw_step)) if raw_step > 0 else 1
             step = max(1e-4, min(1.0, round(raw_step / magnitude) * magnitude))
             selected = st.slider(

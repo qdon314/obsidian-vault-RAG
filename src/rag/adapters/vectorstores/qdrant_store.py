@@ -101,7 +101,9 @@ class QdrantVectorStore:
 
     def __post_init__(self) -> None:
         if self.url:
-            self._client = QdrantClient(url=self.url, api_key=self.api_key, check_compatibility=False)
+            self._client = QdrantClient(
+                url=self.url, api_key=self.api_key, check_compatibility=False
+            )
         elif self.path:
             self._client = QdrantClient(path=self.path)
         else:

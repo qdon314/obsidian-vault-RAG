@@ -45,17 +45,20 @@ def render(bundle: RunBundle | None) -> None:
     # ── Full cohort table ──────────────────────────────────────────────────────
     st.subheader(f"All cohorts: {' x '.join(selected_dims)}")
     import pandas as pd
+
     rows = []
     for row in table.rows:
         label = " | ".join(f"{k}={v}" for k, v in row.key.parts)
         recall = row.metrics.get("recall@10")
         ndcg = row.metrics.get("ndcg@10")
-        rows.append({
-            "Cohort": label,
-            "Size": row.size,
-            "recall@10": f"{recall:.3f}" if recall is not None else "—",
-            "ndcg@10": f"{ndcg:.3f}" if ndcg is not None else "—",
-        })
+        rows.append(
+            {
+                "Cohort": label,
+                "Size": row.size,
+                "recall@10": f"{recall:.3f}" if recall is not None else "—",
+                "ndcg@10": f"{ndcg:.3f}" if ndcg is not None else "—",
+            }
+        )
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
     # ── Worst cohorts drill-down ───────────────────────────────────────────────

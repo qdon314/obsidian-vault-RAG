@@ -30,9 +30,13 @@ class MetricsLoader:
                 warnings=tuple(warnings),
             )
         except Exception as exc:
-            warnings.append(BundleWarning(
-                code=BundleWarningCode.PARTIAL_RESULTS_PARSE,
-                message=f"Failed to parse metrics.json: {exc}",
-                artifact_name=self.artifact_name,
-            ))
-            return LoadedArtifact(artifact_name=self.artifact_name, payload=None, warnings=tuple(warnings))
+            warnings.append(
+                BundleWarning(
+                    code=BundleWarningCode.PARTIAL_RESULTS_PARSE,
+                    message=f"Failed to parse metrics.json: {exc}",
+                    artifact_name=self.artifact_name,
+                )
+            )
+            return LoadedArtifact(
+                artifact_name=self.artifact_name, payload=None, warnings=tuple(warnings)
+            )

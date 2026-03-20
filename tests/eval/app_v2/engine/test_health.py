@@ -187,9 +187,11 @@ def test_build_health_avg_quality_falls_back_to_per_query():
     assert health.avg_quality_score is not None
     assert abs(health.avg_quality_score - 0.7) < 1e-9
 
+
 def test_build_health_empty_run_gives_none_extended_metrics():
     """When aggregates has num_queries=0, headline MRR/MAP/hit_rate/precision are None."""
     from rag.eval.models import RetrievalSummary
+
     empty_aggs = EvalAggregates(overall=RetrievalSummary(num_queries=0, avg_retrieved=0.0))
     health = build_health([], empty_aggs)
 

@@ -5,6 +5,7 @@ from eval.app_v2.engine.domain.warnings import BundleWarning, BundleWarningCode
 def test_bundle_warning_is_frozen():
     w = BundleWarning(code=BundleWarningCode.MISSING_TRACES, message="no traces")
     import dataclasses
+
     assert dataclasses.is_dataclass(w)
     try:
         w.message = "changed"  # type: ignore
@@ -14,7 +15,9 @@ def test_bundle_warning_is_frozen():
 
 
 def test_bundle_warning_optional_artifact():
-    w = BundleWarning(code=BundleWarningCode.ORPHAN_TRACE, message="orphan", artifact_name="traces.jsonl")
+    w = BundleWarning(
+        code=BundleWarningCode.ORPHAN_TRACE, message="orphan", artifact_name="traces.jsonl"
+    )
     assert w.artifact_name == "traces.jsonl"
 
     w2 = BundleWarning(code=BundleWarningCode.MISSING_VERDICT, message="no verdict")

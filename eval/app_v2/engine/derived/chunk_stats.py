@@ -15,8 +15,10 @@ class ChunkStat:
     queries_where_retrieved: int
     queries_where_reranked: int
     queries_where_packed: int
-    miss_rate: float         # (queries_where_relevant - queries_where_retrieved) / queries_where_relevant
-    rerank_drop_rate: float  # (queries_where_retrieved - queries_where_reranked) / queries_where_retrieved
+    miss_rate: float  # (queries_where_relevant - queries_where_retrieved) / queries_where_relevant
+    rerank_drop_rate: (
+        float  # (queries_where_retrieved - queries_where_reranked) / queries_where_retrieved
+    )
 
 
 def build_chunk_stats(queries: Sequence[AnalyzedQuery]) -> tuple[ChunkStat, ...]:
@@ -56,18 +58,18 @@ def build_chunk_stats(queries: Sequence[AnalyzedQuery]) -> tuple[ChunkStat, ...]
         n_pck = packed_counts.get(cid, 0)
         miss_rate = (n_rel - n_ret) / n_rel if n_rel > 0 else 0.0
         rerank_drop_rate = (
-            (n_ret - n_rrk) / n_ret
-            if (n_ret > 0 and cid in has_rerank_trace)
-            else 0.0
+            (n_ret - n_rrk) / n_ret if (n_ret > 0 and cid in has_rerank_trace) else 0.0
         )
-        stats.append(ChunkStat(
-            chunk_id=cid,
-            queries_where_relevant=n_rel,
-            queries_where_retrieved=n_ret,
-            queries_where_reranked=n_rrk,
-            queries_where_packed=n_pck,
-            miss_rate=miss_rate,
-            rerank_drop_rate=rerank_drop_rate,
-        ))
+        stats.append(
+            ChunkStat(
+                chunk_id=cid,
+                queries_where_relevant=n_rel,
+                queries_where_retrieved=n_ret,
+                queries_where_reranked=n_rrk,
+                queries_where_packed=n_pck,
+                miss_rate=miss_rate,
+                rerank_drop_rate=rerank_drop_rate,
+            )
+        )
 
     return tuple(sorted(stats, key=lambda s: s.miss_rate, reverse=True))

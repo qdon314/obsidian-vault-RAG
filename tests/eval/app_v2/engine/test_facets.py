@@ -145,11 +145,13 @@ def test_numeric_facets_higher_is_better_flags():
     assert halluc_f is not None and halluc_f.higher_is_better is False
     assert latency_f is not None and latency_f.higher_is_better is False
 
+
 def test_recall_at_10_facet_returns_none_when_key_absent():
     facet = get_facet("recall_at_10")
     assert facet is not None
     # Build a record with an empty per_query_recall_at_k dict
     import dataclasses
+
     r = _record(recall_10=0.5)
     r_no_k = dataclasses.replace(r, per_query_recall_at_k={})
     assert facet.extract(r_no_k) is None
@@ -159,6 +161,7 @@ def test_ndcg_at_10_facet_returns_none_when_key_absent():
     facet = get_facet("ndcg_at_10")
     assert facet is not None
     import dataclasses
+
     r = _record(recall_10=0.5, ndcg_10=0.5)
     r_no_k = dataclasses.replace(r, per_query_ndcg_at_k={})
     assert facet.extract(r_no_k) is None

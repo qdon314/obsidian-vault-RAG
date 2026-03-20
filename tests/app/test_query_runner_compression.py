@@ -1,4 +1,5 @@
 """Test that query_runner stores context_before/after in compression trace metadata."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock

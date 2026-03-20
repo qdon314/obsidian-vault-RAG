@@ -3,6 +3,7 @@
 Navigation and selection over already-derived diagnostics.
 Does NOT construct new diagnoses.
 """
+
 from __future__ import annotations
 
 from eval.app_v2.engine.derived.contributors import worst_queries
@@ -23,6 +24,7 @@ def list_queries_by_code(bundle: RunBundle, code: DiagnosticCode) -> tuple[Analy
 
 def list_queries_by_slice(bundle: RunBundle, slice_key: SliceKey) -> tuple[AnalyzedQuery, ...]:
     """Return queries whose record fields match all parts of a SliceKey."""
+
     def matches(aq: AnalyzedQuery) -> bool:
         for field, value in slice_key.parts:
             if value == "__none__":
@@ -31,6 +33,7 @@ def list_queries_by_slice(bundle: RunBundle, slice_key: SliceKey) -> tuple[Analy
             elif str(getattr(aq.record, field, None)) != value:
                 return False
         return True
+
     return tuple(aq for aq in bundle.queries if matches(aq))
 
 
@@ -42,4 +45,5 @@ def contributor_queries_for_failure_mode(
     bundle: RunBundle, code: DiagnosticCode, *, limit: int = 20
 ) -> tuple[AnalyzedQuery, ...]:
     from eval.app_v2.engine.derived.contributors import contributor_queries_for_code
+
     return contributor_queries_for_code(bundle.queries, code, limit=limit)

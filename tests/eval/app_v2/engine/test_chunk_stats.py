@@ -87,7 +87,7 @@ def test_rerank_drop_detected():
 
 def test_sorted_by_miss_rate_descending():
     queries = [
-        _aq("q1", relevant=["bad"], retrieved=[]),        # miss_rate = 1.0
+        _aq("q1", relevant=["bad"], retrieved=[]),  # miss_rate = 1.0
         _aq("q2", relevant=["good"], retrieved=["good"]),  # miss_rate = 0.0
     ]
     stats = build_chunk_stats(queries)
