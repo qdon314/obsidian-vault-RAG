@@ -3,12 +3,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-
 from benchmark.stages.stage_0_source_view import build_source_spans
-
 from rag.adapters.ingestion.regulatory.ecfr_parser import (
-    CrossRef,
     ParsedParagraph,
     ParsedSection,
 )
