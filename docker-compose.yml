@@ -4,10 +4,6 @@ services:
     ports:
       - "6333:6333"
       - "6334:6334"
-    deploy:
-    resources:
-      limits:
-        memory: 2G
     volumes:
       - qdrant_data:/qdrant/storage
     restart: unless-stopped
@@ -26,7 +22,7 @@ services:
       - ./artifacts:/app/artifacts
       - ./settings.docker.toml:/app/settings.toml:ro
       # Mount your vault/corpus directory here:
-      - '/Users/quentindonnelly/Documents/Personal & Professional:/data/vault:ro'
+      # - /path/to/your/vault:/data/vault:ro
     depends_on:
       qdrant:
         condition: service_healthy

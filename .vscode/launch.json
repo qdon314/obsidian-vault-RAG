@@ -47,10 +47,9 @@
       "cwd": "${workspaceFolder}",
       "justMyCode": false,
       "args": [
-        "--queries",
-        "eval/datasets/regulatory_adversarial.jsonl",
-        "--index",
-        "artifacts/indexes/regulatory"
+        "--manifest",
+        "artifacts/indexes/obsidian/manifest.json",
+        "--run-generation"
       ],
       "envFile": "${workspaceFolder}/.env"
     },

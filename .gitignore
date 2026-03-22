@@ -237,8 +237,3 @@ corpus/us-nrc/cases/
 
 # Git worktrees
 .worktrees/
-
-# Regulatory
-!data/ecfr/
-docs/APS-API-Guide.pdf
-corpus/us-nrc/cases/
