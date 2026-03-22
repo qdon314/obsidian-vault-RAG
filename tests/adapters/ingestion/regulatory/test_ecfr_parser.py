@@ -83,3 +83,27 @@ def test_parsed_paragraph_has_cross_references_field() -> None:
 def test_parsed_section_has_amendments_field() -> None:
     s = ParsedSection(section_number="50.71", title="Maintenance of records", part_number="50")
     assert s.amendments == ()
+
+
+XREF_FIXTURE_XML = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<CFRGRANULE>
+  <DIV5 N="Part 50" TYPE="PART">
+    <DIV8 N="50.71" TYPE="SECTION">
+      <HEAD>§ 50.71 Maintenance of records, making of reports.</HEAD>
+      <XREF ID="20241230" REFID="14" AMDINSN="15">Link to an amendment published at 89 FR 106251, Dec. 30, 2024.</XREF>
+      <P>(a) First paragraph.</P>
+    </DIV8>
+  </DIV5>
+</CFRGRANULE>
+"""
+
+
+def test_parse_ecfr_xml_extracts_xref_amendments() -> None:
+    sections = parse_ecfr_xml(XREF_FIXTURE_XML)
+    assert len(sections) == 1
+    assert len(sections[0].amendments) == 1
+    amend = sections[0].amendments[0]
+    assert amend.amendment_id == "20241230"
+    assert amend.ref_id == "14"
+    assert "89 FR 106251" in amend.text

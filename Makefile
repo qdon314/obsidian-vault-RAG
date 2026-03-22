@@ -132,9 +132,6 @@ ask-dummy:  ## Ask using DummyEmbedder
 results:  ## Launch results analyzer app
 	$(PYTHON) -m streamlit run eval/app/results_analyzer.py
 
-resultsv2:  ## Launch results analyzer app
-	$(PYTHON) -m streamlit run eval/app_v2/app.py
-
 curate:  ## Launch query curator app
 	$(PYTHON) -m streamlit run eval/app/query_curator.py
 

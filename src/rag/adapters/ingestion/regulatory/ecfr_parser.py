@@ -165,6 +165,19 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
                 continue
 
             section_number, title = _parse_section_head(_extract_text(head_elem))
+
+            # Extract XREF amendment metadata.
+            amendments: list[SectionAmendment] = []
+            for child in section_elem:
+                if _local_name(child.tag) == "XREF":
+                    amendments.append(
+                        SectionAmendment(
+                            amendment_id=child.get("ID", ""),
+                            ref_id=child.get("REFID", ""),
+                            text=_extract_text(child),
+                        )
+                    )
+
             paragraphs: list[ParsedParagraph] = []
 
             for child in section_elem:
@@ -197,6 +210,7 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
                     title=title,
                     part_number=part_number,
                     paragraphs=tuple(paragraphs),
+                    amendments=tuple(amendments),
                 )
             )
 
