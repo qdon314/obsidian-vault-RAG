@@ -14,6 +14,8 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
+from rag.adapters.ingestion.regulatory.cross_references import extract_cross_references
+
 # Matches one or more leading subsection markers like ``(a)(1)(i)``.
 _SUBSECTION_CHAIN_RE = re.compile(r"^\s*((?:\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)\s*)+)")
 _SUBSECTION_TOKEN_RE = re.compile(r"\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)")
@@ -138,6 +140,12 @@ def _parse_section_head(head_text: str) -> tuple[str, str]:
     return section_number, title.rstrip(".")
 
 
+def _detect_cross_references(text: str) -> tuple[CrossRef, ...]:
+    """Detect CFR cross-references in paragraph text."""
+    cfr_refs = extract_cross_references(text)
+    return tuple(CrossRef(target_citation=ref, kind="cfr") for ref in cfr_refs)
+
+
 def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
     """Parse eCFR XML into a list of ``ParsedSection`` objects.
 
@@ -195,12 +203,14 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
                 if not text:
                     continue
                 level, prefix, subsection_tokens = _classify_paragraph(text)
+                cross_refs = _detect_cross_references(text)
                 paragraphs.append(
                     ParsedParagraph(
                         text=text,
                         level=level,
                         prefix=prefix,
                         subsection_tokens=subsection_tokens,
+                        cross_references=cross_refs,
                     )
                 )
 

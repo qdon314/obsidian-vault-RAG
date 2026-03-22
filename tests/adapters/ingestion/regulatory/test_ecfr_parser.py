@@ -107,3 +107,23 @@ def test_parse_ecfr_xml_extracts_xref_amendments() -> None:
     assert amend.amendment_id == "20241230"
     assert amend.ref_id == "14"
     assert "89 FR 106251" in amend.text
+
+
+def test_parse_ecfr_xml_detects_cfr_cross_references() -> None:
+    fixture = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<CFRGRANULE>
+  <DIV5 N="Part 50" TYPE="PART">
+    <DIV8 N="50.55a" TYPE="SECTION">
+      <HEAD>§ 50.55a Codes and standards.</HEAD>
+      <P>(a) Licensees must comply with § 50.46 and 10 CFR 50.34.</P>
+    </DIV8>
+  </DIV5>
+</CFRGRANULE>
+"""
+    sections = parse_ecfr_xml(fixture)
+    para = sections[0].paragraphs[0]
+    citations = {ref.target_citation for ref in para.cross_references}
+    assert "10 CFR §50.46" in citations
+    assert "10 CFR §50.34" in citations
+    assert all(ref.kind == "cfr" for ref in para.cross_references)
