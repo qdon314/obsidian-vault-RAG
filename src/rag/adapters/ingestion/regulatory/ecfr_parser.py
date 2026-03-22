@@ -81,6 +81,7 @@ class ParsedSection:
     title: str  # human-readable title
     part_number: str  # e.g. "50"
     paragraphs: tuple[ParsedParagraph, ...] = ()
+    amendments: tuple[SectionAmendment, ...] = ()  # XREF elements at section level
 
 
 def _token_level(token: str) -> int:
