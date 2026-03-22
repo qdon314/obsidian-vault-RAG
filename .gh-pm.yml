@@ -1,0 +1,41 @@
+project:
+    name: "obsidian-vault-RAG"
+    org: ""
+repositories:
+    - qdon314/obsidian-vault-RAG
+defaults:
+    priority: medium
+    status: todo
+    labels:
+        - pm-tracked
+fields:
+    priority:
+        field: Priority
+        values:
+            critical: Critical
+            high: High
+            low: Low
+            medium: Medium
+    status:
+        field: Status
+        values:
+            done: Done
+            in_progress: In Progress
+            in_review: In Review
+            todo: Todo
+triage:
+    estimate:
+        query: is:issue is:open -has:estimate
+        apply: {}
+        interactive:
+            estimate: true
+    tracked:
+        query: is:issue is:open -label:pm-tracked
+        apply:
+            labels:
+                - pm-tracked
+            fields:
+                priority: p1
+                status: backlog
+        interactive:
+            status: true

@@ -1,0 +1,1 @@
+"""NRC benchmark generation pipeline."""

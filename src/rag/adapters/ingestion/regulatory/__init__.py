@@ -4,8 +4,10 @@ from rag.adapters.ingestion.regulatory.cross_references import (
     section_sort_key,
 )
 from rag.adapters.ingestion.regulatory.ecfr_parser import (
+    CrossRef,
     ParsedParagraph,
     ParsedSection,
+    SectionAmendment,
     parse_ecfr_xml,
 )
 from rag.adapters.ingestion.regulatory.enrichment import enrich_regulatory_chunks
@@ -17,9 +19,11 @@ from rag.adapters.ingestion.regulatory.normalizer import (
 )
 
 __all__ = [
+    "CrossRef",
     "NormalizationConfig",
     "ParsedParagraph",
     "ParsedSection",
+    "SectionAmendment",
     "enrich_regulatory_chunk_metadata",
     "enrich_regulatory_chunks",
     "extract_cross_references",

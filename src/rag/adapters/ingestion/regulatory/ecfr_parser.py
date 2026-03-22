@@ -14,6 +14,8 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
+from rag.adapters.ingestion.regulatory.cross_references import extract_cross_references
+
 # Matches one or more leading subsection markers like ``(a)(1)(i)``.
 _SUBSECTION_CHAIN_RE = re.compile(r"^\s*((?:\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)\s*)+)")
 _SUBSECTION_TOKEN_RE = re.compile(r"\(([A-Za-z0-9ivxlcdmIVXLCDM]+)\)")
@@ -46,6 +48,23 @@ def _local_name(tag: str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
+class CrossRef:
+    """A cross-reference found in paragraph text."""
+
+    target_citation: str  # canonical form, e.g. "10 CFR §50.55a" or "ASME BPV III"
+    kind: str  # "cfr" | "incorporated_standard"
+
+
+@dataclass(frozen=True, slots=True)
+class SectionAmendment:
+    """Amendment metadata from an XREF element at section level."""
+
+    amendment_id: str  # XREF ID attribute (date-like, e.g. "20241230")
+    ref_id: str  # XREF REFID attribute
+    text: str  # human-readable amendment description
+
+
+@dataclass(frozen=True, slots=True)
 class ParsedParagraph:
     """One paragraph extracted from an eCFR section."""
 
@@ -53,6 +72,7 @@ class ParsedParagraph:
     level: int  # nesting depth (0 = no subsection prefix)
     prefix: str | None  # the raw prefix value, e.g. "a", "1", "iv"
     subsection_tokens: tuple[str, ...] = ()  # full leading chain, e.g. ("a", "1", "i")
+    cross_references: tuple[CrossRef, ...] = ()  # cross-refs detected in text
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +83,7 @@ class ParsedSection:
     title: str  # human-readable title
     part_number: str  # e.g. "50"
     paragraphs: tuple[ParsedParagraph, ...] = ()
+    amendments: tuple[SectionAmendment, ...] = ()  # XREF elements at section level
 
 
 def _token_level(token: str) -> int:
@@ -119,6 +140,37 @@ def _parse_section_head(head_text: str) -> tuple[str, str]:
     return section_number, title.rstrip(".")
 
 
+# Matches incorporated standard references: "ASME BPV Code", "IEEE 323-1974", etc.
+_INCORPORATED_STANDARD_RE = re.compile(
+    r"(?P<body>"
+    r"ASME\s+(?:Boiler and Pressure Vessel Code(?:,\s*Section\s+[IVX]+)?|BPV\s+[IVX]+|[A-Z]+\s*[\d./-]+)"
+    r"|IEEE\s+[\d.]+-?[\d]*"
+    r"|ASTM\s+[A-Z]+[\d.]+-?[\d]*"
+    r"|ANS[I]?\s+[\d./]+-?[\d]*"
+    r")"
+)
+
+
+def _detect_incorporated_standards(text: str) -> tuple[CrossRef, ...]:
+    """Detect incorporated standard references in paragraph text."""
+    seen: set[str] = set()
+    refs: list[CrossRef] = []
+    for match in _INCORPORATED_STANDARD_RE.finditer(text):
+        citation = match.group("body").strip()
+        if citation not in seen:
+            seen.add(citation)
+            refs.append(CrossRef(target_citation=citation, kind="incorporated_standard"))
+    return tuple(refs)
+
+
+def _detect_cross_references(text: str) -> tuple[CrossRef, ...]:
+    """Detect all cross-references in paragraph text."""
+    cfr_refs = extract_cross_references(text)
+    cfr = tuple(CrossRef(target_citation=ref, kind="cfr") for ref in cfr_refs)
+    standards = _detect_incorporated_standards(text)
+    return cfr + standards
+
+
 def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
     """Parse eCFR XML into a list of ``ParsedSection`` objects.
 
@@ -146,6 +198,19 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
                 continue
 
             section_number, title = _parse_section_head(_extract_text(head_elem))
+
+            # Extract XREF amendment metadata.
+            amendments: list[SectionAmendment] = []
+            for child in section_elem:
+                if _local_name(child.tag) == "XREF":
+                    amendments.append(
+                        SectionAmendment(
+                            amendment_id=child.get("ID", ""),
+                            ref_id=child.get("REFID", ""),
+                            text=_extract_text(child),
+                        )
+                    )
+
             paragraphs: list[ParsedParagraph] = []
 
             for child in section_elem:
@@ -163,12 +228,14 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
                 if not text:
                     continue
                 level, prefix, subsection_tokens = _classify_paragraph(text)
+                cross_refs = _detect_cross_references(text)
                 paragraphs.append(
                     ParsedParagraph(
                         text=text,
                         level=level,
                         prefix=prefix,
                         subsection_tokens=subsection_tokens,
+                        cross_references=cross_refs,
                     )
                 )
 
@@ -178,6 +245,7 @@ def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
                     title=title,
                     part_number=part_number,
                     paragraphs=tuple(paragraphs),
+                    amendments=tuple(amendments),
                 )
             )
 
