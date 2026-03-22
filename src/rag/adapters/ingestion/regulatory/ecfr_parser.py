@@ -46,6 +46,23 @@ def _local_name(tag: str) -> str:
 
 
 @dataclass(frozen=True, slots=True)
+class CrossRef:
+    """A cross-reference found in paragraph text."""
+
+    target_citation: str  # canonical form, e.g. "10 CFR §50.55a" or "ASME BPV III"
+    kind: str  # "cfr" | "incorporated_standard"
+
+
+@dataclass(frozen=True, slots=True)
+class SectionAmendment:
+    """Amendment metadata from an XREF element at section level."""
+
+    amendment_id: str  # XREF ID attribute (date-like, e.g. "20241230")
+    ref_id: str  # XREF REFID attribute
+    text: str  # human-readable amendment description
+
+
+@dataclass(frozen=True, slots=True)
 class ParsedParagraph:
     """One paragraph extracted from an eCFR section."""
 

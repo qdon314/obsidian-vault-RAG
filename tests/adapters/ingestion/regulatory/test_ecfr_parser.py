@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from rag.adapters.ingestion.regulatory.ecfr_parser import parse_ecfr_xml
+from rag.adapters.ingestion.regulatory.ecfr_parser import (
+    CrossRef,
+    ParsedParagraph,
+    ParsedSection,
+    SectionAmendment,
+    parse_ecfr_xml,
+)
 
 FIXTURE_XML = """\
 <?xml version="1.0" encoding="UTF-8"?>
@@ -51,3 +57,29 @@ def test_parse_ecfr_xml_extracts_subsection_chains() -> None:
     assert paragraphs[1].level == 3
     assert paragraphs[2].subsection_tokens == ("b", "1")
     assert paragraphs[2].level == 2
+
+
+def test_cross_ref_dataclass_is_frozen() -> None:
+    ref = CrossRef(target_citation="10 CFR §50.55a", kind="cfr")
+    assert ref.target_citation == "10 CFR §50.55a"
+    assert ref.kind == "cfr"
+
+
+def test_section_amendment_dataclass_is_frozen() -> None:
+    amend = SectionAmendment(
+        amendment_id="20241230",
+        ref_id="14",
+        text="Link to an amendment published at 89 FR 106251, Dec. 30, 2024.",
+    )
+    assert amend.amendment_id == "20241230"
+    assert amend.ref_id == "14"
+
+
+def test_parsed_paragraph_has_cross_references_field() -> None:
+    p = ParsedParagraph(text="See § 50.55a.", level=0, prefix=None)
+    assert p.cross_references == ()
+
+
+def test_parsed_section_has_amendments_field() -> None:
+    s = ParsedSection(section_number="50.71", title="Maintenance of records", part_number="50")
+    assert s.amendments == ()
