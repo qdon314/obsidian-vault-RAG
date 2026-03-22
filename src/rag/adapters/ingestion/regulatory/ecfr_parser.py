@@ -70,6 +70,7 @@ class ParsedParagraph:
     level: int  # nesting depth (0 = no subsection prefix)
     prefix: str | None  # the raw prefix value, e.g. "a", "1", "iv"
     subsection_tokens: tuple[str, ...] = ()  # full leading chain, e.g. ("a", "1", "i")
+    cross_references: tuple[CrossRef, ...] = ()  # cross-refs detected in text
 
 
 @dataclass(frozen=True, slots=True)
