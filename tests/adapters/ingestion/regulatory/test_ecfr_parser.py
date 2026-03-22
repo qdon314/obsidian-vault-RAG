@@ -127,3 +127,23 @@ def test_parse_ecfr_xml_detects_cfr_cross_references() -> None:
     assert "10 CFR §50.46" in citations
     assert "10 CFR §50.34" in citations
     assert all(ref.kind == "cfr" for ref in para.cross_references)
+
+
+def test_parse_ecfr_xml_detects_incorporated_standards() -> None:
+    fixture = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<CFRGRANULE>
+  <DIV5 N="Part 50" TYPE="PART">
+    <DIV8 N="50.55a" TYPE="SECTION">
+      <HEAD>§ 50.55a Codes and standards.</HEAD>
+      <P>(a) Systems must meet ASME Boiler and Pressure Vessel Code, Section III requirements and IEEE 323-1974 qualification standards.</P>
+    </DIV8>
+  </DIV5>
+</CFRGRANULE>
+"""
+    sections = parse_ecfr_xml(fixture)
+    para = sections[0].paragraphs[0]
+    std_refs = [ref for ref in para.cross_references if ref.kind == "incorporated_standard"]
+    std_citations = {ref.target_citation for ref in std_refs}
+    assert any("ASME" in c for c in std_citations)
+    assert any("IEEE 323-1974" in c or "IEEE" in c for c in std_citations)

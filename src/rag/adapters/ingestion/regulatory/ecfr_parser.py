@@ -140,10 +140,35 @@ def _parse_section_head(head_text: str) -> tuple[str, str]:
     return section_number, title.rstrip(".")
 
 
+# Matches incorporated standard references: "ASME BPV Code", "IEEE 323-1974", etc.
+_INCORPORATED_STANDARD_RE = re.compile(
+    r"(?P<body>"
+    r"ASME\s+(?:Boiler and Pressure Vessel Code(?:,\s*Section\s+[IVX]+)?|BPV\s+[IVX]+|[A-Z]+\s*[\d./-]+)"
+    r"|IEEE\s+[\d.]+-?[\d]*"
+    r"|ASTM\s+[A-Z]+[\d.]+-?[\d]*"
+    r"|ANS[I]?\s+[\d./]+-?[\d]*"
+    r")"
+)
+
+
+def _detect_incorporated_standards(text: str) -> tuple[CrossRef, ...]:
+    """Detect incorporated standard references in paragraph text."""
+    seen: set[str] = set()
+    refs: list[CrossRef] = []
+    for match in _INCORPORATED_STANDARD_RE.finditer(text):
+        citation = match.group("body").strip()
+        if citation not in seen:
+            seen.add(citation)
+            refs.append(CrossRef(target_citation=citation, kind="incorporated_standard"))
+    return tuple(refs)
+
+
 def _detect_cross_references(text: str) -> tuple[CrossRef, ...]:
-    """Detect CFR cross-references in paragraph text."""
+    """Detect all cross-references in paragraph text."""
     cfr_refs = extract_cross_references(text)
-    return tuple(CrossRef(target_citation=ref, kind="cfr") for ref in cfr_refs)
+    cfr = tuple(CrossRef(target_citation=ref, kind="cfr") for ref in cfr_refs)
+    standards = _detect_incorporated_standards(text)
+    return cfr + standards
 
 
 def parse_ecfr_xml(xml_text: str) -> list[ParsedSection]:
