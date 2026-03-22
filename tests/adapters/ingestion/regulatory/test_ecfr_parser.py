@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
 from rag.adapters.ingestion.regulatory.ecfr_parser import (
     CrossRef,
     ParsedParagraph,
@@ -154,3 +158,37 @@ def test_public_api_exports_new_types() -> None:
 
     assert CrossRef is not None
     assert SectionAmendment is not None
+
+
+@pytest.mark.skipif(
+    not Path("data/ecfr/title-10-part-50.xml").exists(),
+    reason="Real eCFR XML not available",
+)
+def test_real_xml_cross_references_detected() -> None:
+    """Smoke test: real XML produces cross-references on at least some paragraphs."""
+    xml_text = Path("data/ecfr/title-10-part-50.xml").read_text(encoding="utf-8")
+    sections = parse_ecfr_xml(xml_text)
+    assert len(sections) > 50  # part 50 has many sections
+
+    # At least some paragraphs should have CFR cross-references
+    cfr_ref_count = sum(
+        1
+        for section in sections
+        for para in section.paragraphs
+        if any(ref.kind == "cfr" for ref in para.cross_references)
+    )
+    assert cfr_ref_count > 0, "Expected CFR cross-references in real XML"
+
+    # At least some paragraphs should have incorporated standards
+    std_ref_count = sum(
+        1
+        for section in sections
+        for para in section.paragraphs
+        if any(ref.kind == "incorporated_standard" for ref in para.cross_references)
+    )
+    assert std_ref_count > 0, "Expected incorporated standard references in real XML"
+
+    # § 50.71 should have an amendment (XREF tag)
+    sec_50_71 = [s for s in sections if s.section_number == "50.71"]
+    if sec_50_71:
+        assert len(sec_50_71[0].amendments) >= 1
