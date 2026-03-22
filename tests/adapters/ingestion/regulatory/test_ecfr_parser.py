@@ -147,3 +147,10 @@ def test_parse_ecfr_xml_detects_incorporated_standards() -> None:
     std_citations = {ref.target_citation for ref in std_refs}
     assert any("ASME" in c for c in std_citations)
     assert any("IEEE 323-1974" in c or "IEEE" in c for c in std_citations)
+
+
+def test_public_api_exports_new_types() -> None:
+    from rag.adapters.ingestion.regulatory import CrossRef, SectionAmendment
+
+    assert CrossRef is not None
+    assert SectionAmendment is not None
