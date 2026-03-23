@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import json
 
+from benchmark.adapters.extraction.llm_extractor import LLMExtractor
 from benchmark.domain.enums import UnitKind
 from benchmark.domain.models import BenchmarkSourceSpan, RegulatoryUnit, StageConfig
-from benchmark.ports.llm_client import LLMClient, LLMResponse
-
-from benchmark.adapters.extraction.llm_extractor import LLMExtractor
+from benchmark.ports.llm_client import LLMResponse
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
