@@ -5,8 +5,14 @@ from __future__ import annotations
 
 import dataclasses
 
-from benchmark.domain.enums import UnitKind
-from benchmark.domain.models import BenchmarkSourceSpan, RegulatoryUnit, StageConfig
+from benchmark.domain.enums import EvidenceTier, UnitKind
+from benchmark.domain.models import (
+    BenchmarkSourceSpan,
+    EvidenceEntry,
+    EvidenceSet,
+    RegulatoryUnit,
+    StageConfig,
+)
 
 
 class TestBenchmarkSourceSpan:
@@ -104,6 +110,87 @@ class TestRegulatoryUnit:
         assert unit.entities == ()
         assert unit.conditions == ()
         assert unit.metadata == {}
+
+
+class TestEvidenceEntry:
+    def test_frozen(self) -> None:
+        entry = EvidenceEntry(
+            span_id="50.46_b_1_0",
+            citation="10 CFR 50.46(b)(1)",
+            text="Peak cladding temperature shall not exceed 2200°F.",
+            char_start=0,
+            char_end=51,
+            chunk_ids=("chunk_17", "chunk_18"),
+            tier=EvidenceTier.CRITICAL,
+        )
+        assert dataclasses.is_dataclass(entry)
+        with_error = False
+        try:
+            entry.tier = EvidenceTier.SUPPORTING  # type: ignore[misc]
+        except dataclasses.FrozenInstanceError:
+            with_error = True
+        assert with_error
+
+    def test_fields(self) -> None:
+        entry = EvidenceEntry(
+            span_id="50.46_b_1_0",
+            citation="10 CFR 50.46(b)(1)",
+            text="Some text.",
+            char_start=100,
+            char_end=110,
+            chunk_ids=("c1",),
+            tier=EvidenceTier.SUPPORTING,
+        )
+        assert entry.span_id == "50.46_b_1_0"
+        assert entry.tier == EvidenceTier.SUPPORTING
+        assert entry.chunk_ids == ("c1",)
+
+
+class TestEvidenceSet:
+    def test_frozen(self) -> None:
+        es = EvidenceSet(unit_id="50.46_b_1")
+        assert dataclasses.is_dataclass(es)
+        with_error = False
+        try:
+            es.unit_id = "changed"  # type: ignore[misc]
+        except dataclasses.FrozenInstanceError:
+            with_error = True
+        assert with_error
+
+    def test_defaults_empty_tuples(self) -> None:
+        es = EvidenceSet(unit_id="50.46_b_1")
+        assert es.critical == ()
+        assert es.supporting == ()
+        assert es.contextual == ()
+
+    def test_with_entries(self) -> None:
+        critical = EvidenceEntry(
+            span_id="u1_0",
+            citation="10 CFR 50.46(b)(1)",
+            text="Temperature limit.",
+            char_start=0,
+            char_end=18,
+            chunk_ids=("c1",),
+            tier=EvidenceTier.CRITICAL,
+        )
+        contextual = EvidenceEntry(
+            span_id="u1_1",
+            citation="10 CFR 50.46(b)(2)",
+            text="Related provision.",
+            char_start=18,
+            char_end=36,
+            chunk_ids=("c2",),
+            tier=EvidenceTier.CONTEXTUAL,
+        )
+        es = EvidenceSet(
+            unit_id="50.46_b_1",
+            critical=(critical,),
+            contextual=(contextual,),
+        )
+        assert len(es.critical) == 1
+        assert len(es.supporting) == 0
+        assert len(es.contextual) == 1
+        assert es.critical[0].tier == EvidenceTier.CRITICAL
 
 
 class TestStageConfig:
