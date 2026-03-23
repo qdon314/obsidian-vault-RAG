@@ -91,9 +91,7 @@ class LLMEvidenceBuilder:
         # Index spans by parent_section_id for neighbor lookup.
         self._section_spans: dict[str, list[BenchmarkSourceSpan]] = {}
         for span in all_spans:
-            self._section_spans.setdefault(
-                span.parent_section_id, []
-            ).append(span)
+            self._section_spans.setdefault(span.parent_section_id, []).append(span)
 
     def build(self, unit: RegulatoryUnit) -> EvidenceSet:
         """Build tiered evidence for a single regulatory unit."""
@@ -111,14 +109,10 @@ class LLMEvidenceBuilder:
         unit: RegulatoryUnit,
     ) -> list[BenchmarkSourceSpan]:
         """Find spans in the same section that are not part of this unit."""
-        unit_keys = {
-            (s.citation_key, s.char_start, s.char_end) for s in unit.spans
-        }
+        unit_keys = {(s.citation_key, s.char_start, s.char_end) for s in unit.spans}
         section_spans = self._section_spans.get(unit.parent_section_id, [])
         return [
-            s
-            for s in section_spans
-            if (s.citation_key, s.char_start, s.char_end) not in unit_keys
+            s for s in section_spans if (s.citation_key, s.char_start, s.char_end) not in unit_keys
         ]
 
     def _build_prompt(
@@ -128,13 +122,11 @@ class LLMEvidenceBuilder:
     ) -> str:
         """Build the evidence classification prompt."""
         spans_block = "\n".join(
-            f"[{i}] ({span.citation}) {span.text}"
-            for i, span in enumerate(unit.spans)
+            f"[{i}] ({span.citation}) {span.text}" for i, span in enumerate(unit.spans)
         )
         if neighbors:
             neighbors_block = "\n".join(
-                f"[{i}] ({span.citation}) {span.text}"
-                for i, span in enumerate(neighbors)
+                f"[{i}] ({span.citation}) {span.text}" for i, span in enumerate(neighbors)
             )
         else:
             neighbors_block = "(none)"
@@ -261,9 +253,7 @@ class LLMEvidenceBuilder:
         return fallback
 
     @staticmethod
-    def _parse_response_json(
-        text: str, unit_id: str
-    ) -> dict[str, Any] | None:
+    def _parse_response_json(text: str, unit_id: str) -> dict[str, Any] | None:
         """Parse JSON from LLM response, stripping code fences."""
         cleaned = text.strip()
         if cleaned.startswith("```"):
@@ -276,9 +266,7 @@ class LLMEvidenceBuilder:
         try:
             parsed = json.loads(cleaned)
         except (json.JSONDecodeError, ValueError):
-            logger.warning(
-                "Failed to parse JSON for unit %s: %.200s", unit_id, text
-            )
+            logger.warning("Failed to parse JSON for unit %s: %.200s", unit_id, text)
             return None
 
         if not isinstance(parsed, dict):

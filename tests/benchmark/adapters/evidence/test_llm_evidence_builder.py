@@ -107,9 +107,7 @@ class TestLLMEvidenceBuilder:
             char_start=7,
             char_end=14,
         )
-        response = json.dumps(
-            {"unit_spans": {"0": "critical", "1": "supporting"}}
-        )
+        response = json.dumps({"unit_spans": {"0": "critical", "1": "supporting"}})
         client = _MockLLMClient(response)
         builder = LLMEvidenceBuilder(client, _CONFIG, [span_a, span_b])
 
@@ -139,9 +137,7 @@ class TestLLMEvidenceBuilder:
             }
         )
         client = _MockLLMClient(response)
-        builder = LLMEvidenceBuilder(
-            client, _CONFIG, [unit_span, neighbor]
-        )
+        builder = LLMEvidenceBuilder(client, _CONFIG, [unit_span, neighbor])
 
         es = builder.build(_make_unit(spans=(unit_span,)))
         assert len(es.critical) == 1
@@ -195,18 +191,14 @@ class TestLLMEvidenceBuilder:
             }
         )
         client = _MockLLMClient(response)
-        builder = LLMEvidenceBuilder(
-            client, _CONFIG, [unit_span, other_section_span]
-        )
+        builder = LLMEvidenceBuilder(client, _CONFIG, [unit_span, other_section_span])
 
         es = builder.build(_make_unit(spans=(unit_span,)))
         # No contextual — the other-section span is not a valid neighbor.
         assert len(es.contextual) == 0
 
     def test_span_id_format(self) -> None:
-        response = json.dumps(
-            {"unit_spans": {"0": "critical", "1": "supporting"}}
-        )
+        response = json.dumps({"unit_spans": {"0": "critical", "1": "supporting"}})
         span_a = _make_span(citation_key="a", char_start=0, char_end=5)
         span_b = _make_span(citation_key="b", char_start=5, char_end=10)
         client = _MockLLMClient(response)

@@ -94,9 +94,7 @@ class TestBuildSourceSpans:
             section_number="50.46",
             title="ECCS criteria",
             part_number="50",
-            paragraphs=(
-                ParsedParagraph(text="General intro text.", level=0, prefix=None),
-            ),
+            paragraphs=(ParsedParagraph(text="General intro text.", level=0, prefix=None),),
         )
         spans = build_source_spans(
             sections=[section],
