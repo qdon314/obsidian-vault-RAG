@@ -10,7 +10,6 @@ from benchmark.ports.llm_client import LLMClient, LLMResponse
 
 from benchmark.adapters.extraction.llm_extractor import LLMExtractor
 
-
 # ── Helpers ──────────────────────────────────────────────────────────
 
 
