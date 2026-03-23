@@ -235,5 +235,6 @@ docs/APS-API-Guide.pdf
 corpus/us-nrc/cases/
 .vscode/launch.json
 
-# Git worktrees
+# Git and Backlog Management
 .worktrees/
+.milestone-state-*.json
