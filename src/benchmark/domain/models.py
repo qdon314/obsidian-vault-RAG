@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from benchmark.domain.enums import UnitKind
+from benchmark.domain.enums import EvidenceTier, UnitKind
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +60,39 @@ class RegulatoryUnit:
     cross_references: tuple[str, ...] = ()  # target_citation values
 
     metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceEntry:
+    """A single span assigned to an evidence tier.
+
+    Created by Stage 2 (evidence builder) from ``BenchmarkSourceSpan`` data.
+    The ``span_id`` is minted by the evidence builder, not carried from the
+    source span.
+    """
+
+    span_id: str
+    citation: str  # e.g. "10 CFR 50.46(b)(1)"
+    text: str  # span text for downstream prompt construction
+    char_start: int
+    char_end: int
+    chunk_ids: tuple[str, ...]
+    tier: EvidenceTier
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceSet:
+    """Unit-relative tiered evidence for a single ``RegulatoryUnit``.
+
+    Evidence tiers are unit-relative — they describe how important each span
+    is to the regulatory unit's normative content, not to any specific query.
+    See ``docs/decisions/adr-evidence-tier-semantics.md``.
+    """
+
+    unit_id: str
+    critical: tuple[EvidenceEntry, ...] = ()
+    supporting: tuple[EvidenceEntry, ...] = ()
+    contextual: tuple[EvidenceEntry, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
