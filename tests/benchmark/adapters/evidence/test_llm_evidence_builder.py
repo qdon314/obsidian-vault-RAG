@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import json
 
+from benchmark.adapters.evidence.llm_evidence_builder import LLMEvidenceBuilder
 from benchmark.domain.enums import EvidenceTier, UnitKind
 from benchmark.domain.models import BenchmarkSourceSpan, RegulatoryUnit, StageConfig
 from benchmark.ports.evidence_builder import EvidenceBuilder
 from benchmark.ports.llm_client import LLMResponse
-
-from benchmark.adapters.evidence.llm_evidence_builder import LLMEvidenceBuilder
-
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
