@@ -5,13 +5,16 @@ from __future__ import annotations
 
 import dataclasses
 
-from benchmark.domain.enums import EvidenceTier, UnitKind
+from benchmark.domain.enums import EvidenceTier, QueryClass, UnitKind
 from benchmark.domain.models import (
     BenchmarkSourceSpan,
     EvidenceEntry,
     EvidenceSet,
+    QueryCandidate,
     RegulatoryUnit,
     StageConfig,
+    ValidatedQuery,
+    ValidationResult,
 )
 
 
@@ -200,3 +203,135 @@ class TestStageConfig:
         assert cfg.max_tokens == 4096
         assert cfg.max_retries == 3
         assert cfg.timeout_s == 60.0
+
+
+class TestQueryCandidate:
+    def test_frozen(self) -> None:
+        qc = QueryCandidate(
+            candidate_id="qc_50.46_b_1_citation_lookup_0",
+            unit_id="50.46_b_1",
+            query="What does 10 CFR 50.46(b)(1) require?",
+            query_class=QueryClass.CITATION_LOOKUP,
+            source_citations=("10 CFR 50.46(b)(1)",),
+            evidence_span_ids=("50.46_b_1_0",),
+        )
+        assert dataclasses.is_dataclass(qc)
+        with_error = False
+        try:
+            qc.query = "mutated"  # type: ignore[misc]
+        except dataclasses.FrozenInstanceError:
+            with_error = True
+        assert with_error
+
+    def test_defaults(self) -> None:
+        qc = QueryCandidate(
+            candidate_id="qc_1",
+            unit_id="u1",
+            query="Test query?",
+            query_class=QueryClass.CITATION_LOOKUP,
+            source_citations=("10 CFR 50.46",),
+            evidence_span_ids=("u1_0",),
+        )
+        assert qc.difficulty == "easy"
+        assert qc.corpus_snapshot_id == ""
+        assert qc.metadata == {}
+
+    def test_all_query_classes_accepted(self) -> None:
+        for qclass in QueryClass:
+            qc = QueryCandidate(
+                candidate_id=f"qc_{qclass.value}",
+                unit_id="u1",
+                query="Test?",
+                query_class=qclass,
+                source_citations=(),
+                evidence_span_ids=(),
+            )
+            assert qc.query_class == qclass
+
+
+class TestValidationResult:
+    def test_frozen(self) -> None:
+        vr = ValidationResult(
+            candidate_id="qc_1",
+            is_valid=True,
+            flags=(),
+        )
+        assert dataclasses.is_dataclass(vr)
+        with_error = False
+        try:
+            vr.is_valid = False  # type: ignore[misc]
+        except dataclasses.FrozenInstanceError:
+            with_error = True
+        assert with_error
+
+    def test_defaults(self) -> None:
+        vr = ValidationResult(
+            candidate_id="qc_1",
+            is_valid=False,
+            flags=("too_short",),
+        )
+        assert vr.scores == {}
+
+    def test_with_flags_and_scores(self) -> None:
+        vr = ValidationResult(
+            candidate_id="qc_1",
+            is_valid=False,
+            flags=("no_citation", "too_short"),
+            scores={"length_score": 0.3},
+        )
+        assert len(vr.flags) == 2
+        assert vr.scores["length_score"] == 0.3
+
+
+class TestValidatedQuery:
+    def test_frozen(self) -> None:
+        vq = ValidatedQuery(
+            candidate_id="qc_1",
+            unit_id="u1",
+            query="What does 10 CFR 50.46(b)(1) require?",
+            query_class=QueryClass.CITATION_LOOKUP,
+            source_citations=("10 CFR 50.46(b)(1)",),
+            evidence_span_ids=("u1_0",),
+            difficulty="easy",
+            corpus_snapshot_id="snap1",
+        )
+        assert dataclasses.is_dataclass(vq)
+        with_error = False
+        try:
+            vq.query = "mutated"  # type: ignore[misc]
+        except dataclasses.FrozenInstanceError:
+            with_error = True
+        assert with_error
+
+    def test_defaults(self) -> None:
+        vq = ValidatedQuery(
+            candidate_id="qc_1",
+            unit_id="u1",
+            query="Test?",
+            query_class=QueryClass.CITATION_LOOKUP,
+            source_citations=(),
+            evidence_span_ids=(),
+            difficulty="easy",
+            corpus_snapshot_id="snap1",
+        )
+        assert vq.validation_scores == {}
+        assert vq.metadata == {}
+
+    def test_shares_fields_with_query_candidate(self) -> None:
+        """Common fields between QueryCandidate and ValidatedQuery
+        should have the same names for easy conversion."""
+        qc_fields = {f.name for f in dataclasses.fields(QueryCandidate)}
+        vq_fields = {f.name for f in dataclasses.fields(ValidatedQuery)}
+        common = {
+            "candidate_id",
+            "unit_id",
+            "query",
+            "query_class",
+            "source_citations",
+            "evidence_span_ids",
+            "difficulty",
+            "corpus_snapshot_id",
+            "metadata",
+        }
+        assert common <= qc_fields
+        assert common <= vq_fields

@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from benchmark.domain.enums import EvidenceTier, UnitKind
+from benchmark.domain.enums import EvidenceTier, QueryClass, UnitKind
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,3 +107,56 @@ class StageConfig:
     max_tokens: int = 4096
     max_retries: int = 3
     timeout_s: float = 60.0
+
+
+@dataclass(frozen=True, slots=True)
+class QueryCandidate:
+    """Stage 3 output: a generated query candidate.
+
+    Produced by a ``QueryGenerator`` from a ``RegulatoryUnit`` and its
+    ``EvidenceSet``.  The ``candidate_id`` is minted by the generator
+    (e.g. ``qc_50.46_b_1_citation_lookup_0``).
+    """
+
+    candidate_id: str
+    unit_id: str
+    query: str
+    query_class: QueryClass
+    source_citations: tuple[str, ...]
+    evidence_span_ids: tuple[str, ...]
+    difficulty: str = "easy"
+    corpus_snapshot_id: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationResult:
+    """Stage 5a output: result of validating a ``QueryCandidate``.
+
+    ``is_valid`` is ``True`` only when ``flags`` is empty.
+    """
+
+    candidate_id: str
+    is_valid: bool
+    flags: tuple[str, ...]
+    scores: dict[str, float] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class ValidatedQuery:
+    """A ``QueryCandidate`` that has passed validation.
+
+    Shares common field names with ``QueryCandidate`` so conversion is
+    straightforward via dict unpacking.
+    """
+
+    candidate_id: str
+    unit_id: str
+    query: str
+    query_class: QueryClass
+    source_citations: tuple[str, ...]
+    evidence_span_ids: tuple[str, ...]
+    difficulty: str
+    corpus_snapshot_id: str
+    validation_scores: dict[str, float] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
