@@ -212,17 +212,17 @@ def main() -> None:
     # -- Build unit extractor / evidence builder / classifier --------------
     # These are not changed by M4; they require the eCFR corpus to be indexed.
     try:
-        from benchmark.adapters.evidence.evidence_builder import (
-            DefaultEvidenceBuilder,  # type: ignore[import]
+        from benchmark.adapters.evidence.evidence_builder import (  # type: ignore[import-untyped]
+            DefaultEvidenceBuilder,
         )
-        from benchmark.adapters.extraction.ecfr_extractor import (
-            ECFRUnitExtractor,  # type: ignore[import]
+        from benchmark.adapters.extraction.ecfr_extractor import (  # type: ignore[import-untyped]
+            ECFRUnitExtractor,
         )
-        from benchmark.adapters.extraction.llm_classifier import (
-            LLMUnitClassifier,  # type: ignore[import]
+        from benchmark.adapters.extraction.llm_classifier import (  # type: ignore[import-untyped]
+            LLMUnitClassifier,
         )
 
-        from benchmark.stages.stage_0_source_view import build_corpus_spans  # type: ignore[import]
+        from benchmark.stages.stage_0_source_view import build_corpus_spans  # type: ignore[attr-defined]
 
         unit_extractor = ECFRUnitExtractor()
         evidence_builder = DefaultEvidenceBuilder()

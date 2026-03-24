@@ -29,6 +29,25 @@ This repository does not rely on shell activation. Use the pinned interpreter on
 
 Never run `python`, `pip`, `pytest`, `ruff`, or `streamlit` directly.
 
+## Pre-commit Checklist
+
+Run these before every commit to avoid CI failures:
+
+```bash
+./scripts/py -m ruff format .   # auto-format (must pass CI format check)
+./scripts/py -m ruff check .    # lint
+make typecheck                   # type check
+```
+
+A `.pre-commit-config.yaml` is checked in. Install the hooks once with:
+
+```bash
+./scripts/pip install pre-commit
+pre-commit install
+```
+
+After that, `ruff format` and `ruff check` run automatically on staged files at commit time.
+
 ## Do/Don't Quick Reference
 
 Do:
