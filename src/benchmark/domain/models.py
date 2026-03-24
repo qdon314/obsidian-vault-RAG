@@ -2,6 +2,8 @@
 
 All models are frozen dataclasses. Identity (``unit_id``) is structurally
 derived in Stage 1a and immutable from that point forward.
+
+M4 additions: ``HardNegativeResult``, ``BenchmarkRecord``, ``BenchmarkDataset``.
 """
 
 from __future__ import annotations
@@ -159,4 +161,65 @@ class ValidatedQuery:
     difficulty: str
     corpus_snapshot_id: str
     validation_scores: dict[str, float] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class HardNegativeResult:
+    """Stage 5b output: hard negatives for a single validated query.
+
+    Hard negatives are top-k retrieval results that are **not** in the
+    query's evidence set.  Required for meaningful reranker evaluation —
+    without them, reranker eval measures easy separation, not real
+    discrimination.
+    """
+
+    candidate_id: str
+    hard_negative_chunk_ids: tuple[str, ...]
+    retriever_config: dict[str, Any]  # model, index_version, top_k
+    insufficient: bool = False  # True when < min_hard_negatives found
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkRecord:
+    """A fully assembled benchmark record ready for export.
+
+    Combines data from a validated query, its evidence set, and optional
+    hard negatives into the schema defined in the design doc.  The ``qid``
+    preserves the ``candidate_id`` from ``ValidatedQuery`` — identity is
+    not reminted.
+    """
+
+    qid: str
+    query: str
+    query_class: QueryClass
+    difficulty: str
+    source_unit_ids: tuple[str, ...]
+    source_citations: tuple[str, ...]
+    critical_evidence: tuple[EvidenceEntry, ...]
+    supporting_evidence: tuple[EvidenceEntry, ...]
+    contextual_evidence: tuple[EvidenceEntry, ...]
+    hard_negative_chunk_ids: tuple[str, ...]
+    hard_negatives_retriever_config: dict[str, Any]
+    corpus_snapshot_id: str
+    valid_as_of: str  # ISO date
+    is_unanswerable: bool = False
+    unanswerable_reason: str | None = None
+    robustness_parent_qid: str | None = None
+    validation_scores: dict[str, float] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkDataset:
+    """A collection of benchmark records with schema metadata.
+
+    Immutable snapshot of the benchmark pipeline output, suitable for
+    serialization and handoff to the exporter.
+    """
+
+    schema_version: str
+    records: tuple[BenchmarkRecord, ...]
+    corpus_snapshot_id: str
+    created_at: str  # ISO datetime
     metadata: dict[str, Any] = field(default_factory=dict)
