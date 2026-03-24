@@ -63,7 +63,7 @@ _STAGE_ORDER = (
     "stage_3",
     "stage_5a",
     "stage_5b",
-    "stage_6",   # M5: gold answer synthesis (must precede stage_5c)
+    "stage_6",  # M5: gold answer synthesis (must precede stage_5c)
     "stage_5c",  # M5: contamination probe
     "export",
 )
@@ -77,8 +77,8 @@ _RESUME_INPUT_FILES: dict[str, str] = {
     "stage_3": "stage_2_evidence.jsonl",
     "stage_5a": "stage_3_candidates.jsonl",
     "stage_5b": "stage_5a_queries.jsonl",
-    "stage_6": "stage_5a_queries.jsonl",          # reads validated queries
-    "stage_5c": "stage_6_gold_answers.jsonl",     # reads records with gold answers
+    "stage_6": "stage_5a_queries.jsonl",  # reads validated queries
+    "stage_5c": "stage_6_gold_answers.jsonl",  # reads records with gold answers
     "export": "stage_5a_queries.jsonl",
 }
 
@@ -229,9 +229,7 @@ class PipelineRunner:
                 classified = self._run_stage_1b(units)
             elif stage == "stage_2":
                 if not classified:
-                    classified = self._read_checkpoint_units(
-                        "stage_1b_classified.jsonl"
-                    )
+                    classified = self._read_checkpoint_units("stage_1b_classified.jsonl")
                 evidence_sets = self._run_stage_2(classified)
             elif stage == "stage_3":
                 if not evidence_sets:
@@ -242,8 +240,8 @@ class PipelineRunner:
                     candidates = self._read_checkpoint_candidates()
                 if not evidence_sets:
                     evidence_sets = self._read_checkpoint_evidence()
-                results, validated_queries, refined_evidence_by_cid = (
-                    self._run_stage_5a(candidates, evidence_sets)
+                results, validated_queries, refined_evidence_by_cid = self._run_stage_5a(
+                    candidates, evidence_sets
                 )
             elif stage == "stage_5b":
                 if not validated_queries:
@@ -283,9 +281,7 @@ class PipelineRunner:
                     if not validated_queries:
                         validated_queries = self._read_checkpoint_validated_queries()
                     if not refined_evidence_by_cid:
-                        refined_evidence_by_cid = (
-                            self._read_checkpoint_refined_evidence()
-                        )
+                        refined_evidence_by_cid = self._read_checkpoint_refined_evidence()
                     if not hard_negatives:
                         hard_negatives = self._read_checkpoint_hard_negatives()
                     benchmark_records = self._run_export(
@@ -295,23 +291,22 @@ class PipelineRunner:
             stages_completed.append(stage)
 
         flagged = sum(1 for r in results if not r.is_valid)
-        hn_count = sum(
-            len(hn.hard_negative_chunk_ids) for hn in hard_negatives
-        )
+        hn_count = sum(len(hn.hard_negative_chunk_ids) for hn in hard_negatives)
 
         # Count exported records from checkpoint.
         exported_count = 0
         records_path = self._output_path / "benchmark_records.jsonl"
         if records_path.exists():
-            exported_count = sum(1 for line in records_path.read_text().splitlines() if line.strip())
+            exported_count = sum(
+                1 for line in records_path.read_text().splitlines() if line.strip()
+            )
 
         # Count contaminated records (M5).
         contaminated_count = 0
         if self._contamination_model_id:
             mid = self._contamination_model_id
             contaminated_count = sum(
-                1 for r in benchmark_records
-                if r.contamination_probes.get(mid) is True
+                1 for r in benchmark_records if r.contamination_probes.get(mid) is True
             )
 
         return PipelineResult(
@@ -347,17 +342,13 @@ class PipelineRunner:
         self._write_checkpoint("stage_0_spans.jsonl", spans)
         return spans
 
-    def _run_stage_1a(
-        self, spans: list[BenchmarkSourceSpan]
-    ) -> list[RegulatoryUnit]:
+    def _run_stage_1a(self, spans: list[BenchmarkSourceSpan]) -> list[RegulatoryUnit]:
         logger.info("Running Stage 1a: structural segmentation")
         units = self._unit_extractor.extract(spans)
         self._write_checkpoint("stage_1a_units.jsonl", units)
         return units
 
-    def _run_stage_1b(
-        self, units: list[RegulatoryUnit]
-    ) -> list[RegulatoryUnit]:
+    def _run_stage_1b(self, units: list[RegulatoryUnit]) -> list[RegulatoryUnit]:
         if self._llm_classifier is None:
             msg = "Stage 1b requires an LLM classifier but none was provided"
             raise ValueError(msg)
@@ -367,9 +358,7 @@ class PipelineRunner:
         self._write_checkpoint("stage_1b_classified.jsonl", classified)
         return classified
 
-    def _run_stage_2(
-        self, units: list[RegulatoryUnit]
-    ) -> list[EvidenceSet]:
+    def _run_stage_2(self, units: list[RegulatoryUnit]) -> list[EvidenceSet]:
         if self._evidence_builder is None:
             msg = "Stage 2 requires an EvidenceBuilder but none was provided"
             raise ValueError(msg)
@@ -379,9 +368,7 @@ class PipelineRunner:
         self._write_checkpoint("stage_2_evidence.jsonl", evidence_sets)
         return evidence_sets
 
-    def _run_stage_3(
-        self, evidence_sets: list[EvidenceSet]
-    ) -> list[QueryCandidate]:
+    def _run_stage_3(self, evidence_sets: list[EvidenceSet]) -> list[QueryCandidate]:
         logger.info("Running Stage 3: query generation (%s classes)", len(self._query_classes))
 
         # Build a lookup from unit_id to evidence set.
@@ -394,9 +381,7 @@ class PipelineRunner:
         for unit in classified:
             evidence = evidence_by_unit.get(unit.unit_id)
             if evidence is None:
-                logger.warning(
-                    "No evidence set for unit %s; skipping", unit.unit_id
-                )
+                logger.warning("No evidence set for unit %s; skipping", unit.unit_id)
                 continue
             for query_class in self._query_classes:
                 generator = self._query_generators.get(query_class)
@@ -422,9 +407,7 @@ class PipelineRunner:
         dict[str, EvidenceSet],
     ]:
         if self._query_validator is None:
-            msg = (
-                "Stage 5a requires a QueryValidator but none was provided"
-            )
+            msg = "Stage 5a requires a QueryValidator but none was provided"
             raise ValueError(msg)
 
         logger.info("Running Stage 5a: validation + evidence refinement")
@@ -459,9 +442,7 @@ class PipelineRunner:
             # Refine evidence for this specific query.
             unit_evidence = evidence_by_unit.get(candidate.unit_id)
             if unit_evidence is not None:
-                refined = self._query_validator.refine_evidence(
-                    vq, unit_evidence
-                )
+                refined = self._query_validator.refine_evidence(vq, unit_evidence)
             else:
                 refined = EvidenceSet(unit_id=candidate.unit_id)
             refined_evidence_by_cid[candidate.candidate_id] = refined
@@ -477,9 +458,7 @@ class PipelineRunner:
         evidence_sets: list[EvidenceSet],
     ) -> list[HardNegativeResult]:
         if self._retriever is None:
-            logger.info(
-                "Stage 5b: no retriever provided — skipping hard negative mining"
-            )
+            logger.info("Stage 5b: no retriever provided — skipping hard negative mining")
             return []
 
         logger.info("Running Stage 5b: hard negative mining (%d queries)", len(validated_queries))
@@ -513,9 +492,7 @@ class PipelineRunner:
 
         records: list[BenchmarkRecord] = []
         for vq in validated_queries:
-            refined = refined_evidence_by_cid.get(
-                vq.candidate_id, EvidenceSet(unit_id=vq.unit_id)
-            )
+            refined = refined_evidence_by_cid.get(vq.candidate_id, EvidenceSet(unit_id=vq.unit_id))
             hn = hn_by_cid.get(vq.candidate_id)
 
             record = BenchmarkRecord(
@@ -528,12 +505,8 @@ class PipelineRunner:
                 critical_evidence=refined.critical,
                 supporting_evidence=refined.supporting,
                 contextual_evidence=refined.contextual,
-                hard_negative_chunk_ids=(
-                    hn.hard_negative_chunk_ids if hn is not None else ()
-                ),
-                hard_negatives_retriever_config=(
-                    hn.retriever_config if hn is not None else {}
-                ),
+                hard_negative_chunk_ids=(hn.hard_negative_chunk_ids if hn is not None else ()),
+                hard_negatives_retriever_config=(hn.retriever_config if hn is not None else {}),
                 corpus_snapshot_id=vq.corpus_snapshot_id,
                 valid_as_of=self._valid_as_of,
                 is_unanswerable=bool(vq.metadata.get("is_unanswerable", False)),
@@ -589,13 +562,9 @@ class PipelineRunner:
         self._write_checkpoint("stage_5c_probed_records.jsonl", probed)
         return probed
 
-    def _run_export_from_records(
-        self, records: list[BenchmarkRecord]
-    ) -> None:
+    def _run_export_from_records(self, records: list[BenchmarkRecord]) -> None:
         """Export pre-assembled BenchmarkRecord objects (M5 path)."""
-        logger.info(
-            "Running export stage: writing %d benchmark records", len(records)
-        )
+        logger.info("Running export stage: writing %d benchmark records", len(records))
         self._write_checkpoint("benchmark_records.jsonl", records)
 
         if self._exporter is not None:
@@ -628,9 +597,7 @@ class PipelineRunner:
 
         records: list[BenchmarkRecord] = []
         for vq in validated_queries:
-            refined = refined_evidence_by_cid.get(
-                vq.candidate_id, EvidenceSet(unit_id=vq.unit_id)
-            )
+            refined = refined_evidence_by_cid.get(vq.candidate_id, EvidenceSet(unit_id=vq.unit_id))
             hn = hn_by_cid.get(vq.candidate_id)
 
             record = BenchmarkRecord(
@@ -643,17 +610,11 @@ class PipelineRunner:
                 critical_evidence=refined.critical,
                 supporting_evidence=refined.supporting,
                 contextual_evidence=refined.contextual,
-                hard_negative_chunk_ids=(
-                    hn.hard_negative_chunk_ids if hn is not None else ()
-                ),
-                hard_negatives_retriever_config=(
-                    hn.retriever_config if hn is not None else {}
-                ),
+                hard_negative_chunk_ids=(hn.hard_negative_chunk_ids if hn is not None else ()),
+                hard_negatives_retriever_config=(hn.retriever_config if hn is not None else {}),
                 corpus_snapshot_id=vq.corpus_snapshot_id,
                 valid_as_of=self._valid_as_of,
-                is_unanswerable=bool(
-                    vq.metadata.get("is_unanswerable", False)
-                ),
+                is_unanswerable=bool(vq.metadata.get("is_unanswerable", False)),
                 unanswerable_reason=vq.metadata.get("unanswerable_reason"),
                 validation_scores=vq.validation_scores,
                 metadata=vq.metadata,
@@ -663,9 +624,7 @@ class PipelineRunner:
         self._write_checkpoint("benchmark_records.jsonl", records)
 
         if self._exporter is not None:
-            snapshot_id = (
-                records[0].corpus_snapshot_id if records else ""
-            )
+            snapshot_id = records[0].corpus_snapshot_id if records else ""
             dataset = BenchmarkDataset(
                 schema_version="1.0",
                 records=tuple(records),
@@ -685,16 +644,12 @@ class PipelineRunner:
     # Checkpoint I/O
     # ------------------------------------------------------------------
 
-    def _write_checkpoint(
-        self, filename: str, records: list[Any]
-    ) -> None:
+    def _write_checkpoint(self, filename: str, records: list[Any]) -> None:
         """Write records to a JSONL checkpoint file."""
         path = self._output_path / filename
         with path.open("w") as f:
             for record in records:
-                line = json.dumps(
-                    dataclasses.asdict(record), default=str
-                )
+                line = json.dumps(dataclasses.asdict(record), default=str)
                 f.write(line + "\n")
         logger.info("Wrote %d records to %s", len(records), path)
 
@@ -717,29 +672,21 @@ class PipelineRunner:
         path = self._output_path / "stage_0_spans.jsonl"
         return [_dict_to_span(d) for d in self._read_jsonl(path)]
 
-    def _read_checkpoint_units(
-        self, filename: str
-    ) -> list[RegulatoryUnit]:
+    def _read_checkpoint_units(self, filename: str) -> list[RegulatoryUnit]:
         path = self._output_path / filename
         return [_dict_to_unit(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_evidence(self) -> list[EvidenceSet]:
         path = self._output_path / "stage_2_evidence.jsonl"
-        return [
-            _dict_to_evidence_set(d) for d in self._read_jsonl(path)
-        ]
+        return [_dict_to_evidence_set(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_candidates(self) -> list[QueryCandidate]:
         path = self._output_path / "stage_3_candidates.jsonl"
-        return [
-            _dict_to_candidate(d) for d in self._read_jsonl(path)
-        ]
+        return [_dict_to_candidate(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_validated_queries(self) -> list[ValidatedQuery]:
         path = self._output_path / "stage_5a_queries.jsonl"
-        return [
-            _dict_to_validated_query(d) for d in self._read_jsonl(path)
-        ]
+        return [_dict_to_validated_query(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_refined_evidence(self) -> dict[str, EvidenceSet]:
         path = self._output_path / "stage_5a_refined_evidence.jsonl"
@@ -753,9 +700,7 @@ class PipelineRunner:
         path = self._output_path / "stage_5b_hard_negatives.jsonl"
         if not path.exists():
             return []
-        return [
-            _dict_to_hard_negative(d) for d in self._read_jsonl(path)
-        ]
+        return [_dict_to_hard_negative(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_benchmark_records(self) -> list[BenchmarkRecord]:
         """Read the latest available BenchmarkRecord checkpoint.
@@ -771,20 +716,14 @@ class PipelineRunner:
             path = self._output_path / filename
             if path.exists():
                 logger.info("Reading benchmark records from %s", path)
-                return [
-                    _dict_to_benchmark_record(d)
-                    for d in self._read_jsonl(path)
-                ]
+                return [_dict_to_benchmark_record(d) for d in self._read_jsonl(path)]
         return []
 
     @staticmethod
     def _read_jsonl(path: Path) -> list[dict[str, Any]]:
         """Read a JSONL file into a list of dicts."""
         if not path.exists():
-            msg = (
-                f"Checkpoint file not found: {path}. "
-                f"Cannot resume from this stage."
-            )
+            msg = f"Checkpoint file not found: {path}. Cannot resume from this stage."
             raise FileNotFoundError(msg)
         records: list[dict[str, Any]] = []
         with path.open() as f:
@@ -831,9 +770,7 @@ def _dict_to_span(d: dict[str, Any]) -> BenchmarkSourceSpan:
         text=d["text"],
         char_start=d["char_start"],
         char_end=d["char_end"],
-        chunk_ids_overlapping_span=tuple(
-            d["chunk_ids_overlapping_span"]
-        ),
+        chunk_ids_overlapping_span=tuple(d["chunk_ids_overlapping_span"]),
         parent_section_id=d["parent_section_id"],
         effective_date=d["effective_date"],
         corpus_snapshot_id=d["corpus_snapshot_id"],
@@ -874,15 +811,9 @@ def _dict_to_evidence_entry(d: dict[str, Any]) -> EvidenceEntry:
 def _dict_to_evidence_set(d: dict[str, Any]) -> EvidenceSet:
     return EvidenceSet(
         unit_id=d["unit_id"],
-        critical=tuple(
-            _dict_to_evidence_entry(e) for e in d.get("critical", ())
-        ),
-        supporting=tuple(
-            _dict_to_evidence_entry(e) for e in d.get("supporting", ())
-        ),
-        contextual=tuple(
-            _dict_to_evidence_entry(e) for e in d.get("contextual", ())
-        ),
+        critical=tuple(_dict_to_evidence_entry(e) for e in d.get("critical", ())),
+        supporting=tuple(_dict_to_evidence_entry(e) for e in d.get("supporting", ())),
+        contextual=tuple(_dict_to_evidence_entry(e) for e in d.get("contextual", ())),
     )
 
 
@@ -937,9 +868,7 @@ def _dict_to_benchmark_record(d: dict[str, Any]) -> BenchmarkRecord:
         difficulty=d.get("difficulty", "easy"),
         source_unit_ids=tuple(d.get("source_unit_ids", ())),
         source_citations=tuple(d.get("source_citations", ())),
-        critical_evidence=tuple(
-            _dict_to_evidence_entry(e) for e in d.get("critical_evidence", ())
-        ),
+        critical_evidence=tuple(_dict_to_evidence_entry(e) for e in d.get("critical_evidence", ())),
         supporting_evidence=tuple(
             _dict_to_evidence_entry(e) for e in d.get("supporting_evidence", ())
         ),

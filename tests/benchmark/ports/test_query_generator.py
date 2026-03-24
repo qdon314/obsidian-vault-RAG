@@ -56,9 +56,7 @@ class _MockQueryGenerator:
                 query="What does 10 CFR 50.46(b)(1) require?",
                 query_class=query_class,
                 source_citations=(unit.citation,),
-                evidence_span_ids=tuple(
-                    e.span_id for e in evidence.critical
-                ),
+                evidence_span_ids=tuple(e.span_id for e in evidence.critical),
             )
         ]
 

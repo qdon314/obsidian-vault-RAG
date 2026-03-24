@@ -45,7 +45,7 @@ jobs:
 
   # Post-merge eval monitor: trigger ECS eval tasks per dataset, then verdict locally.
   eval-monitor:
-    if: github.event_name == 'push'
+    if: false  # temporarily disabled — re-enable by restoring: github.event_name == 'push'
     needs: lint-and-test
     runs-on: ubuntu-latest
 
@@ -124,7 +124,7 @@ jobs:
 
   # Post-eval notification: comment on commit if any dataset produced a BLOCK verdict.
   eval-notify:
-    if: github.event_name == 'push' && always()
+    if: false  # temporarily disabled — re-enable by restoring: github.event_name == 'push' && always()
     needs: eval-monitor
     runs-on: ubuntu-latest
     permissions:

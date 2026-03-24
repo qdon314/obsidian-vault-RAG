@@ -159,11 +159,7 @@ class _StubLLMClient:
     def complete(self, prompt: str, config: StageConfig) -> LLMResponse:
         self._call_count += 1
         # Alternate: odd calls are generation, even are judge.
-        text = (
-            self._generation_response
-            if self._call_count % 2 == 1
-            else self._judge_response
-        )
+        text = self._generation_response if self._call_count % 2 == 1 else self._judge_response
         return LLMResponse(text=text, model=config.model or "stub")
 
 
@@ -241,9 +237,7 @@ class TestM5BackwardCompat:
 
 
 class TestStage6GoldSynthesis:
-    def test_stage_6_in_stages_completed_when_synthesizer_provided(
-        self, tmp_path: Path
-    ) -> None:
+    def test_stage_6_in_stages_completed_when_synthesizer_provided(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path, gold_synthesizer=_StubGoldAnswerSynthesizer())
         result = runner.run()
 
@@ -264,12 +258,8 @@ class TestStage6GoldSynthesis:
         assert record["gold_answer"] == "The limit is 2200°F."
         assert "2200°F" in record["required_points"]
 
-    def test_empty_gold_answer_record_retained_without_gold(
-        self, tmp_path: Path
-    ) -> None:
-        runner = _build_runner(
-            tmp_path, gold_synthesizer=_StubEmptyGoldAnswerSynthesizer()
-        )
+    def test_empty_gold_answer_record_retained_without_gold(self, tmp_path: Path) -> None:
+        runner = _build_runner(tmp_path, gold_synthesizer=_StubEmptyGoldAnswerSynthesizer())
         runner.run()
 
         path = tmp_path / "m5_run" / "stage_6_gold_answers.jsonl"
@@ -277,9 +267,7 @@ class TestStage6GoldSynthesis:
         # Record is still present but gold_answer field is null/absent.
         assert record.get("gold_answer") is None or record.get("gold_answer") == ""
 
-    def test_benchmark_records_used_for_export_when_stage6_ran(
-        self, tmp_path: Path
-    ) -> None:
+    def test_benchmark_records_used_for_export_when_stage6_ran(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path, gold_synthesizer=_StubGoldAnswerSynthesizer())
         result = runner.run()
 
@@ -298,9 +286,7 @@ class TestStage6GoldSynthesis:
 
 
 class TestStage5cContaminationProbe:
-    def test_stage_5c_in_stages_completed_when_enabled(
-        self, tmp_path: Path
-    ) -> None:
+    def test_stage_5c_in_stages_completed_when_enabled(self, tmp_path: Path) -> None:
         runner = _build_runner(
             tmp_path,
             gold_synthesizer=_StubGoldAnswerSynthesizer(),

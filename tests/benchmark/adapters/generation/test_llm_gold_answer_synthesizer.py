@@ -29,9 +29,11 @@ from benchmark.ports.llm_client import LLMClient, LLMResponse
 # Stubs
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _StubLLMClient:
     """Stub LLMClient returning a fixed response."""
+
     response_text: str
     raise_on_call: bool = False
 
@@ -48,6 +50,7 @@ def _make_client(data: dict[str, Any]) -> _StubLLMClient:
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def config() -> StageConfig:
@@ -86,6 +89,7 @@ def evidence_set() -> EvidenceSet:
 # Tests
 # ---------------------------------------------------------------------------
 
+
 class TestLLMGoldAnswerSynthesizerSuccess:
     def test_returns_gold_answer_from_valid_json(
         self,
@@ -93,12 +97,14 @@ class TestLLMGoldAnswerSynthesizerSuccess:
         validated_query: ValidatedQuery,
         evidence_set: EvidenceSet,
     ) -> None:
-        client = _make_client({
-            "gold_answer": "The limit is 2200°F.",
-            "acceptable_answer_variants": ["2200 degrees Fahrenheit"],
-            "required_points": ["Contains 2200°F"],
-            "forbidden_errors": ["Wrong threshold"],
-        })
+        client = _make_client(
+            {
+                "gold_answer": "The limit is 2200°F.",
+                "acceptable_answer_variants": ["2200 degrees Fahrenheit"],
+                "required_points": ["Contains 2200°F"],
+                "forbidden_errors": ["Wrong threshold"],
+            }
+        )
         synthesizer = LLMGoldAnswerSynthesizer(client, config)
         result = synthesizer.synthesize(validated_query, evidence_set)
 

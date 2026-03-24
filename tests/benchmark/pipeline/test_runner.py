@@ -151,9 +151,7 @@ def _build_runner(
         evidence_builder=_MockEvidenceBuilder() if include_evidence else None,
         query_generator=_MockQueryGenerator() if include_generator else None,
         query_validator=(
-            _MockQueryValidator(is_valid=validator_valid)
-            if include_validator
-            else None
+            _MockQueryValidator(is_valid=validator_valid) if include_validator else None
         ),
     )
 

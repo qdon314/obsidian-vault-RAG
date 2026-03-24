@@ -30,7 +30,9 @@ MODEL_ID = "gpt-4o-2025-01-01"
 class _StubLLMClient:
     """Returns canned responses: first call = generation, second = judge."""
 
-    def __init__(self, gen_text: str, judge_data: dict | None, *, raise_on: int | None = None) -> None:
+    def __init__(
+        self, gen_text: str, judge_data: dict | None, *, raise_on: int | None = None
+    ) -> None:
         self._gen_text = gen_text
         self._judge_data = judge_data
         self._raise_on = raise_on
@@ -91,6 +93,7 @@ def config() -> StageConfig:
 # Tests: core contamination logic
 # ---------------------------------------------------------------------------
 
+
 class TestRunContaminationProbe:
     def test_high_score_flags_as_contaminated(self, config: StageConfig) -> None:
         """correctness=4.5 → score_0_1=0.9 → contaminated=True."""
@@ -122,7 +125,9 @@ class TestRunContaminationProbe:
             judge_data={"correctness": 3.5},
         )
         records = [_make_record()]
-        result = run_contamination_probe(records, client, config, MODEL_ID, contamination_threshold=0.7)
+        result = run_contamination_probe(
+            records, client, config, MODEL_ID, contamination_threshold=0.7
+        )
         assert result[0].contamination_probes[MODEL_ID] is True
 
     def test_custom_threshold(self, config: StageConfig) -> None:
@@ -132,7 +137,9 @@ class TestRunContaminationProbe:
             judge_data={"correctness": 4.5},
         )
         records = [_make_record()]
-        result = run_contamination_probe(records, client, config, MODEL_ID, contamination_threshold=0.95)
+        result = run_contamination_probe(
+            records, client, config, MODEL_ID, contamination_threshold=0.95
+        )
         assert result[0].contamination_probes[MODEL_ID] is False
 
     def test_multiple_records_processed(self, config: StageConfig) -> None:
@@ -153,6 +160,7 @@ class TestRunContaminationProbe:
 # ---------------------------------------------------------------------------
 # Tests: edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestContaminationEdgeCases:
     def test_skips_record_without_gold_answer(self, config: StageConfig) -> None:

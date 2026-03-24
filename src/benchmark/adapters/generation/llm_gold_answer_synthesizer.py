@@ -59,9 +59,7 @@ _EMPTY = GoldAnswer(gold_answer="")
 def _format_entries(entries: tuple[EvidenceEntry, ...]) -> str:
     if not entries:
         return "(none)"
-    return "\n".join(
-        f"- [{e.citation}] {e.text}" for e in entries
-    )
+    return "\n".join(f"- [{e.citation}] {e.text}" for e in entries)
 
 
 def _parse_response(text: str) -> dict[str, Any] | None:
@@ -99,9 +97,7 @@ class LLMGoldAnswerSynthesizer:
             critical_evidence=_format_entries(evidence.critical),
             supporting_evidence=_format_entries(evidence.supporting),
         )
-        logger.debug(
-            "Synthesising gold answer for candidate_id=%s", query.candidate_id
-        )
+        logger.debug("Synthesising gold answer for candidate_id=%s", query.candidate_id)
         try:
             response = self._client.complete(prompt, self._config)
         except Exception as exc:
@@ -134,10 +130,6 @@ class LLMGoldAnswerSynthesizer:
             acceptable_answer_variants=tuple(
                 str(v) for v in data.get("acceptable_answer_variants", [])
             ),
-            required_points=tuple(
-                str(p) for p in data.get("required_points", [])
-            ),
-            forbidden_errors=tuple(
-                str(e) for e in data.get("forbidden_errors", [])
-            ),
+            required_points=tuple(str(p) for p in data.get("required_points", [])),
+            forbidden_errors=tuple(str(e) for e in data.get("forbidden_errors", [])),
         )

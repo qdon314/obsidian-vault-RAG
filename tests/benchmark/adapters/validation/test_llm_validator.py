@@ -95,13 +95,15 @@ class _MockLLMClient:
 
 
 def _good_scores() -> str:
-    return json.dumps({
-        "plausibility": 0.9,
-        "boundedness": 0.8,
-        "ambiguity": 0.9,
-        "specificity": 0.85,
-        "leakage": 0.8,
-    })
+    return json.dumps(
+        {
+            "plausibility": 0.9,
+            "boundedness": 0.8,
+            "ambiguity": 0.9,
+            "specificity": 0.85,
+            "leakage": 0.8,
+        }
+    )
 
 
 def _make_validator(
@@ -216,7 +218,9 @@ class TestLLMScoring:
 
     def test_custom_threshold_respected(self) -> None:
         # All scores 0.7 — should fail with default 0.8 threshold but pass with 0.5
-        scores = dict.fromkeys(("plausibility", "boundedness", "ambiguity", "specificity", "leakage"), 0.7)
+        scores = dict.fromkeys(
+            ("plausibility", "boundedness", "ambiguity", "specificity", "leakage"), 0.7
+        )
         validator_strict, _ = _make_validator(
             json.dumps(scores),
             thresholds={"plausibility": 0.8},
@@ -283,11 +287,13 @@ class TestRefineEvidence:
         supporting: list[str] | None = None,
         contextual: list[str] | None = None,
     ) -> str:
-        return json.dumps({
-            "critical": critical,
-            "supporting": supporting or [],
-            "contextual": contextual or [],
-        })
+        return json.dumps(
+            {
+                "critical": critical,
+                "supporting": supporting or [],
+                "contextual": contextual or [],
+            }
+        )
 
     def test_returns_new_evidence_set(self) -> None:
         validator, _ = _make_validator(self._refine_response(["span_0"]))
@@ -320,9 +326,7 @@ class TestRefineEvidence:
 
     def test_hallucinated_span_ids_filtered(self) -> None:
         # LLM returns a span_id not in the original evidence
-        validator, _ = _make_validator(
-            self._refine_response(["span_0", "span_FAKE_99"])
-        )
+        validator, _ = _make_validator(self._refine_response(["span_0", "span_FAKE_99"]))
         query = _make_validated_query()
         evidence = _make_evidence()
 
@@ -341,9 +345,7 @@ class TestRefineEvidence:
 
     def test_tier_reassignment(self) -> None:
         # LLM promotes span_1 (originally supporting) to critical
-        validator, _ = _make_validator(
-            self._refine_response(critical=["span_0", "span_1"])
-        )
+        validator, _ = _make_validator(self._refine_response(critical=["span_0", "span_1"]))
         query = _make_validated_query()
         evidence = _make_evidence()
 

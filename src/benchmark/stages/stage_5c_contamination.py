@@ -151,8 +151,7 @@ def _probe_record(
         ungrounded_answer = gen_response.text.strip()
     except Exception as exc:
         logger.warning(
-            "Generation call failed for qid=%s (model_id=%s): %s — "
-            "treating as not contaminated",
+            "Generation call failed for qid=%s (model_id=%s): %s — treating as not contaminated",
             record.qid,
             model_id,
             exc,
@@ -174,8 +173,7 @@ def _probe_record(
         result = GoldJudgeResult.from_llm_dict(judge_data)
     except Exception as exc:
         logger.warning(
-            "Judge call failed for qid=%s (model_id=%s): %s — "
-            "treating as not contaminated",
+            "Judge call failed for qid=%s (model_id=%s): %s — treating as not contaminated",
             record.qid,
             model_id,
             exc,

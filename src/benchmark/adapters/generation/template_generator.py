@@ -79,10 +79,7 @@ class TemplateQueryGenerator:
         Only ``CITATION_LOOKUP`` is supported in M3.
         """
         if query_class != QueryClass.CITATION_LOOKUP:
-            msg = (
-                f"Only CITATION_LOOKUP is supported in M3, "
-                f"got {query_class.value!r}"
-            )
+            msg = f"Only CITATION_LOOKUP is supported in M3, got {query_class.value!r}"
             raise ValueError(msg)
 
         template = self._build_template(unit)

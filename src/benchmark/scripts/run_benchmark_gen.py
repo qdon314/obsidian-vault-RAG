@@ -71,10 +71,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--query-classes",
         default="citation_lookup",
-        help=(
-            "Comma-separated list of query classes to generate "
-            "(default: citation_lookup)"
-        ),
+        help=("Comma-separated list of query classes to generate (default: citation_lookup)"),
     )
     parser.add_argument(
         "--skip-hard-negatives",
@@ -127,9 +124,7 @@ def main() -> None:
     # -- Validate OPENAI_API_KEY -------------------------------------------
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        logger.error(
-            "OPENAI_API_KEY not set. Set it in your environment or .env file."
-        )
+        logger.error("OPENAI_API_KEY not set. Set it in your environment or .env file.")
         sys.exit(1)
 
     # -- Parse query classes -----------------------------------------------
@@ -145,11 +140,11 @@ def main() -> None:
     # -- Wire LLM client ---------------------------------------------------
     try:
         from benchmark.adapters.llm.openai_client import OpenAILLMClient  # type: ignore[import]
+
         llm_client = OpenAILLMClient(api_key=api_key)
     except ImportError:
         logger.error(
-            "OpenAI LLM client not available. Install with: "
-            "./scripts/pip install -e '.[openai]'"
+            "OpenAI LLM client not available. Install with: ./scripts/pip install -e '.[openai]'"
         )
         sys.exit(1)
 
@@ -162,15 +157,11 @@ def main() -> None:
             llm_client, stage_config
         )
     if QueryClass.UNANSWERABLE in query_classes:
-        query_generators[QueryClass.UNANSWERABLE] = UnanswerableGenerator(
-            llm_client, stage_config
-        )
+        query_generators[QueryClass.UNANSWERABLE] = UnanswerableGenerator(llm_client, stage_config)
 
     # -- Wire validator ---------------------------------------------------
     deterministic = DeterministicValidator()
-    validator = LLMValidator(
-        llm_client, stage_config, deterministic=deterministic
-    )
+    validator = LLMValidator(llm_client, stage_config, deterministic=deterministic)
 
     # -- Wire retriever (optional) ----------------------------------------
     retriever = None
@@ -178,6 +169,7 @@ def main() -> None:
     if not args.skip_hard_negatives:
         try:
             from rag.app.container import build_container  # type: ignore[import]
+
             container = build_container()
             retriever = container.retriever
             retriever_config = {"model": args.model, "top_k": 20}
@@ -193,6 +185,7 @@ def main() -> None:
     exporter = None
     if args.export_path:
         from benchmark.adapters.export.eval_query_exporter import EvalQueryExporter
+
         exporter = EvalQueryExporter(Path(args.export_path))
         logger.info("EvalQuery exporter writing to %s", args.export_path)
 
@@ -202,6 +195,7 @@ def main() -> None:
         from benchmark.adapters.generation.llm_gold_answer_synthesizer import (  # type: ignore[import]
             LLMGoldAnswerSynthesizer,
         )
+
         gold_answer_synthesizer = LLMGoldAnswerSynthesizer(llm_client, stage_config)
         logger.info("Gold answer synthesizer wired for Stage 6")
 
@@ -229,14 +223,14 @@ def main() -> None:
         )
 
         from benchmark.stages.stage_0_source_view import build_corpus_spans  # type: ignore[import]
+
         unit_extractor = ECFRUnitExtractor()
         evidence_builder = DefaultEvidenceBuilder()
         llm_classifier = LLMUnitClassifier(llm_client, stage_config).classify
         corpus_spans_builder = build_corpus_spans
     except ImportError as exc:
         logger.error(
-            "Could not import pipeline adapters: %s. "
-            "Ensure the package is installed correctly.",
+            "Could not import pipeline adapters: %s. Ensure the package is installed correctly.",
             exc,
         )
         sys.exit(1)
