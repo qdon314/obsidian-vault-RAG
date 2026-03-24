@@ -9,15 +9,19 @@ Usage:
         [--query-classes citation_lookup,unanswerable] \\
         [--skip-hard-negatives] \\
         [--export-path eval/datasets/benchmark_v1.jsonl] \\
-        [--valid-as-of 2026-03-24]
+        [--valid-as-of 2026-03-24] \\
+        [--synthesize-gold-answers] \\
+        [--contamination-model gpt-4o-2025-01-01]
 
-This script is the composition root for M4 adapters. It wires together:
+This script is the composition root for M4+M5 adapters. It wires together:
 - LLMClient: OpenAI-based adapter (from OPENAI_API_KEY env var)
 - QueryGenerators: {CITATION_LOOKUP: TemplateQueryGenerator,
                     UNANSWERABLE: UnanswerableGenerator}
 - QueryValidator: LLMValidator (wrapping DeterministicValidator)
 - Retriever: optional, from RAG container (requires Qdrant running)
 - Exporter: EvalQueryExporter writing to --export-path
+- GoldAnswerSynthesizer: LLMGoldAnswerSynthesizer (when --synthesize-gold-answers)
+- ContaminationProbe: Stage 5c (when --contamination-model is set)
 """
 
 from __future__ import annotations
@@ -86,6 +90,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--valid-as-of",
         default="",
         help="ISO date for benchmark record validity (e.g. 2026-03-24)",
+    )
+    # M5 flags.
+    parser.add_argument(
+        "--synthesize-gold-answers",
+        action="store_true",
+        help="Enable Stage 6 gold answer synthesis (requires LLM)",
+    )
+    parser.add_argument(
+        "--contamination-model",
+        default=None,
+        metavar="MODEL_ID",
+        help=(
+            "Model ID to use for Stage 5c contamination probe "
+            "(e.g. gpt-4o-2025-01-01). "
+            "Requires --synthesize-gold-answers or a run with Stage 6 complete."
+        ),
     )
     return parser
 
@@ -176,6 +196,25 @@ def main() -> None:
         exporter = EvalQueryExporter(Path(args.export_path))
         logger.info("EvalQuery exporter writing to %s", args.export_path)
 
+    # -- Wire M5 gold answer synthesizer (optional) -----------------------
+    gold_answer_synthesizer = None
+    if args.synthesize_gold_answers:
+        from benchmark.adapters.generation.llm_gold_answer_synthesizer import (  # type: ignore[import]
+            LLMGoldAnswerSynthesizer,
+        )
+        gold_answer_synthesizer = LLMGoldAnswerSynthesizer(llm_client, stage_config)
+        logger.info("Gold answer synthesizer wired for Stage 6")
+
+    # -- Validate M5 contamination probe args ------------------------------
+    contamination_model_id = args.contamination_model
+    if contamination_model_id and not args.synthesize_gold_answers:
+        # Warn if no synthesizer but allow: operator may be resuming from
+        # a run that already has Stage 6 complete.
+        logger.warning(
+            "Stage 5c requires gold answers. Pass --synthesize-gold-answers "
+            "or resume from a run that has stage_6 complete."
+        )
+
     # -- Build unit extractor / evidence builder / classifier --------------
     # These are not changed by M4; they require the eCFR corpus to be indexed.
     try:
@@ -222,19 +261,24 @@ def main() -> None:
         exporter=exporter,
         query_classes=tuple(query_classes),
         valid_as_of=args.valid_as_of,
+        # M5 additions.
+        gold_answer_synthesizer=gold_answer_synthesizer,  # type: ignore[arg-type]
+        llm_client=llm_client,
+        contamination_model_id=contamination_model_id,
     )
 
     result = runner.run()
 
     logger.info(
         "Pipeline complete: run_id=%s candidates=%d validated=%d "
-        "flagged=%d hard_negatives=%d exported=%d",
+        "flagged=%d hard_negatives=%d exported=%d contaminated=%d",
         result.run_id,
         result.total_candidates,
         result.total_validated,
         result.total_flagged,
         result.total_hard_negatives,
         result.total_exported,
+        result.total_contaminated,
     )
     logger.info("Output: %s", result.output_dir)
 
