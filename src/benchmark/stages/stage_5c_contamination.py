@@ -29,9 +29,19 @@ from rag.eval.judges import GoldJudgeResult, make_gold_prompt
 logger = logging.getLogger(__name__)
 
 _GENERATION_PROMPT = """\
-Answer the following question without any additional context.
+You are a nuclear regulatory expert. Answer the following question \
+using only your training knowledge. No documents or retrieved context \
+have been provided — answer as completely and precisely as you can \
+from what you know.
 
-Question: {query}"""
+Rules:
+- Do not ask for clarification or additional context.
+- Give a specific, direct answer. If you know the answer, commit to it.
+- If you genuinely do not know, say so briefly.
+- Do not hedge unnecessarily.
+
+QUESTION:
+{query}"""
 
 _CONTAMINATION_THRESHOLD_DEFAULT = 0.7
 
