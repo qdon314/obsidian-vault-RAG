@@ -4,6 +4,8 @@ All models are frozen dataclasses. Identity (``unit_id``) is structurally
 derived in Stage 1a and immutable from that point forward.
 
 M4 additions: ``HardNegativeResult``, ``BenchmarkRecord``, ``BenchmarkDataset``.
+M5 additions: ``GoldAnswer``; answer-core fields + ``contamination_probes`` on
+``BenchmarkRecord``.
 """
 
 from __future__ import annotations
@@ -165,6 +167,20 @@ class ValidatedQuery:
 
 
 @dataclass(frozen=True, slots=True)
+class GoldAnswer:
+    """Stage 6 output: synthesised gold answer and answer-core rubric.
+
+    Attached to a ``BenchmarkRecord`` after gold synthesis and before
+    contamination probing.  Fields mirror the design doc dataset schema.
+    """
+
+    gold_answer: str
+    acceptable_answer_variants: tuple[str, ...] = ()
+    required_points: tuple[str, ...] = ()
+    forbidden_errors: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class HardNegativeResult:
     """Stage 5b output: hard negatives for a single validated query.
 
@@ -208,6 +224,14 @@ class BenchmarkRecord:
     robustness_parent_qid: str | None = None
     validation_scores: dict[str, float] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    # M5 additions: answer-core fields (populated by Stage 6).
+    gold_answer: str | None = None
+    acceptable_answer_variants: tuple[str, ...] = ()
+    required_points: tuple[str, ...] = ()
+    forbidden_errors: tuple[str, ...] = ()
+    # M5 additions: contamination probe results (populated by Stage 5c).
+    # Maps model_id -> True (contaminated) / False (clean).
+    contamination_probes: dict[str, bool] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
