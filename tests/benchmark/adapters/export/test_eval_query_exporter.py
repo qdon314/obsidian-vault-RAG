@@ -52,12 +52,20 @@ def _make_record(
         else ()
     )
     supporting = (
-        (_make_evidence_entry(span_id="s2", chunk_ids=supporting_chunk_ids, tier=EvidenceTier.SUPPORTING),)
+        (
+            _make_evidence_entry(
+                span_id="s2", chunk_ids=supporting_chunk_ids, tier=EvidenceTier.SUPPORTING
+            ),
+        )
         if supporting_chunk_ids
         else ()
     )
     contextual = (
-        (_make_evidence_entry(span_id="s3", chunk_ids=contextual_chunk_ids, tier=EvidenceTier.CONTEXTUAL),)
+        (
+            _make_evidence_entry(
+                span_id="s3", chunk_ids=contextual_chunk_ids, tier=EvidenceTier.CONTEXTUAL
+            ),
+        )
         if contextual_chunk_ids
         else ()
     )

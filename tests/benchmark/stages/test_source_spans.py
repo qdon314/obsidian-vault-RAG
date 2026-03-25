@@ -1,9 +1,8 @@
-# tests/benchmark/stages/test_stage_0_source_view.py
-"""Tests for Stage 0 corpus normalization."""
+"""Tests for source span corpus normalization."""
 
 from __future__ import annotations
 
-from benchmark.stages.stage_0_source_view import build_source_spans
+from benchmark.stages.source_spans import build_source_spans
 from rag.adapters.ingestion.regulatory.ecfr_parser import (
     ParsedParagraph,
     ParsedSection,

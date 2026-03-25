@@ -205,8 +205,7 @@ class LLMValidator:
 
         # Build span lookup by span_id from all tiers.
         all_spans: dict[str, EvidenceEntry] = {
-            e.span_id: e
-            for e in (*evidence.critical, *evidence.supporting, *evidence.contextual)
+            e.span_id: e for e in (*evidence.critical, *evidence.supporting, *evidence.contextual)
         }
 
         def _pick(ids: list[str]) -> tuple[EvidenceEntry, ...]:

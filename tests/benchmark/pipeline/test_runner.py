@@ -151,9 +151,7 @@ def _build_runner(
         evidence_builder=_MockEvidenceBuilder() if include_evidence else None,
         query_generator=_MockQueryGenerator() if include_generator else None,
         query_validator=(
-            _MockQueryValidator(is_valid=validator_valid)
-            if include_validator
-            else None
+            _MockQueryValidator(is_valid=validator_valid) if include_validator else None
         ),
     )
 
@@ -168,13 +166,13 @@ class TestFullRun:
 
         assert result.run_id == "test_run"
         assert result.stages_completed == (
-            "stage_0",
-            "stage_1a",
-            "stage_1b",
-            "stage_2",
-            "stage_3",
-            "stage_5a",
-            "stage_5b",
+            "source_spans",
+            "unit_extraction",
+            "unit_classification",
+            "evidence_tiers",
+            "candidate_generation",
+            "query_validation",
+            "hard_negative_mining",
             "export",
         )
 
@@ -184,18 +182,18 @@ class TestFullRun:
 
         run_dir = tmp_path / "test_run"
         assert (run_dir / "run_config.json").exists()
-        assert (run_dir / "stage_0_spans.jsonl").exists()
-        assert (run_dir / "stage_1a_units.jsonl").exists()
-        assert (run_dir / "stage_1b_classified.jsonl").exists()
-        assert (run_dir / "stage_2_evidence.jsonl").exists()
-        assert (run_dir / "stage_3_candidates.jsonl").exists()
-        assert (run_dir / "stage_5a_validated.jsonl").exists()
+        assert (run_dir / "source_spans.jsonl").exists()
+        assert (run_dir / "unit_extraction.jsonl").exists()
+        assert (run_dir / "unit_classification.jsonl").exists()
+        assert (run_dir / "evidence_tiers.jsonl").exists()
+        assert (run_dir / "candidate_generation.jsonl").exists()
+        assert (run_dir / "query_validation_results.jsonl").exists()
 
     def test_checkpoint_files_are_valid_jsonl(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path)
         runner.run()
 
-        candidates_path = tmp_path / "test_run" / "stage_3_candidates.jsonl"
+        candidates_path = tmp_path / "test_run" / "candidate_generation.jsonl"
         lines = candidates_path.read_text().strip().splitlines()
         assert len(lines) >= 1
         parsed = json.loads(lines[0])
@@ -226,41 +224,46 @@ class TestFullRun:
 
 
 class TestResume:
-    def test_resume_from_stage_5a(self, tmp_path: Path) -> None:
+    def test_resume_from_query_validation(self, tmp_path: Path) -> None:
         # First: full run to create checkpoints
         runner = _build_runner(tmp_path)
         runner.run()
 
-        # Resume from stage_5a — should run stage_5a, stage_5b, export
+        # Resume from query_validation — should run query_validation, hard_negative_mining, export
         resume_runner = _build_runner(
             tmp_path,
-            resume_from="stage_5a",
+            resume_from="query_validation",
             include_classifier=False,
             include_evidence=False,
             include_generator=False,
         )
         result = resume_runner.run()
 
-        assert result.stages_completed == ("stage_5a", "stage_5b", "export")
+        assert result.stages_completed == ("query_validation", "hard_negative_mining", "export")
         assert result.total_validated == 1
 
-    def test_resume_from_stage_3(self, tmp_path: Path) -> None:
+    def test_resume_from_candidate_generation(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path)
         runner.run()
 
         resume_runner = _build_runner(
             tmp_path,
-            resume_from="stage_3",
+            resume_from="candidate_generation",
             include_classifier=False,
             include_evidence=False,
         )
         result = resume_runner.run()
 
-        assert result.stages_completed == ("stage_3", "stage_5a", "stage_5b", "export")
+        assert result.stages_completed == (
+            "candidate_generation",
+            "query_validation",
+            "hard_negative_mining",
+            "export",
+        )
 
     def test_resume_missing_checkpoint_raises(self, tmp_path: Path) -> None:
         # No prior run — checkpoint files don't exist
-        runner = _build_runner(tmp_path, resume_from="stage_5a")
+        runner = _build_runner(tmp_path, resume_from="query_validation")
 
         with pytest.raises(FileNotFoundError, match="Checkpoint file not found"):
             runner.run()
@@ -295,7 +298,7 @@ class TestSnapshotVerification:
     def test_matching_snapshot_passes(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path, snapshot_id="snap1")
         result = runner.run()
-        assert "stage_0" in result.stages_completed
+        assert "source_spans" in result.stages_completed
 
     def test_mismatched_snapshot_raises(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path, snapshot_id="wrong_snap")
@@ -305,7 +308,7 @@ class TestSnapshotVerification:
     def test_empty_snapshot_skips_verification(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path, snapshot_id="")
         result = runner.run()
-        assert "stage_0" in result.stages_completed
+        assert "source_spans" in result.stages_completed
 
 
 class TestInvalidResumeStage:
@@ -331,7 +334,7 @@ class TestPipelineResult:
     def test_frozen(self) -> None:
         result = PipelineResult(
             run_id="r1",
-            stages_completed=("stage_0",),
+            stages_completed=("source_spans",),
             output_dir="/tmp/test",
             total_candidates=10,
             total_validated=10,
@@ -343,7 +346,7 @@ class TestPipelineResult:
     def test_m4_fields_have_defaults(self) -> None:
         result = PipelineResult(
             run_id="r1",
-            stages_completed=("stage_0",),
+            stages_completed=("source_spans",),
             output_dir="/tmp/test",
             total_candidates=10,
             total_validated=10,
@@ -447,17 +450,17 @@ def _build_runner_m4(
 
 
 class TestM4Checkpoints:
-    def test_stage_5a_queries_checkpoint_written(self, tmp_path: Path) -> None:
+    def test_query_validation_checkpoint_written(self, tmp_path: Path) -> None:
         runner = _build_runner_m4(tmp_path)
         runner.run()
 
-        assert (tmp_path / "m4_run" / "stage_5a_queries.jsonl").exists()
+        assert (tmp_path / "m4_run" / "query_validation.jsonl").exists()
 
-    def test_stage_5a_refined_evidence_checkpoint_written(self, tmp_path: Path) -> None:
+    def test_query_validation_refined_evidence_checkpoint_written(self, tmp_path: Path) -> None:
         runner = _build_runner_m4(tmp_path)
         runner.run()
 
-        assert (tmp_path / "m4_run" / "stage_5a_refined_evidence.jsonl").exists()
+        assert (tmp_path / "m4_run" / "query_validation_refined_evidence.jsonl").exists()
 
     def test_benchmark_records_checkpoint_written(self, tmp_path: Path) -> None:
         runner = _build_runner_m4(tmp_path)
@@ -553,24 +556,24 @@ class TestM4BackwardCompat:
                 query_generators={QueryClass.CITATION_LOOKUP: _MockQueryGenerator()},
             )
 
-    def test_stage_5b_skipped_without_retriever(self, tmp_path: Path) -> None:
-        # No retriever — stage_5b runs but produces no hard negatives.
+    def test_hard_negative_mining_skipped_without_retriever(self, tmp_path: Path) -> None:
+        # No retriever — hard_negative_mining runs but produces no hard negatives.
         runner = _build_runner_m4(tmp_path)
         result = runner.run()
 
         assert result.total_hard_negatives == 0
-        assert "stage_5b" in result.stages_completed
+        assert "hard_negative_mining" in result.stages_completed
 
 
 class TestM4Resume:
-    def test_resume_from_stage_5b(self, tmp_path: Path) -> None:
+    def test_resume_from_hard_negative_mining(self, tmp_path: Path) -> None:
         # Full run first to create checkpoints.
         _build_runner_m4(tmp_path).run()
 
-        resume_runner = _build_runner_m4(tmp_path, resume_from="stage_5b")
+        resume_runner = _build_runner_m4(tmp_path, resume_from="hard_negative_mining")
         result = resume_runner.run()
 
-        assert result.stages_completed == ("stage_5b", "export")
+        assert result.stages_completed == ("hard_negative_mining", "export")
 
     def test_resume_from_export(self, tmp_path: Path) -> None:
         _build_runner_m4(tmp_path).run()

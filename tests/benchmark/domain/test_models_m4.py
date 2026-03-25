@@ -101,9 +101,7 @@ class TestHardNegativeResult:
         serialized = json.dumps(d, default=str)
         restored = json.loads(serialized)
         assert restored["candidate_id"] == hnr.candidate_id
-        assert restored["hard_negative_chunk_ids"] == list(
-            hnr.hard_negative_chunk_ids
-        )
+        assert restored["hard_negative_chunk_ids"] == list(hnr.hard_negative_chunk_ids)
         assert restored["retriever_config"] == hnr.retriever_config
         assert restored["insufficient"] is False
 

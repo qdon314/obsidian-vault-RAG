@@ -98,10 +98,12 @@ class TestTemplateQueryGeneratorProtocol:
 
 class TestGenerate:
     def test_produces_candidates_from_paraphrases(self) -> None:
-        paraphrases = json.dumps([
-            "What is the peak cladding temperature limit per 10 CFR 50.46(b)(1)?",
-            "Under 10 CFR 50.46(b)(1), what temperature threshold applies?",
-        ])
+        paraphrases = json.dumps(
+            [
+                "What is the peak cladding temperature limit per 10 CFR 50.46(b)(1)?",
+                "Under 10 CFR 50.46(b)(1), what temperature threshold applies?",
+            ]
+        )
         client = _MockLLMClient(paraphrases)
         gen = TemplateQueryGenerator(client, StageConfig(model="gpt-4o"))
         unit = _make_unit()

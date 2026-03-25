@@ -5,19 +5,23 @@ Usage:
         --run-id "run_20260324" \\
         --output-dir benchmark_runs/ \\
         --model gpt-4o \\
-        [--resume-from stage_3] \\
+        [--resume-from candidate_generation] \\
         [--query-classes citation_lookup,unanswerable] \\
         [--skip-hard-negatives] \\
         [--export-path eval/datasets/benchmark_v1.jsonl] \\
-        [--valid-as-of 2026-03-24]
+        [--valid-as-of 2026-03-24] \\
+        [--synthesize-gold-answers] \\
+        [--contamination-model gpt-4o-2025-01-01]
 
-This script is the composition root for M4 adapters. It wires together:
+This script is the composition root for M4+M5 adapters. It wires together:
 - LLMClient: OpenAI-based adapter (from OPENAI_API_KEY env var)
 - QueryGenerators: {CITATION_LOOKUP: TemplateQueryGenerator,
                     UNANSWERABLE: UnanswerableGenerator}
 - QueryValidator: LLMValidator (wrapping DeterministicValidator)
 - Retriever: optional, from RAG container (requires Qdrant running)
 - Exporter: EvalQueryExporter writing to --export-path
+- GoldAnswerSynthesizer: LLMGoldAnswerSynthesizer (when --synthesize-gold-answers)
+- ContaminationProbe: contamination_probe (when --contamination-model is set)
 """
 
 from __future__ import annotations
@@ -60,22 +64,20 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--resume-from",
         default=None,
         help=(
-            "Stage to resume from: stage_0, stage_1a, stage_1b, stage_2, "
-            "stage_3, stage_5a, stage_5b, export"
+            "Stage to resume from: source_spans, unit_extraction, unit_classification, "
+            "evidence_tiers, candidate_generation, query_validation, "
+            "hard_negative_mining, gold_answer_synthesis, contamination_probe, export"
         ),
     )
     parser.add_argument(
         "--query-classes",
         default="citation_lookup",
-        help=(
-            "Comma-separated list of query classes to generate "
-            "(default: citation_lookup)"
-        ),
+        help=("Comma-separated list of query classes to generate (default: citation_lookup)"),
     )
     parser.add_argument(
         "--skip-hard-negatives",
         action="store_true",
-        help="Skip Stage 5b hard negative mining (no Qdrant required)",
+        help="Skip hard negative mining (no Qdrant required)",
     )
     parser.add_argument(
         "--export-path",
@@ -86,6 +88,22 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--valid-as-of",
         default="",
         help="ISO date for benchmark record validity (e.g. 2026-03-24)",
+    )
+    # M5 flags.
+    parser.add_argument(
+        "--synthesize-gold-answers",
+        action="store_true",
+        help="Enable gold answer synthesis (requires LLM)",
+    )
+    parser.add_argument(
+        "--contamination-model",
+        default=None,
+        metavar="MODEL_ID",
+        help=(
+            "Model ID to use for contamination probe "
+            "(e.g. gpt-4o-2025-01-01). "
+            "Requires --synthesize-gold-answers or a run with gold_answer_synthesis complete."
+        ),
     )
     return parser
 
@@ -107,9 +125,7 @@ def main() -> None:
     # -- Validate OPENAI_API_KEY -------------------------------------------
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        logger.error(
-            "OPENAI_API_KEY not set. Set it in your environment or .env file."
-        )
+        logger.error("OPENAI_API_KEY not set. Set it in your environment or .env file.")
         sys.exit(1)
 
     # -- Parse query classes -----------------------------------------------
@@ -125,11 +141,11 @@ def main() -> None:
     # -- Wire LLM client ---------------------------------------------------
     try:
         from benchmark.adapters.llm.openai_client import OpenAILLMClient  # type: ignore[import]
+
         llm_client = OpenAILLMClient(api_key=api_key)
     except ImportError:
         logger.error(
-            "OpenAI LLM client not available. Install with: "
-            "./scripts/pip install -e '.[openai]'"
+            "OpenAI LLM client not available. Install with: ./scripts/pip install -e '.[openai]'"
         )
         sys.exit(1)
 
@@ -142,15 +158,11 @@ def main() -> None:
             llm_client, stage_config
         )
     if QueryClass.UNANSWERABLE in query_classes:
-        query_generators[QueryClass.UNANSWERABLE] = UnanswerableGenerator(
-            llm_client, stage_config
-        )
+        query_generators[QueryClass.UNANSWERABLE] = UnanswerableGenerator(llm_client, stage_config)
 
     # -- Wire validator ---------------------------------------------------
     deterministic = DeterministicValidator()
-    validator = LLMValidator(
-        llm_client, stage_config, deterministic=deterministic
-    )
+    validator = LLMValidator(llm_client, stage_config, deterministic=deterministic)
 
     # -- Wire retriever (optional) ----------------------------------------
     retriever = None
@@ -158,14 +170,15 @@ def main() -> None:
     if not args.skip_hard_negatives:
         try:
             from rag.app.container import build_container  # type: ignore[import]
+
             container = build_container()
             retriever = container.retriever
             retriever_config = {"model": args.model, "top_k": 20}
-            logger.info("Retriever wired for Stage 5b hard negative mining")
+            logger.info("Retriever wired for hard_negative_mining")
         except Exception as exc:
             logger.warning(
                 "Could not initialize retriever (%s). "
-                "Skipping Stage 5b. Pass --skip-hard-negatives to suppress.",
+                "Skipping hard_negative_mining. Pass --skip-hard-negatives to suppress.",
                 exc,
             )
 
@@ -173,31 +186,52 @@ def main() -> None:
     exporter = None
     if args.export_path:
         from benchmark.adapters.export.eval_query_exporter import EvalQueryExporter
+
         exporter = EvalQueryExporter(Path(args.export_path))
         logger.info("EvalQuery exporter writing to %s", args.export_path)
+
+    # -- Wire M5 gold answer synthesizer (optional) -----------------------
+    gold_answer_synthesizer = None
+    if args.synthesize_gold_answers:
+        from benchmark.adapters.generation.llm_gold_answer_synthesizer import (  # type: ignore[import]
+            LLMGoldAnswerSynthesizer,
+        )
+
+        gold_answer_synthesizer = LLMGoldAnswerSynthesizer(llm_client, stage_config)
+        logger.info("Gold answer synthesizer wired for gold_answer_synthesis")
+
+    # -- Validate M5 contamination probe args ------------------------------
+    contamination_model_id = args.contamination_model
+    if contamination_model_id and not args.synthesize_gold_answers:
+        # Warn if no synthesizer but allow: operator may be resuming from
+        # a run that already has Stage 6 complete.
+        logger.warning(
+            "contamination_probe requires gold answers. Pass --synthesize-gold-answers "
+            "or resume from a run that has gold_answer_synthesis complete."
+        )
 
     # -- Build unit extractor / evidence builder / classifier --------------
     # These are not changed by M4; they require the eCFR corpus to be indexed.
     try:
-        from benchmark.adapters.evidence.evidence_builder import (
-            DefaultEvidenceBuilder,  # type: ignore[import]
+        from benchmark.adapters.evidence.evidence_builder import (  # type: ignore[import-untyped]
+            DefaultEvidenceBuilder,
         )
-        from benchmark.adapters.extraction.ecfr_extractor import (
-            ECFRUnitExtractor,  # type: ignore[import]
+        from benchmark.adapters.extraction.ecfr_extractor import (  # type: ignore[import-untyped]
+            ECFRUnitExtractor,
         )
-        from benchmark.adapters.extraction.llm_classifier import (
-            LLMUnitClassifier,  # type: ignore[import]
+        from benchmark.adapters.extraction.llm_classifier import (  # type: ignore[import-untyped]
+            LLMUnitClassifier,
         )
 
-        from benchmark.stages.stage_0_source_view import build_corpus_spans  # type: ignore[import]
+        from benchmark.stages.source_spans import build_source_spans
+
         unit_extractor = ECFRUnitExtractor()
         evidence_builder = DefaultEvidenceBuilder()
         llm_classifier = LLMUnitClassifier(llm_client, stage_config).classify
-        corpus_spans_builder = build_corpus_spans
+        corpus_spans_builder = build_source_spans
     except ImportError as exc:
         logger.error(
-            "Could not import pipeline adapters: %s. "
-            "Ensure the package is installed correctly.",
+            "Could not import pipeline adapters: %s. Ensure the package is installed correctly.",
             exc,
         )
         sys.exit(1)
@@ -211,7 +245,7 @@ def main() -> None:
 
     runner = PipelineRunner(
         config,
-        corpus_spans_builder=corpus_spans_builder,
+        corpus_spans_builder=corpus_spans_builder,  # type: ignore[arg-type]
         unit_extractor=unit_extractor,
         llm_classifier=llm_classifier,
         evidence_builder=evidence_builder,
@@ -222,19 +256,24 @@ def main() -> None:
         exporter=exporter,
         query_classes=tuple(query_classes),
         valid_as_of=args.valid_as_of,
+        # M5 additions.
+        gold_answer_synthesizer=gold_answer_synthesizer,  # type: ignore[arg-type]
+        llm_client=llm_client,
+        contamination_model_id=contamination_model_id,
     )
 
     result = runner.run()
 
     logger.info(
         "Pipeline complete: run_id=%s candidates=%d validated=%d "
-        "flagged=%d hard_negatives=%d exported=%d",
+        "flagged=%d hard_negatives=%d exported=%d contaminated=%d",
         result.run_id,
         result.total_candidates,
         result.total_validated,
         result.total_flagged,
         result.total_hard_negatives,
         result.total_exported,
+        result.total_contaminated,
     )
     logger.info("Output: %s", result.output_dir)
 

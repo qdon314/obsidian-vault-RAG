@@ -22,6 +22,7 @@ from benchmark.domain.models import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _minimal_record() -> BenchmarkRecord:
     """BenchmarkRecord with all required fields; M5 fields left at defaults."""
     entry = EvidenceEntry(
@@ -53,6 +54,7 @@ def _minimal_record() -> BenchmarkRecord:
 # ---------------------------------------------------------------------------
 # GoldAnswer tests
 # ---------------------------------------------------------------------------
+
 
 class TestGoldAnswer:
     def test_required_field_only(self) -> None:
@@ -104,6 +106,7 @@ class TestGoldAnswer:
 # ---------------------------------------------------------------------------
 # BenchmarkRecord M5 field tests
 # ---------------------------------------------------------------------------
+
 
 class TestBenchmarkRecordM5Fields:
     def test_defaults_are_none_and_empty(self) -> None:

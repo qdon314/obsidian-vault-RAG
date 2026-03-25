@@ -1,4 +1,4 @@
-"""Tests for Stage 5b hard negative mining."""
+"""Tests for hard negative mining."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from benchmark.domain.models import (
     EvidenceSet,
     ValidatedQuery,
 )
-from benchmark.stages.stage_5b_hard_negatives import mine_hard_negatives
+from benchmark.stages.hard_negative_mining import mine_hard_negatives
 from rag.domain.models import Candidate, Chunk
 
 # -- Helpers ------------------------------------------------------------------
@@ -114,27 +114,44 @@ class TestMineHardNegatives:
     def test_all_tiers_excluded_from_hard_negatives(self) -> None:
         # Evidence with critical + supporting + contextual tiers
         critical = EvidenceEntry(
-            span_id="s1", citation="c", text="t", char_start=0, char_end=1,
-            chunk_ids=("critical_chunk",), tier=EvidenceTier.CRITICAL,
+            span_id="s1",
+            citation="c",
+            text="t",
+            char_start=0,
+            char_end=1,
+            chunk_ids=("critical_chunk",),
+            tier=EvidenceTier.CRITICAL,
         )
         supporting = EvidenceEntry(
-            span_id="s2", citation="c", text="t", char_start=0, char_end=1,
-            chunk_ids=("supporting_chunk",), tier=EvidenceTier.SUPPORTING,
+            span_id="s2",
+            citation="c",
+            text="t",
+            char_start=0,
+            char_end=1,
+            chunk_ids=("supporting_chunk",),
+            tier=EvidenceTier.SUPPORTING,
         )
         contextual = EvidenceEntry(
-            span_id="s3", citation="c", text="t", char_start=0, char_end=1,
-            chunk_ids=("contextual_chunk",), tier=EvidenceTier.CONTEXTUAL,
+            span_id="s3",
+            citation="c",
+            text="t",
+            char_start=0,
+            char_end=1,
+            chunk_ids=("contextual_chunk",),
+            tier=EvidenceTier.CONTEXTUAL,
         )
-        evidence = {"50.46_b_1": EvidenceSet(
-            unit_id="50.46_b_1",
-            critical=(critical,),
-            supporting=(supporting,),
-            contextual=(contextual,),
-        )}
+        evidence = {
+            "50.46_b_1": EvidenceSet(
+                unit_id="50.46_b_1",
+                critical=(critical,),
+                supporting=(supporting,),
+                contextual=(contextual,),
+            )
+        }
         queries = [_make_validated_query()]
-        retriever = _mock_retriever([
-            "critical_chunk", "supporting_chunk", "contextual_chunk", "new_chunk"
-        ])
+        retriever = _mock_retriever(
+            ["critical_chunk", "supporting_chunk", "contextual_chunk", "new_chunk"]
+        )
 
         results = mine_hard_negatives(
             queries, evidence, retriever, retriever_config=_RETRIEVER_CONFIG
@@ -148,9 +165,7 @@ class TestMineHardNegatives:
         evidence = {"50.46_b_1": _make_evidence()}
         retriever = _mock_retriever(["chunk_99"])
 
-        results = mine_hard_negatives(
-            queries, evidence, retriever, retriever_config=config
-        )
+        results = mine_hard_negatives(queries, evidence, retriever, retriever_config=config)
 
         assert results[0].retriever_config == config
 
@@ -165,7 +180,9 @@ class TestInsufficientFlag:
         retriever = _mock_retriever(["chunk_10", "chunk_11", "chunk_12"])
 
         results = mine_hard_negatives(
-            queries, evidence, retriever,
+            queries,
+            evidence,
+            retriever,
             min_hard_negatives=2,
             retriever_config=_RETRIEVER_CONFIG,
         )
@@ -180,7 +197,9 @@ class TestInsufficientFlag:
         retriever = _mock_retriever(["chunk_1", "chunk_10"])
 
         results = mine_hard_negatives(
-            queries, evidence, retriever,
+            queries,
+            evidence,
+            retriever,
             min_hard_negatives=2,
             retriever_config=_RETRIEVER_CONFIG,
         )
@@ -222,9 +241,7 @@ class TestEdgeCases:
         evidence = {"50.46_b_1": _make_evidence()}
         retriever = _mock_retriever([])
 
-        mine_hard_negatives(
-            queries, evidence, retriever, retriever_config=_RETRIEVER_CONFIG
-        )
+        mine_hard_negatives(queries, evidence, retriever, retriever_config=_RETRIEVER_CONFIG)
 
         retriever.retrieve.assert_called_once_with(query_text, top_k=20)
 

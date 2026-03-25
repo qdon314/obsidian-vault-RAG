@@ -130,10 +130,10 @@ class UnanswerableGenerator:
     """
 
     ADJACENT_DOMAINS: ClassVar[tuple[str, ...]] = (
-        "29 CFR 1910",   # OSHA general industry
-        "40 CFR 61",     # EPA NESHAP
-        "10 CFR 830",    # DOE nuclear safety
-        "49 CFR 173",    # DOT hazmat transport
+        "29 CFR 1910",  # OSHA general industry
+        "40 CFR 61",  # EPA NESHAP
+        "10 CFR 830",  # DOE nuclear safety
+        "49 CFR 173",  # DOT hazmat transport
     )
 
     def __init__(
@@ -155,10 +155,7 @@ class UnanswerableGenerator:
         Raises ``ValueError`` if *query_class* is not ``UNANSWERABLE``.
         """
         if query_class != QueryClass.UNANSWERABLE:
-            msg = (
-                f"UnanswerableGenerator only supports UNANSWERABLE, "
-                f"got {query_class.value!r}"
-            )
+            msg = f"UnanswerableGenerator only supports UNANSWERABLE, got {query_class.value!r}"
             raise ValueError(msg)
 
         strategy = self._select_strategy(unit.unit_id)
@@ -261,8 +258,7 @@ class UnanswerableGenerator:
             result = json.loads(cleaned)
         except (json.JSONDecodeError, ValueError):
             logger.warning(
-                "Failed to parse JSON for unanswerable query "
-                "(unit=%s, strategy=%s): %.200s",
+                "Failed to parse JSON for unanswerable query (unit=%s, strategy=%s): %.200s",
                 unit_id,
                 strategy,
                 response.text,
@@ -271,8 +267,7 @@ class UnanswerableGenerator:
 
         if not isinstance(result, dict):
             logger.warning(
-                "Expected JSON object for unanswerable query "
-                "(unit=%s, strategy=%s), got %s",
+                "Expected JSON object for unanswerable query (unit=%s, strategy=%s), got %s",
                 unit_id,
                 strategy,
                 type(result).__name__,

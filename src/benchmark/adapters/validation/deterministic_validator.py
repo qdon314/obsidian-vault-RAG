@@ -29,10 +29,12 @@ _BANNED_PREFIXES = (
 )
 
 # Query classes considered "narrow" — evidence set size is bounded.
-_NARROW_QUERY_CLASSES = frozenset({
-    QueryClass.CITATION_LOOKUP,
-    QueryClass.NARROW_FACTUAL,
-})
+_NARROW_QUERY_CLASSES = frozenset(
+    {
+        QueryClass.CITATION_LOOKUP,
+        QueryClass.NARROW_FACTUAL,
+    }
+)
 
 
 class DeterministicValidator:

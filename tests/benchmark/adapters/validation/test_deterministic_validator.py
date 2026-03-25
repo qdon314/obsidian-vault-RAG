@@ -62,9 +62,7 @@ class TestCitationFormat:
 
     def test_valid_cfr_citation_passes(self) -> None:
         val = DeterministicValidator()
-        result = val.validate(
-            _make_candidate(query="What does 10 CFR 50.46 require?")
-        )
+        result = val.validate(_make_candidate(query="What does 10 CFR 50.46 require?"))
         assert "no_cfr_citation" not in result.flags
 
 
@@ -86,7 +84,9 @@ class TestDuplicateDetection:
 
     def test_whitespace_normalized_dedup(self) -> None:
         val = DeterministicValidator(
-            known_queries=["What  does  10  CFR  50.46  require  regarding  peak  cladding  temperature?"]
+            known_queries=[
+                "What  does  10  CFR  50.46  require  regarding  peak  cladding  temperature?"
+            ]
         )
         result = val.validate(_make_candidate())
         assert "duplicate_query" in result.flags
@@ -106,46 +106,34 @@ class TestDuplicateDetection:
 class TestBannedPrefix:
     def test_summarize_rejected(self) -> None:
         val = DeterministicValidator()
-        result = val.validate(
-            _make_candidate(query="Summarize the requirements in 10 CFR 50.46")
-        )
+        result = val.validate(_make_candidate(query="Summarize the requirements in 10 CFR 50.46"))
         assert "banned_prefix:summarize" in result.flags
 
     def test_list_all_rejected(self) -> None:
         val = DeterministicValidator()
-        result = val.validate(
-            _make_candidate(query="List all requirements in 10 CFR 50.46")
-        )
+        result = val.validate(_make_candidate(query="List all requirements in 10 CFR 50.46"))
         assert "banned_prefix:list all" in result.flags
 
     def test_describe_everything_rejected(self) -> None:
         val = DeterministicValidator()
-        result = val.validate(
-            _make_candidate(query="Describe everything about 10 CFR 50.46")
-        )
+        result = val.validate(_make_candidate(query="Describe everything about 10 CFR 50.46"))
         assert "banned_prefix:describe everything" in result.flags
 
     def test_what_are_all_the_rules_rejected(self) -> None:
         val = DeterministicValidator()
-        result = val.validate(
-            _make_candidate(query="What are all the rules in 10 CFR 50.46?")
-        )
+        result = val.validate(_make_candidate(query="What are all the rules in 10 CFR 50.46?"))
         assert "banned_prefix:what are all the rules" in result.flags
 
     def test_case_insensitive_ban(self) -> None:
         val = DeterministicValidator()
-        result = val.validate(
-            _make_candidate(query="SUMMARIZE the requirements in 10 CFR 50.46")
-        )
+        result = val.validate(_make_candidate(query="SUMMARIZE the requirements in 10 CFR 50.46"))
         assert "banned_prefix:summarize" in result.flags
 
 
 class TestLength:
     def test_too_short(self) -> None:
         val = DeterministicValidator(min_query_length=10)
-        result = val.validate(
-            _make_candidate(query="10 CFR?")
-        )
+        result = val.validate(_make_candidate(query="10 CFR?"))
         assert "too_short" in result.flags
 
     def test_too_long(self) -> None:
@@ -170,9 +158,7 @@ class TestEvidence:
 
     def test_too_many_evidence_spans_for_narrow_class(self) -> None:
         val = DeterministicValidator(max_evidence_spans=2)
-        result = val.validate(
-            _make_candidate(evidence_span_ids=("s1", "s2", "s3"))
-        )
+        result = val.validate(_make_candidate(evidence_span_ids=("s1", "s2", "s3")))
         assert "too_many_evidence_spans" in result.flags
 
     def test_evidence_size_not_checked_for_broad_classes(self) -> None:

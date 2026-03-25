@@ -1,4 +1,4 @@
-"""Stage 0: Corpus normalization — build benchmark-friendly source spans.
+"""Source spans: corpus normalization — build benchmark-friendly source spans.
 
 Reads ``ParsedSection`` objects from the eCFR parser and the existing chunk
 index, producing ``BenchmarkSourceSpan`` records.  This is a plain builder

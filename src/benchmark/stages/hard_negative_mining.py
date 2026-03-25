@@ -1,4 +1,4 @@
-"""Stage 5b: Hard negative mining via the RAG retriever.
+"""Hard negative mining via the RAG retriever.
 
 This is the only place the benchmark package crosses the RAG boundary.
 See ``docs/decisions/adr-benchmark-rag-boundary-crossing.md`` for rationale.
@@ -58,9 +58,7 @@ def mine_hard_negatives(
         evidence_chunk_ids = _collect_evidence_chunk_ids(evidence)
 
         try:
-            candidates: list[Candidate] = retriever.retrieve(
-                query.query, top_k=top_k
-            )
+            candidates: list[Candidate] = retriever.retrieve(query.query, top_k=top_k)
         except Exception:
             logger.exception(
                 "Retriever failed for candidate %s — using empty hard negatives",
@@ -69,9 +67,7 @@ def mine_hard_negatives(
             candidates = []
 
         hard_negative_ids = tuple(
-            c.chunk.chunk_id
-            for c in candidates
-            if c.chunk.chunk_id not in evidence_chunk_ids
+            c.chunk.chunk_id for c in candidates if c.chunk.chunk_id not in evidence_chunk_ids
         )
 
         insufficient = len(hard_negative_ids) < min_hard_negatives

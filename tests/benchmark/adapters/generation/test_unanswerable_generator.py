@@ -119,9 +119,7 @@ class TestGenerate:
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         assert len(result) == 1
         assert result[0].query_class == QueryClass.UNANSWERABLE
@@ -131,9 +129,7 @@ class TestGenerate:
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         assert result[0].evidence_span_ids == ()
 
@@ -142,9 +138,7 @@ class TestGenerate:
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         assert result[0].source_citations == ()
 
@@ -153,9 +147,7 @@ class TestGenerate:
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         meta = result[0].metadata
         assert meta["is_unanswerable"] is True
@@ -171,9 +163,7 @@ class TestGenerate:
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         cid = result[0].candidate_id
         assert cid.startswith("qc_50.46_b_1_unanswerable_")
@@ -184,9 +174,7 @@ class TestGenerate:
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         assert result[0].corpus_snapshot_id == "snap1"
 
@@ -214,9 +202,7 @@ class TestStrategySelection:
         strategies = set()
         for i in range(20):
             uid = f"unit_{i}"
-            result = gen.generate(
-                _make_unit(uid), _make_evidence(uid), QueryClass.UNANSWERABLE
-            )
+            result = gen.generate(_make_unit(uid), _make_evidence(uid), QueryClass.UNANSWERABLE)
             strategies.add(result[0].metadata["unanswerable_strategy"])
 
         assert len(strategies) >= 2
@@ -256,10 +242,7 @@ class TestDomainBoundaryStrategy:
             if gen_strategy == STRATEGY_DOMAIN_BOUNDARY:
                 gen.generate(_make_unit(uid), _make_evidence(uid), QueryClass.UNANSWERABLE)
                 prompt = client.calls[-1]
-                assert any(
-                    domain in prompt
-                    for domain in UnanswerableGenerator.ADJACENT_DOMAINS
-                )
+                assert any(domain in prompt for domain in UnanswerableGenerator.ADJACENT_DOMAINS)
                 return
 
         pytest.skip("Could not find unit_id that hashes to domain_boundary")
@@ -267,11 +250,13 @@ class TestDomainBoundaryStrategy:
 
 class TestFabricatedCitationStrategy:
     def test_prompt_mentions_non_existent(self) -> None:
-        resp = json.dumps({
-            "query": "What does 10 CFR 50.46(b)(6) require?",
-            "fabricated_citation": "10 CFR 50.46(b)(6)",
-            "reason": "only (b)(1)-(5) exist",
-        })
+        resp = json.dumps(
+            {
+                "query": "What does 10 CFR 50.46(b)(6) require?",
+                "fabricated_citation": "10 CFR 50.46(b)(6)",
+                "reason": "only (b)(1)-(5) exist",
+            }
+        )
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
@@ -295,9 +280,7 @@ class TestFallback:
         client = _MockLLMClient("this is not json")
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         assert len(result) == 1
         assert result[0].metadata["is_unanswerable"] is True
@@ -309,9 +292,7 @@ class TestFallback:
         client = _MockLLMClient(resp)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         assert len(result) == 1
         assert result[0].metadata.get("is_fallback") is True
@@ -320,9 +301,7 @@ class TestFallback:
         client = _MockLLMClient(json.dumps(["not", "a", "dict"]))
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         assert len(result) == 1
         assert result[0].metadata.get("is_fallback") is True
@@ -333,9 +312,7 @@ class TestFallback:
         client = _MockLLMClient(fenced)
         gen = UnanswerableGenerator(client, StageConfig(model="gpt-4o"))
 
-        result = gen.generate(
-            _make_unit(), _make_evidence(), QueryClass.UNANSWERABLE
-        )
+        result = gen.generate(_make_unit(), _make_evidence(), QueryClass.UNANSWERABLE)
 
         # Should parse successfully — NOT a fallback
         assert len(result) == 1
