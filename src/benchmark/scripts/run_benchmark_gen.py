@@ -105,6 +105,31 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "Requires --synthesize-gold-answers or a run with gold_answer_synthesis complete."
         ),
     )
+    parser.add_argument(
+        "--rpm-limit",
+        type=float,
+        default=0.0,
+        metavar="N",
+        help=(
+            "Requests-per-minute limit for LLM calls. "
+            "Adds a minimum delay between calls to avoid rate limit errors "
+            "(e.g. 60 → 1s delay, 120 → 0.5s delay). Default 0 = no enforced delay."
+        ),
+    )
+    parser.add_argument(
+        "--ecfr-xml",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Path to eCFR XML file for Stage 0 source span extraction. "
+            "Required unless resuming from unit_extraction or later."
+        ),
+    )
+    parser.add_argument(
+        "--doc-id",
+        default="ecfr",
+        help="Document ID to assign to source spans (default: ecfr)",
+    )
     return parser
 
 
@@ -142,7 +167,8 @@ def main() -> None:
     try:
         from benchmark.adapters.llm.openai_client import OpenAILLMClient  # type: ignore[import]
 
-        llm_client = OpenAILLMClient(api_key=api_key)
+        min_delay_s = (60.0 / args.rpm_limit) if args.rpm_limit > 0 else 0.0
+        llm_client = OpenAILLMClient(api_key=api_key, min_delay_s=min_delay_s)
     except ImportError:
         logger.error(
             "OpenAI LLM client not available. Install with: ./scripts/pip install -e '.[openai]'"
@@ -228,7 +254,44 @@ def main() -> None:
         unit_extractor = ECFRUnitExtractor()
         evidence_builder = DefaultEvidenceBuilder()
         llm_classifier = LLMUnitClassifier(llm_client, stage_config).classify
-        corpus_spans_builder = build_source_spans
+
+        _ecfr_xml = args.ecfr_xml
+        _doc_id = args.doc_id
+        _effective_date = args.valid_as_of
+
+        def _make_corpus_spans() -> list:
+            if _ecfr_xml is None:
+                raise RuntimeError(
+                    "source_spans stage requires --ecfr-xml <path>. "
+                    "Pass --resume-from unit_extraction (or later) to skip this stage."
+                )
+            from benchmark.domain.snapshot import compute_snapshot_id
+            from rag.adapters.ingestion.regulatory.ecfr_parser import (
+                parse_ecfr_xml as _parse_xml,
+            )
+            from rag.app.container import _get_store_chunks, build_container
+
+            _sections = _parse_xml(Path(_ecfr_xml).read_text())
+            _chunks: list = []
+            _snapshot_id = ""
+            try:
+                _cont = build_container()
+                _chunks = list(_get_store_chunks(_cont.store))
+                _snapshot_id = compute_snapshot_id(_chunks)
+            except Exception as _exc:
+                logger.warning(
+                    "Could not load chunk index (%s). Span overlap resolution will be empty.",
+                    _exc,
+                )
+            return build_source_spans(
+                sections=_sections,
+                doc_id=_doc_id,
+                chunk_index=_chunks,
+                corpus_snapshot_id=_snapshot_id,
+                effective_date=_effective_date,
+            )
+
+        corpus_spans_builder = _make_corpus_spans
     except ImportError as exc:
         logger.error(
             "Could not import pipeline adapters: %s. Ensure the package is installed correctly.",

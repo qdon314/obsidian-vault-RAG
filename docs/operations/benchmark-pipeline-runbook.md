@@ -4,9 +4,10 @@ Operational guide for running the NRC benchmark generation pipeline.
 
 ## Prerequisites
 
-- Python 3.11+ environment with `.[dev]` extras installed
+- Python 3.11+ environment with `.[dev,openai]` extras installed
 - OpenAI API key in `.env` or `OPENAI_API_KEY` environment variable
-- Parsed eCFR corpus available (run `make index` first if needed)
+- eCFR XML file for the regulatory part you want to benchmark (Stage 0 input)
+- Parsed eCFR corpus indexed (run `make index` first — needed for chunk overlap resolution)
 - Sufficient API quota for LLM stages (see Cost Estimation below)
 - Qdrant running locally for hard negative mining (or use `--skip-hard-negatives`)
 
@@ -17,6 +18,8 @@ Operational guide for running the NRC benchmark generation pipeline.
   --run-id "run_$(date +%Y%m%d_%H%M%S)" \
   --output-dir benchmark_runs/ \
   --model gpt-4o \
+  --ecfr-xml data/ecfr_part50.xml \
+  --doc-id ecfr_part50 \
   --query-classes citation_lookup,unanswerable \
   --export-path eval/datasets/benchmark_v1.jsonl \
   --valid-as-of "$(date +%Y-%m-%d)"
@@ -29,8 +32,26 @@ To skip hard negative mining (no Qdrant required):
   --run-id "run_$(date +%Y%m%d_%H%M%S)" \
   --output-dir benchmark_runs/ \
   --model gpt-4o \
+  --ecfr-xml data/ecfr_part50.xml \
+  --doc-id ecfr_part50 \
   --skip-hard-negatives
 ```
+
+### Key Arguments
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `--run-id` | Yes | Unique identifier for this run (used as output subdirectory) |
+| `--ecfr-xml PATH` | For Stage 0 | Path to the eCFR XML file to benchmark. Not required when resuming from `unit_extraction` or later. |
+| `--doc-id` | No | Document ID to assign to source spans (default: `ecfr`) |
+| `--model` | No | OpenAI model for all LLM stages (default: `gpt-4o`) |
+| `--query-classes` | No | Comma-separated query classes (default: `citation_lookup`) |
+| `--valid-as-of` | No | ISO date for `valid_as_of` field on all records |
+| `--skip-hard-negatives` | No | Skip Stage 5b; no Qdrant required |
+| `--export-path` | No | Write EvalQuery-compatible JSONL for the eval harness |
+| `--synthesize-gold-answers` | No | Enable Stage 6 gold answer synthesis (M5) |
+| `--contamination-model` | No | Model ID for Stage 5c contamination probe (M5) |
+| `--resume-from STAGE` | No | Resume from a specific stage; see Resuming a Run below |
 
 ### Output Directory Structure
 
@@ -117,6 +138,7 @@ If a run is interrupted or you want to re-run from a specific stage:
 ```
 
 This reads `evidence_tiers.jsonl` as input and re-runs candidate generation onward.
+`--ecfr-xml` is not required when resuming from `unit_extraction` or later — Stage 0 is skipped.
 
 | `--resume-from` | Reads checkpoint | Re-runs |
 |-----------------|-----------------|---------|

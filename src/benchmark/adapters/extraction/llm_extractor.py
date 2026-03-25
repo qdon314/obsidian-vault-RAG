@@ -47,6 +47,11 @@ Respond ONLY with the JSON object, no other text.
 # Confidence threshold: below this, flag the unit for human review.
 DEFAULT_CONFIDENCE_THRESHOLD = 0.5
 
+# Safety cap on combined span text sent to the LLM.
+# 1 token ≈ 4 chars; 100 000 chars ≈ 25 000 tokens, leaving headroom for the
+# system prompt and response within a 30 000-TPM budget.
+DEFAULT_MAX_CONTEXT_CHARS = 100_000
+
 
 class LLMExtractor:
     """Stage 1b: LLM-based semantic classification of regulatory units.
@@ -62,10 +67,12 @@ class LLMExtractor:
         config: StageConfig,
         *,
         confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
+        max_context_chars: int = DEFAULT_MAX_CONTEXT_CHARS,
     ) -> None:
         self._llm_client = llm_client
         self._config = config
         self._confidence_threshold = confidence_threshold
+        self._max_context_chars = max_context_chars
 
     def classify(self, units: list[RegulatoryUnit]) -> list[RegulatoryUnit]:
         """Classify each unit and return enriched copies.
@@ -81,19 +88,38 @@ class LLMExtractor:
 
     def _classify_one(self, unit: RegulatoryUnit) -> RegulatoryUnit:
         """Classify a single regulatory unit via LLM."""
-        prompt = self._build_prompt(unit)
+        prompt, truncated = self._build_prompt(unit)
+        if truncated:
+            unit = replace(unit, metadata={**unit.metadata, "truncated": True})
         response = self._llm_client.complete(prompt, self._config)
         return self._apply_classification(unit, response)
 
-    def _build_prompt(self, unit: RegulatoryUnit) -> str:
-        """Build the classification prompt for a single unit."""
+    def _build_prompt(self, unit: RegulatoryUnit) -> tuple[str, bool]:
+        """Build the classification prompt for a single unit.
+
+        Returns:
+            (prompt, truncated) — truncated is True when span text exceeded
+            ``max_context_chars`` and was cut to fit.
+        """
         combined_text = "\n\n".join(span.text for span in unit.spans)
-        return _CLASSIFICATION_PROMPT_TEMPLATE.format(
+        truncated = False
+        if len(combined_text) > self._max_context_chars:
+            combined_text = combined_text[: self._max_context_chars]
+            truncated = True
+            logger.warning(
+                "Unit %s span text truncated to %d chars for LLM classification "
+                "(original ~%d chars). Consider using a higher-context model.",
+                unit.unit_id,
+                self._max_context_chars,
+                len("\n\n".join(span.text for span in unit.spans)),
+            )
+        prompt = _CLASSIFICATION_PROMPT_TEMPLATE.format(
             section_id=unit.parent_section_id,
             subsection_chain=" > ".join(unit.subsection_chain) or "(root)",
             text=combined_text,
             valid_kinds=", ".join(sorted(_VALID_KINDS)),
         )
+        return prompt, truncated
 
     def _apply_classification(
         self,
