@@ -5,7 +5,7 @@ Usage:
         --run-id "run_20260324" \\
         --output-dir benchmark_runs/ \\
         --model gpt-4o \\
-        [--resume-from stage_3] \\
+        [--resume-from candidate_generation] \\
         [--query-classes citation_lookup,unanswerable] \\
         [--skip-hard-negatives] \\
         [--export-path eval/datasets/benchmark_v1.jsonl] \\
@@ -21,7 +21,7 @@ This script is the composition root for M4+M5 adapters. It wires together:
 - Retriever: optional, from RAG container (requires Qdrant running)
 - Exporter: EvalQueryExporter writing to --export-path
 - GoldAnswerSynthesizer: LLMGoldAnswerSynthesizer (when --synthesize-gold-answers)
-- ContaminationProbe: Stage 5c (when --contamination-model is set)
+- ContaminationProbe: contamination_probe (when --contamination-model is set)
 """
 
 from __future__ import annotations
@@ -64,8 +64,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--resume-from",
         default=None,
         help=(
-            "Stage to resume from: stage_0, stage_1a, stage_1b, stage_2, "
-            "stage_3, stage_5a, stage_5b, export"
+            "Stage to resume from: source_spans, unit_extraction, unit_classification, "
+            "evidence_tiers, candidate_generation, query_validation, "
+            "hard_negative_mining, gold_answer_synthesis, contamination_probe, export"
         ),
     )
     parser.add_argument(
@@ -76,7 +77,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--skip-hard-negatives",
         action="store_true",
-        help="Skip Stage 5b hard negative mining (no Qdrant required)",
+        help="Skip hard negative mining (no Qdrant required)",
     )
     parser.add_argument(
         "--export-path",
@@ -92,16 +93,16 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--synthesize-gold-answers",
         action="store_true",
-        help="Enable Stage 6 gold answer synthesis (requires LLM)",
+        help="Enable gold answer synthesis (requires LLM)",
     )
     parser.add_argument(
         "--contamination-model",
         default=None,
         metavar="MODEL_ID",
         help=(
-            "Model ID to use for Stage 5c contamination probe "
+            "Model ID to use for contamination probe "
             "(e.g. gpt-4o-2025-01-01). "
-            "Requires --synthesize-gold-answers or a run with Stage 6 complete."
+            "Requires --synthesize-gold-answers or a run with gold_answer_synthesis complete."
         ),
     )
     return parser
@@ -173,11 +174,11 @@ def main() -> None:
             container = build_container()
             retriever = container.retriever
             retriever_config = {"model": args.model, "top_k": 20}
-            logger.info("Retriever wired for Stage 5b hard negative mining")
+            logger.info("Retriever wired for hard_negative_mining")
         except Exception as exc:
             logger.warning(
                 "Could not initialize retriever (%s). "
-                "Skipping Stage 5b. Pass --skip-hard-negatives to suppress.",
+                "Skipping hard_negative_mining. Pass --skip-hard-negatives to suppress.",
                 exc,
             )
 
@@ -197,7 +198,7 @@ def main() -> None:
         )
 
         gold_answer_synthesizer = LLMGoldAnswerSynthesizer(llm_client, stage_config)
-        logger.info("Gold answer synthesizer wired for Stage 6")
+        logger.info("Gold answer synthesizer wired for gold_answer_synthesis")
 
     # -- Validate M5 contamination probe args ------------------------------
     contamination_model_id = args.contamination_model
@@ -205,8 +206,8 @@ def main() -> None:
         # Warn if no synthesizer but allow: operator may be resuming from
         # a run that already has Stage 6 complete.
         logger.warning(
-            "Stage 5c requires gold answers. Pass --synthesize-gold-answers "
-            "or resume from a run that has stage_6 complete."
+            "contamination_probe requires gold answers. Pass --synthesize-gold-answers "
+            "or resume from a run that has gold_answer_synthesis complete."
         )
 
     # -- Build unit extractor / evidence builder / classifier --------------
@@ -222,12 +223,12 @@ def main() -> None:
             LLMUnitClassifier,
         )
 
-        from benchmark.stages.stage_0_source_view import build_corpus_spans  # type: ignore[attr-defined]
+        from benchmark.stages.source_spans import build_source_spans
 
         unit_extractor = ECFRUnitExtractor()
         evidence_builder = DefaultEvidenceBuilder()
         llm_classifier = LLMUnitClassifier(llm_client, stage_config).classify
-        corpus_spans_builder = build_corpus_spans
+        corpus_spans_builder = build_source_spans
     except ImportError as exc:
         logger.error(
             "Could not import pipeline adapters: %s. Ensure the package is installed correctly.",
@@ -244,7 +245,7 @@ def main() -> None:
 
     runner = PipelineRunner(
         config,
-        corpus_spans_builder=corpus_spans_builder,
+        corpus_spans_builder=corpus_spans_builder,  # type: ignore[arg-type]
         unit_extractor=unit_extractor,
         llm_classifier=llm_classifier,
         evidence_builder=evidence_builder,

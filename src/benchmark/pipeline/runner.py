@@ -1,18 +1,20 @@
 """Benchmark pipeline runner with JSONL checkpoint/resume.
 
-Orchestrates stages 0 -> 1a -> 1b -> 2 -> 3 -> 5a -> 5b -> 6 -> 5c -> export,
+Orchestrates source_spans -> unit_extraction -> unit_classification ->
+evidence_tiers -> candidate_generation -> query_validation ->
+hard_negative_mining -> gold_answer_synthesis -> contamination_probe -> export,
 writing a JSONL checkpoint after each stage.  Supports ``--resume-from`` to skip
 completed stages and read from prior checkpoint files.
 
 M4 additions:
-- Stage 5a now calls ``refine_evidence()`` after validation.
-- Stage 5b hard negative mining (optional, skipped when no retriever).
+- query_validation now calls ``refine_evidence()`` after validation.
+- hard_negative_mining (optional, skipped when no retriever).
 - Export stage assembles ``BenchmarkRecord`` objects and calls the exporter.
 - Multi-class generation: ``query_generators`` dict replaces single ``query_generator``.
 
 M5 additions:
-- Stage 6 gold answer synthesis (optional, skipped when no gold_answer_synthesizer).
-- Stage 5c contamination probe (optional, skipped when no contamination_model_id).
+- gold_answer_synthesis (optional, skipped when no gold_answer_synthesizer).
+- contamination_probe (optional, skipped when no contamination_model_id).
 - ``PipelineResult.total_contaminated`` count.
 """
 
@@ -33,7 +35,6 @@ from benchmark.domain.models import (
     BenchmarkSourceSpan,
     EvidenceEntry,
     EvidenceSet,
-    GoldAnswer,
     HardNegativeResult,
     QueryCandidate,
     RegulatoryUnit,
@@ -48,38 +49,38 @@ from benchmark.ports.llm_client import LLMClient
 from benchmark.ports.query_generator import QueryGenerator
 from benchmark.ports.query_validator import QueryValidator
 from benchmark.ports.unit_extractor import UnitExtractor
-from benchmark.stages.stage_5b_hard_negatives import mine_hard_negatives
-from benchmark.stages.stage_5c_contamination import run_contamination_probe
+from benchmark.stages.contamination_probe import run_contamination_probe
+from benchmark.stages.hard_negative_mining import mine_hard_negatives
 from rag.ports.retriever import Retriever
 
 logger = logging.getLogger(__name__)
 
 # Stage ordering — used for resume logic.
 _STAGE_ORDER = (
-    "stage_0",
-    "stage_1a",
-    "stage_1b",
-    "stage_2",
-    "stage_3",
-    "stage_5a",
-    "stage_5b",
-    "stage_6",  # M5: gold answer synthesis (must precede stage_5c)
-    "stage_5c",  # M5: contamination probe
+    "source_spans",
+    "unit_extraction",
+    "unit_classification",
+    "evidence_tiers",
+    "candidate_generation",
+    "query_validation",
+    "hard_negative_mining",
+    "gold_answer_synthesis",  # M5: must precede contamination_probe
+    "contamination_probe",  # M5: contamination probe
     "export",
 )
 
 # Maps each stage to the checkpoint file it reads on resume.
 _RESUME_INPUT_FILES: dict[str, str] = {
-    "stage_0": "",  # no input file — runs from scratch
-    "stage_1a": "stage_0_spans.jsonl",
-    "stage_1b": "stage_1a_units.jsonl",
-    "stage_2": "stage_1b_classified.jsonl",
-    "stage_3": "stage_2_evidence.jsonl",
-    "stage_5a": "stage_3_candidates.jsonl",
-    "stage_5b": "stage_5a_queries.jsonl",
-    "stage_6": "stage_5a_queries.jsonl",  # reads validated queries
-    "stage_5c": "stage_6_gold_answers.jsonl",  # reads records with gold answers
-    "export": "stage_5a_queries.jsonl",
+    "source_spans": "",  # no input file — runs from scratch
+    "unit_extraction": "source_spans.jsonl",
+    "unit_classification": "unit_extraction.jsonl",
+    "evidence_tiers": "unit_classification.jsonl",
+    "candidate_generation": "evidence_tiers.jsonl",
+    "query_validation": "candidate_generation.jsonl",
+    "hard_negative_mining": "query_validation.jsonl",
+    "gold_answer_synthesis": "query_validation.jsonl",  # reads validated queries
+    "contamination_probe": "gold_answer_synthesis.jsonl",  # reads records with gold answers
+    "export": "query_validation.jsonl",
 }
 
 
@@ -121,22 +122,22 @@ class PipelineRunner:
     M4 constructor additions:
     - ``query_generators``: dict mapping ``QueryClass`` to ``QueryGenerator``.
       Replaces the singular ``query_generator`` param (backward compatible).
-    - ``retriever``: optional live RAG retriever for Stage 5b hard negative
-      mining.  Stage 5b is skipped when ``None``.
+    - ``retriever``: optional live RAG retriever for hard negative mining.
+      hard_negative_mining is skipped when ``None``.
     - ``retriever_config``: metadata dict recorded on every ``HardNegativeResult``
       for staleness detection.
     - ``exporter``: optional ``BenchmarkExporter`` for the terminal export stage.
       Export stage is skipped when ``None`` (benchmark_records.jsonl still written).
-    - ``query_classes``: which classes to generate in Stage 3.
+    - ``query_classes``: which classes to generate in candidate_generation.
     - ``valid_as_of``: ISO date recorded on ``BenchmarkRecord`` exports.
 
     M5 constructor additions:
-    - ``gold_answer_synthesizer``: optional ``GoldAnswerSynthesizer`` for Stage 6.
-      Stage 6 is skipped when ``None``.
-    - ``llm_client``: optional ``LLMClient`` used by Stage 5c contamination probe.
+    - ``gold_answer_synthesizer``: optional ``GoldAnswerSynthesizer`` for gold_answer_synthesis.
+      gold_answer_synthesis is skipped when ``None``.
+    - ``llm_client``: optional ``LLMClient`` used by contamination_probe.
     - ``contamination_model_id``: model identifier for the contamination probe.
-      Stage 5c is skipped when ``None``.
-    - ``contamination_stage_config``: ``StageConfig`` passed to Stage 5c LLM calls.
+      contamination_probe is skipped when ``None``.
+    - ``contamination_stage_config``: ``StageConfig`` passed to contamination_probe LLM calls.
       Defaults to ``StageConfig(model=contamination_model_id)`` when not provided.
     """
 
@@ -217,41 +218,41 @@ class PipelineRunner:
         for idx in range(start_idx, len(_STAGE_ORDER)):
             stage = _STAGE_ORDER[idx]
 
-            if stage == "stage_0":
-                spans = self._run_stage_0()
-            elif stage == "stage_1a":
+            if stage == "source_spans":
+                spans = self._run_source_spans()
+            elif stage == "unit_extraction":
                 if not spans:
                     spans = self._read_checkpoint_spans()
-                units = self._run_stage_1a(spans)
-            elif stage == "stage_1b":
+                units = self._run_unit_extraction(spans)
+            elif stage == "unit_classification":
                 if not units:
-                    units = self._read_checkpoint_units("stage_1a_units.jsonl")
-                classified = self._run_stage_1b(units)
-            elif stage == "stage_2":
+                    units = self._read_checkpoint_units("unit_extraction.jsonl")
+                classified = self._run_unit_classification(units)
+            elif stage == "evidence_tiers":
                 if not classified:
-                    classified = self._read_checkpoint_units("stage_1b_classified.jsonl")
-                evidence_sets = self._run_stage_2(classified)
-            elif stage == "stage_3":
+                    classified = self._read_checkpoint_units("unit_classification.jsonl")
+                evidence_sets = self._run_evidence_tiers(classified)
+            elif stage == "candidate_generation":
                 if not evidence_sets:
                     evidence_sets = self._read_checkpoint_evidence()
-                candidates = self._run_stage_3(evidence_sets)
-            elif stage == "stage_5a":
+                candidates = self._run_candidate_generation(evidence_sets)
+            elif stage == "query_validation":
                 if not candidates:
                     candidates = self._read_checkpoint_candidates()
                 if not evidence_sets:
                     evidence_sets = self._read_checkpoint_evidence()
-                results, validated_queries, refined_evidence_by_cid = self._run_stage_5a(
+                results, validated_queries, refined_evidence_by_cid = self._run_query_validation(
                     candidates, evidence_sets
                 )
-            elif stage == "stage_5b":
+            elif stage == "hard_negative_mining":
                 if not validated_queries:
                     validated_queries = self._read_checkpoint_validated_queries()
                 if not evidence_sets:
                     evidence_sets = self._read_checkpoint_evidence()
-                hard_negatives = self._run_stage_5b(validated_queries, evidence_sets)
-            elif stage == "stage_6":
+                hard_negatives = self._run_hard_negative_mining(validated_queries, evidence_sets)
+            elif stage == "gold_answer_synthesis":
                 if self._gold_answer_synthesizer is None:
-                    logger.info("Stage 6: skipping (no gold_answer_synthesizer)")
+                    logger.info("gold_answer_synthesis: skipping (no gold_answer_synthesizer)")
                     continue  # do not add to stages_completed
                 if not validated_queries:
                     validated_queries = self._read_checkpoint_validated_queries()
@@ -259,16 +260,18 @@ class PipelineRunner:
                     refined_evidence_by_cid = self._read_checkpoint_refined_evidence()
                 if not hard_negatives:
                     hard_negatives = self._read_checkpoint_hard_negatives()
-                benchmark_records = self._run_stage_6(
+                benchmark_records = self._run_gold_answer_synthesis(
                     validated_queries, refined_evidence_by_cid, hard_negatives
                 )
-            elif stage == "stage_5c":
+            elif stage == "contamination_probe":
                 if self._contamination_model_id is None or self._llm_client is None:
-                    logger.info("Stage 5c: skipping (no contamination_model_id or llm_client)")
+                    logger.info(
+                        "contamination_probe: skipping (no contamination_model_id or llm_client)"
+                    )
                     continue  # do not add to stages_completed
                 if not benchmark_records:
                     benchmark_records = self._read_checkpoint_benchmark_records()
-                benchmark_records = self._run_stage_5c(benchmark_records)
+                benchmark_records = self._run_contamination_probe(benchmark_records)
             elif stage == "export":
                 # Prefer M5 benchmark_records (have gold + contamination data).
                 # On resume, try reading M5 checkpoints before falling back to
@@ -325,8 +328,8 @@ class PipelineRunner:
     # Stage implementations
     # ------------------------------------------------------------------
 
-    def _run_stage_0(self) -> list[BenchmarkSourceSpan]:
-        logger.info("Running Stage 0: corpus normalization")
+    def _run_source_spans(self) -> list[BenchmarkSourceSpan]:
+        logger.info("Running source_spans: corpus normalization")
         spans = self._corpus_spans_builder()
 
         if self._config.corpus_snapshot_id:
@@ -339,43 +342,45 @@ class PipelineRunner:
                 )
                 raise ValueError(msg)
 
-        self._write_checkpoint("stage_0_spans.jsonl", spans)
+        self._write_checkpoint("source_spans.jsonl", spans)
         return spans
 
-    def _run_stage_1a(self, spans: list[BenchmarkSourceSpan]) -> list[RegulatoryUnit]:
-        logger.info("Running Stage 1a: structural segmentation")
+    def _run_unit_extraction(self, spans: list[BenchmarkSourceSpan]) -> list[RegulatoryUnit]:
+        logger.info("Running unit_extraction: structural segmentation")
         units = self._unit_extractor.extract(spans)
-        self._write_checkpoint("stage_1a_units.jsonl", units)
+        self._write_checkpoint("unit_extraction.jsonl", units)
         return units
 
-    def _run_stage_1b(self, units: list[RegulatoryUnit]) -> list[RegulatoryUnit]:
+    def _run_unit_classification(self, units: list[RegulatoryUnit]) -> list[RegulatoryUnit]:
         if self._llm_classifier is None:
-            msg = "Stage 1b requires an LLM classifier but none was provided"
+            msg = "unit_classification requires an LLM classifier but none was provided"
             raise ValueError(msg)
 
-        logger.info("Running Stage 1b: LLM classification")
+        logger.info("Running unit_classification: LLM classification")
         classified = self._llm_classifier(units)
-        self._write_checkpoint("stage_1b_classified.jsonl", classified)
+        self._write_checkpoint("unit_classification.jsonl", classified)
         return classified
 
-    def _run_stage_2(self, units: list[RegulatoryUnit]) -> list[EvidenceSet]:
+    def _run_evidence_tiers(self, units: list[RegulatoryUnit]) -> list[EvidenceSet]:
         if self._evidence_builder is None:
-            msg = "Stage 2 requires an EvidenceBuilder but none was provided"
+            msg = "evidence_tiers requires an EvidenceBuilder but none was provided"
             raise ValueError(msg)
 
-        logger.info("Running Stage 2: evidence tier assignment")
+        logger.info("Running evidence_tiers: evidence tier assignment")
         evidence_sets = [self._evidence_builder.build(u) for u in units]
-        self._write_checkpoint("stage_2_evidence.jsonl", evidence_sets)
+        self._write_checkpoint("evidence_tiers.jsonl", evidence_sets)
         return evidence_sets
 
-    def _run_stage_3(self, evidence_sets: list[EvidenceSet]) -> list[QueryCandidate]:
-        logger.info("Running Stage 3: query generation (%s classes)", len(self._query_classes))
+    def _run_candidate_generation(self, evidence_sets: list[EvidenceSet]) -> list[QueryCandidate]:
+        logger.info(
+            "Running candidate_generation: query generation (%s classes)", len(self._query_classes)
+        )
 
         # Build a lookup from unit_id to evidence set.
         evidence_by_unit = {es.unit_id: es for es in evidence_sets}
 
         # Read the classified units for generation context.
-        classified = self._read_checkpoint_units("stage_1b_classified.jsonl")
+        classified = self._read_checkpoint_units("unit_classification.jsonl")
 
         all_candidates: list[QueryCandidate] = []
         for unit in classified:
@@ -394,10 +399,10 @@ class PipelineRunner:
                 candidates = generator.generate(unit, evidence, query_class)
                 all_candidates.extend(candidates)
 
-        self._write_checkpoint("stage_3_candidates.jsonl", all_candidates)
+        self._write_checkpoint("candidate_generation.jsonl", all_candidates)
         return all_candidates
 
-    def _run_stage_5a(
+    def _run_query_validation(
         self,
         candidates: list[QueryCandidate],
         evidence_sets: list[EvidenceSet],
@@ -407,10 +412,10 @@ class PipelineRunner:
         dict[str, EvidenceSet],
     ]:
         if self._query_validator is None:
-            msg = "Stage 5a requires a QueryValidator but none was provided"
+            msg = "query_validation requires a QueryValidator but none was provided"
             raise ValueError(msg)
 
-        logger.info("Running Stage 5a: validation + evidence refinement")
+        logger.info("Running query_validation: validation + evidence refinement")
         evidence_by_unit = {es.unit_id: es for es in evidence_sets}
 
         results: list[ValidationResult] = []
@@ -447,21 +452,21 @@ class PipelineRunner:
                 refined = EvidenceSet(unit_id=candidate.unit_id)
             refined_evidence_by_cid[candidate.candidate_id] = refined
 
-        self._write_checkpoint("stage_5a_validated.jsonl", results)
-        self._write_checkpoint("stage_5a_queries.jsonl", validated_queries)
+        self._write_checkpoint("query_validation_results.jsonl", results)
+        self._write_checkpoint("query_validation.jsonl", validated_queries)
         self._write_refined_evidence_checkpoint(refined_evidence_by_cid)
         return results, validated_queries, refined_evidence_by_cid
 
-    def _run_stage_5b(
+    def _run_hard_negative_mining(
         self,
         validated_queries: list[ValidatedQuery],
         evidence_sets: list[EvidenceSet],
     ) -> list[HardNegativeResult]:
         if self._retriever is None:
-            logger.info("Stage 5b: no retriever provided — skipping hard negative mining")
+            logger.info("hard_negative_mining: no retriever provided — skipping")
             return []
 
-        logger.info("Running Stage 5b: hard negative mining (%d queries)", len(validated_queries))
+        logger.info("Running hard_negative_mining (%d queries)", len(validated_queries))
         evidence_by_unit = {es.unit_id: es for es in evidence_sets}
 
         hard_negatives = mine_hard_negatives(
@@ -470,10 +475,10 @@ class PipelineRunner:
             self._retriever,
             retriever_config=self._retriever_config,
         )
-        self._write_checkpoint("stage_5b_hard_negatives.jsonl", hard_negatives)
+        self._write_checkpoint("hard_negative_mining.jsonl", hard_negatives)
         return hard_negatives
 
-    def _run_stage_6(
+    def _run_gold_answer_synthesis(
         self,
         validated_queries: list[ValidatedQuery],
         refined_evidence_by_cid: dict[str, EvidenceSet],
@@ -485,7 +490,7 @@ class PipelineRunner:
         """
         assert self._gold_answer_synthesizer is not None
         logger.info(
-            "Running Stage 6: gold answer synthesis (%d queries)",
+            "Running gold_answer_synthesis (%d queries)",
             len(validated_queries),
         )
         hn_by_cid = {hn.candidate_id: hn for hn in hard_negatives}
@@ -532,10 +537,10 @@ class PipelineRunner:
 
             records.append(record)
 
-        self._write_checkpoint("stage_6_gold_answers.jsonl", records)
+        self._write_checkpoint("gold_answer_synthesis.jsonl", records)
         return records
 
-    def _run_stage_5c(
+    def _run_contamination_probe(
         self,
         records: list[BenchmarkRecord],
     ) -> list[BenchmarkRecord]:
@@ -548,7 +553,7 @@ class PipelineRunner:
         assert self._llm_client is not None
         assert self._contamination_stage_config is not None  # set in __init__
         logger.info(
-            "Running Stage 5c: contamination probe (%d records, model=%s)",
+            "Running contamination_probe (%d records, model=%s)",
             len(records),
             self._contamination_model_id,
         )
@@ -559,7 +564,7 @@ class PipelineRunner:
             self._contamination_stage_config,
             self._contamination_model_id,
         )
-        self._write_checkpoint("stage_5c_probed_records.jsonl", probed)
+        self._write_checkpoint("contamination_probe.jsonl", probed)
         return probed
 
     def _run_export_from_records(self, records: list[BenchmarkRecord]) -> None:
@@ -657,7 +662,7 @@ class PipelineRunner:
         self, refined_evidence_by_cid: dict[str, EvidenceSet]
     ) -> None:
         """Write refined evidence keyed by candidate_id to JSONL."""
-        path = self._output_path / "stage_5a_refined_evidence.jsonl"
+        path = self._output_path / "query_validation_refined_evidence.jsonl"
         with path.open("w") as f:
             for cid, evidence in refined_evidence_by_cid.items():
                 row = {"candidate_id": cid, **dataclasses.asdict(evidence)}
@@ -669,7 +674,7 @@ class PipelineRunner:
         )
 
     def _read_checkpoint_spans(self) -> list[BenchmarkSourceSpan]:
-        path = self._output_path / "stage_0_spans.jsonl"
+        path = self._output_path / "source_spans.jsonl"
         return [_dict_to_span(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_units(self, filename: str) -> list[RegulatoryUnit]:
@@ -677,19 +682,19 @@ class PipelineRunner:
         return [_dict_to_unit(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_evidence(self) -> list[EvidenceSet]:
-        path = self._output_path / "stage_2_evidence.jsonl"
+        path = self._output_path / "evidence_tiers.jsonl"
         return [_dict_to_evidence_set(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_candidates(self) -> list[QueryCandidate]:
-        path = self._output_path / "stage_3_candidates.jsonl"
+        path = self._output_path / "candidate_generation.jsonl"
         return [_dict_to_candidate(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_validated_queries(self) -> list[ValidatedQuery]:
-        path = self._output_path / "stage_5a_queries.jsonl"
+        path = self._output_path / "query_validation.jsonl"
         return [_dict_to_validated_query(d) for d in self._read_jsonl(path)]
 
     def _read_checkpoint_refined_evidence(self) -> dict[str, EvidenceSet]:
-        path = self._output_path / "stage_5a_refined_evidence.jsonl"
+        path = self._output_path / "query_validation_refined_evidence.jsonl"
         result: dict[str, EvidenceSet] = {}
         for d in self._read_jsonl(path):
             cid = d["candidate_id"]
@@ -697,7 +702,7 @@ class PipelineRunner:
         return result
 
     def _read_checkpoint_hard_negatives(self) -> list[HardNegativeResult]:
-        path = self._output_path / "stage_5b_hard_negatives.jsonl"
+        path = self._output_path / "hard_negative_mining.jsonl"
         if not path.exists():
             return []
         return [_dict_to_hard_negative(d) for d in self._read_jsonl(path)]
@@ -705,13 +710,13 @@ class PipelineRunner:
     def _read_checkpoint_benchmark_records(self) -> list[BenchmarkRecord]:
         """Read the latest available BenchmarkRecord checkpoint.
 
-        Checks stage_5c output first (has contamination data), then
-        stage_6 output (has gold answers), then falls back to returning
+        Checks contamination_probe output first (has contamination data), then
+        gold_answer_synthesis output (has gold answers), then falls back to returning
         an empty list so the caller can use the M4 assembly path.
         """
         for filename in (
-            "stage_5c_probed_records.jsonl",
-            "stage_6_gold_answers.jsonl",
+            "contamination_probe.jsonl",
+            "gold_answer_synthesis.jsonl",
         ):
             path = self._output_path / filename
             if path.exists():

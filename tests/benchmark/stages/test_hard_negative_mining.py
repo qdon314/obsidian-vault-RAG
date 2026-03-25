@@ -1,4 +1,4 @@
-"""Tests for Stage 5b hard negative mining."""
+"""Tests for hard negative mining."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from benchmark.domain.models import (
     EvidenceSet,
     ValidatedQuery,
 )
-from benchmark.stages.stage_5b_hard_negatives import mine_hard_negatives
+from benchmark.stages.hard_negative_mining import mine_hard_negatives
 from rag.domain.models import Candidate, Chunk
 
 # -- Helpers ------------------------------------------------------------------

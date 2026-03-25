@@ -1,4 +1,4 @@
-"""Stage 5c: Contamination probe for benchmark records.
+"""Contamination probe for benchmark records.
 
 For each ``BenchmarkRecord`` with a non-empty ``gold_answer``, runs the
 production generator model with an empty context window and judges the
@@ -83,7 +83,7 @@ def run_contamination_probe(
     with a WARNING log; does not raise.
 
     Args:
-        records: BenchmarkRecords from stage_6 (gold answers populated).
+        records: BenchmarkRecords from gold_answer_synthesis (gold answers populated).
         llm_client: LLM client routed through the benchmark port.
         config: StageConfig used for both the generation and judge calls.
         model_id: Identifier for the model being probed (e.g. ``"gpt-4o-2025-01-01"``).

@@ -1,4 +1,4 @@
-"""Stage 5b: Hard negative mining via the RAG retriever.
+"""Hard negative mining via the RAG retriever.
 
 This is the only place the benchmark package crosses the RAG boundary.
 See ``docs/decisions/adr-benchmark-rag-boundary-crossing.md`` for rationale.

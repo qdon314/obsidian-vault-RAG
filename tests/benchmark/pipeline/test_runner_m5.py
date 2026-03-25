@@ -1,15 +1,12 @@
-"""M5 runner tests: Stage 6 (gold synthesis) and Stage 5c (contamination probe)."""
+"""M5 runner tests: gold_answer_synthesis and contamination_probe."""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-import pytest
-
 from benchmark.domain.enums import EvidenceTier, QueryClass, UnitKind
 from benchmark.domain.models import (
-    BenchmarkRecord,
     BenchmarkSourceSpan,
     EvidenceEntry,
     EvidenceSet,
@@ -220,8 +217,8 @@ class TestM5BackwardCompat:
         result = runner.run()
 
         # Stage 6 and 5c should be absent — skipped via continue.
-        assert "stage_6" not in result.stages_completed
-        assert "stage_5c" not in result.stages_completed
+        assert "gold_answer_synthesis" not in result.stages_completed
+        assert "contamination_probe" not in result.stages_completed
 
     def test_m5_defaults_do_not_break_export(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path)
@@ -237,23 +234,25 @@ class TestM5BackwardCompat:
 
 
 class TestStage6GoldSynthesis:
-    def test_stage_6_in_stages_completed_when_synthesizer_provided(self, tmp_path: Path) -> None:
+    def test_gold_answer_synthesis_in_stages_completed_when_synthesizer_provided(
+        self, tmp_path: Path
+    ) -> None:
         runner = _build_runner(tmp_path, gold_synthesizer=_StubGoldAnswerSynthesizer())
         result = runner.run()
 
-        assert "stage_6" in result.stages_completed
+        assert "gold_answer_synthesis" in result.stages_completed
 
-    def test_stage_6_checkpoint_written(self, tmp_path: Path) -> None:
+    def test_gold_answer_synthesis_checkpoint_written(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path, gold_synthesizer=_StubGoldAnswerSynthesizer())
         runner.run()
 
-        assert (tmp_path / "m5_run" / "stage_6_gold_answers.jsonl").exists()
+        assert (tmp_path / "m5_run" / "gold_answer_synthesis.jsonl").exists()
 
     def test_gold_answer_populated_in_checkpoint(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path, gold_synthesizer=_StubGoldAnswerSynthesizer())
         runner.run()
 
-        path = tmp_path / "m5_run" / "stage_6_gold_answers.jsonl"
+        path = tmp_path / "m5_run" / "gold_answer_synthesis.jsonl"
         record = json.loads(path.read_text().strip().splitlines()[0])
         assert record["gold_answer"] == "The limit is 2200°F."
         assert "2200°F" in record["required_points"]
@@ -262,7 +261,7 @@ class TestStage6GoldSynthesis:
         runner = _build_runner(tmp_path, gold_synthesizer=_StubEmptyGoldAnswerSynthesizer())
         runner.run()
 
-        path = tmp_path / "m5_run" / "stage_6_gold_answers.jsonl"
+        path = tmp_path / "m5_run" / "gold_answer_synthesis.jsonl"
         record = json.loads(path.read_text().strip().splitlines()[0])
         # Record is still present but gold_answer field is null/absent.
         assert record.get("gold_answer") is None or record.get("gold_answer") == ""
@@ -277,16 +276,16 @@ class TestStage6GoldSynthesis:
         record = json.loads(path.read_text().strip().splitlines()[0])
         assert record["gold_answer"] == "The limit is 2200°F."
 
-    def test_stage_6_skipped_without_synthesizer(self, tmp_path: Path) -> None:
+    def test_gold_answer_synthesis_skipped_without_synthesizer(self, tmp_path: Path) -> None:
         runner = _build_runner(tmp_path)
         result = runner.run()
 
-        assert "stage_6" not in result.stages_completed
-        assert not (tmp_path / "m5_run" / "stage_6_gold_answers.jsonl").exists()
+        assert "gold_answer_synthesis" not in result.stages_completed
+        assert not (tmp_path / "m5_run" / "gold_answer_synthesis.jsonl").exists()
 
 
 class TestStage5cContaminationProbe:
-    def test_stage_5c_in_stages_completed_when_enabled(self, tmp_path: Path) -> None:
+    def test_contamination_probe_in_stages_completed_when_enabled(self, tmp_path: Path) -> None:
         runner = _build_runner(
             tmp_path,
             gold_synthesizer=_StubGoldAnswerSynthesizer(),
@@ -295,9 +294,9 @@ class TestStage5cContaminationProbe:
         )
         result = runner.run()
 
-        assert "stage_5c" in result.stages_completed
+        assert "contamination_probe" in result.stages_completed
 
-    def test_stage_5c_checkpoint_written(self, tmp_path: Path) -> None:
+    def test_contamination_probe_checkpoint_written(self, tmp_path: Path) -> None:
         runner = _build_runner(
             tmp_path,
             gold_synthesizer=_StubGoldAnswerSynthesizer(),
@@ -306,7 +305,7 @@ class TestStage5cContaminationProbe:
         )
         runner.run()
 
-        assert (tmp_path / "m5_run" / "stage_5c_probed_records.jsonl").exists()
+        assert (tmp_path / "m5_run" / "contamination_probe.jsonl").exists()
 
     def test_non_contaminated_record_flagged_false(self, tmp_path: Path) -> None:
         # Stub returns correctness=4 → score 0.8 → contaminated=True.
@@ -322,7 +321,7 @@ class TestStage5cContaminationProbe:
         )
         runner.run()
 
-        path = tmp_path / "m5_run" / "stage_5c_probed_records.jsonl"
+        path = tmp_path / "m5_run" / "contamination_probe.jsonl"
         record = json.loads(path.read_text().strip().splitlines()[0])
         assert record["contamination_probes"]["gpt-4o"] is False
 
@@ -335,7 +334,7 @@ class TestStage5cContaminationProbe:
         )
         runner.run()
 
-        path = tmp_path / "m5_run" / "stage_5c_probed_records.jsonl"
+        path = tmp_path / "m5_run" / "contamination_probe.jsonl"
         record = json.loads(path.read_text().strip().splitlines()[0])
         assert record["contamination_probes"]["gpt-4o"] is True
 
@@ -350,7 +349,7 @@ class TestStage5cContaminationProbe:
 
         assert result.total_contaminated == 1
 
-    def test_stage_5c_skipped_without_model_id(self, tmp_path: Path) -> None:
+    def test_contamination_probe_skipped_without_model_id(self, tmp_path: Path) -> None:
         runner = _build_runner(
             tmp_path,
             gold_synthesizer=_StubGoldAnswerSynthesizer(),
@@ -359,9 +358,9 @@ class TestStage5cContaminationProbe:
         )
         result = runner.run()
 
-        assert "stage_5c" not in result.stages_completed
+        assert "contamination_probe" not in result.stages_completed
 
-    def test_stage_5c_skipped_without_llm_client(self, tmp_path: Path) -> None:
+    def test_contamination_probe_skipped_without_llm_client(self, tmp_path: Path) -> None:
         runner = _build_runner(
             tmp_path,
             gold_synthesizer=_StubGoldAnswerSynthesizer(),
@@ -370,7 +369,7 @@ class TestStage5cContaminationProbe:
         )
         result = runner.run()
 
-        assert "stage_5c" not in result.stages_completed
+        assert "contamination_probe" not in result.stages_completed
 
     def test_full_m5_stage_order(self, tmp_path: Path) -> None:
         runner = _build_runner(
@@ -382,21 +381,21 @@ class TestStage5cContaminationProbe:
         result = runner.run()
 
         assert result.stages_completed == (
-            "stage_0",
-            "stage_1a",
-            "stage_1b",
-            "stage_2",
-            "stage_3",
-            "stage_5a",
-            "stage_5b",
-            "stage_6",
-            "stage_5c",
+            "source_spans",
+            "unit_extraction",
+            "unit_classification",
+            "evidence_tiers",
+            "candidate_generation",
+            "query_validation",
+            "hard_negative_mining",
+            "gold_answer_synthesis",
+            "contamination_probe",
             "export",
         )
 
 
-class TestM5ResumeFromStage6:
-    def test_resume_from_stage_6_reruns_synthesis(self, tmp_path: Path) -> None:
+class TestM5ResumeFromGoldAnswerSynthesis:
+    def test_resume_from_gold_answer_synthesis_reruns_synthesis(self, tmp_path: Path) -> None:
         # Full run first to create checkpoints.
         _build_runner(
             tmp_path,
@@ -410,13 +409,13 @@ class TestM5ResumeFromStage6:
             gold_synthesizer=_StubGoldAnswerSynthesizer(),
             llm_client=_StubLLMClient(),
             contamination_model_id="gpt-4o",
-            resume_from="stage_6",
+            resume_from="gold_answer_synthesis",
         )
         result = resume_runner.run()
 
-        assert result.stages_completed == ("stage_6", "stage_5c", "export")
+        assert result.stages_completed == ("gold_answer_synthesis", "contamination_probe", "export")
 
-    def test_resume_from_stage_5c_skips_synthesis(self, tmp_path: Path) -> None:
+    def test_resume_from_contamination_probe_skips_synthesis(self, tmp_path: Path) -> None:
         # Full run first.
         _build_runner(
             tmp_path,
@@ -430,18 +429,18 @@ class TestM5ResumeFromStage6:
             gold_synthesizer=_StubGoldAnswerSynthesizer(),
             llm_client=_StubLLMClient(),
             contamination_model_id="gpt-4o",
-            resume_from="stage_5c",
+            resume_from="contamination_probe",
         )
         result = resume_runner.run()
 
-        assert result.stages_completed == ("stage_5c", "export")
+        assert result.stages_completed == ("contamination_probe", "export")
 
 
 class TestM5PipelineResultM5Field:
     def test_total_contaminated_field_has_default(self) -> None:
         result = PipelineResult(
             run_id="r1",
-            stages_completed=("stage_0",),
+            stages_completed=("source_spans",),
             output_dir="/tmp/test",
             total_candidates=1,
             total_validated=1,

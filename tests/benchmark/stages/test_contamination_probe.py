@@ -1,11 +1,10 @@
-"""Tests for Stage 5c: contamination probe.
+"""Tests for the contamination probe.
 
 All LLM calls are stubbed — no real API calls.
 """
 
 from __future__ import annotations
 
-import dataclasses
 import json
 
 import pytest
@@ -17,8 +16,7 @@ from benchmark.domain.models import (
     StageConfig,
 )
 from benchmark.ports.llm_client import LLMResponse
-from benchmark.stages.stage_5c_contamination import run_contamination_probe
-
+from benchmark.stages.contamination_probe import run_contamination_probe
 
 # ---------------------------------------------------------------------------
 # Helpers / stubs
@@ -143,7 +141,6 @@ class TestRunContaminationProbe:
         assert result[0].contamination_probes[MODEL_ID] is False
 
     def test_multiple_records_processed(self, config: StageConfig) -> None:
-        client = _StubLLMClient(gen_text="Answer.", judge_data={"correctness": 1.0})
         records = [_make_record(qid="q1"), _make_record(qid="q2")]
 
         # Need a fresh client per call since it uses call count.

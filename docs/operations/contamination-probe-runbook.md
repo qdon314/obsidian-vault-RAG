@@ -1,6 +1,6 @@
 # Contamination Probe Runbook
 
-The contamination probe (Stage 5c) detects benchmark queries that a model can answer
+The contamination probe detects benchmark queries that a model can answer
 correctly from training data alone — without reading any retrieved context.  Queries that
 pass the probe are considered "answer-core" candidates: they genuinely require the corpus
 to answer and are safe to include in answer-quality evaluations.
@@ -15,8 +15,8 @@ Re-run the contamination probe whenever:
   contaminated for `gpt-4o-2024-11-20` may not be contaminated for `gpt-4o-2025-01-01`.
 - **New answer-core candidates are added** — any time the validated query set grows,
   un-probed records need to be probed.
-- **The gold answers are revised** — if Stage 6 is re-run (e.g. after evidence changes),
-  the probe thresholds are re-evaluated against the new gold answers, so Stage 5c must
+- **The gold answers are revised** — if `gold_answer_synthesis` is re-run (e.g. after evidence changes),
+  the probe thresholds are re-evaluated against the new gold answers, so `contamination_probe` must
   re-run too.
 - **The contamination threshold is changed** — the current default is `0.7`
   (`correctness / 5.0 ≥ 0.7`). Changing it requires a full Stage 5c re-run.
@@ -37,9 +37,9 @@ Re-run the contamination probe whenever:
   --valid-as-of "$(date +%Y-%m-%d)"
 ```
 
-### Resuming from Stage 5c (gold answers already synthesised)
+### Resuming from contamination_probe (gold answers already synthesised)
 
-If Stage 6 (`stage_6_gold_answers.jsonl`) already exists from a prior run:
+If `gold_answer_synthesis.jsonl` already exists from a prior run:
 
 ```bash
 ./scripts/py -m benchmark.scripts.run_benchmark_gen \
@@ -47,14 +47,14 @@ If Stage 6 (`stage_6_gold_answers.jsonl`) already exists from a prior run:
   --output-dir benchmark_runs/ \
   --model gpt-4o \
   --contamination-model gpt-4o-2025-01-01 \
-  --resume-from stage_5c
+  --resume-from contamination_probe
 ```
 
-> **Note:** Omit `--synthesize-gold-answers` when resuming from Stage 5c — the runner
-> reads from `stage_6_gold_answers.jsonl` automatically.  Passing it without the flag
+> **Note:** Omit `--synthesize-gold-answers` when resuming from `contamination_probe` — the runner
+> reads from `gold_answer_synthesis.jsonl` automatically.  Passing it without the flag
 > emits a warning but does not block execution (safe to ignore if resuming).
 
-### Resuming from Stage 6 (re-synthesise gold answers)
+### Resuming from gold_answer_synthesis (re-synthesise gold answers)
 
 ```bash
 ./scripts/py -m benchmark.scripts.run_benchmark_gen \
@@ -63,14 +63,14 @@ If Stage 6 (`stage_6_gold_answers.jsonl`) already exists from a prior run:
   --model gpt-4o \
   --synthesize-gold-answers \
   --contamination-model gpt-4o-2025-01-01 \
-  --resume-from stage_6
+  --resume-from gold_answer_synthesis
 ```
 
 ---
 
 ## 3. Interpreting Results
 
-Stage 5c writes `benchmark_runs/<run_id>/stage_5c_probed_records.jsonl`.  Each line is a
+The contamination probe writes `benchmark_runs/<run_id>/contamination_probe.jsonl`.  Each line is a
 serialised `BenchmarkRecord`.  The relevant field is:
 
 ```json
@@ -95,7 +95,7 @@ serialised `BenchmarkRecord`.  The relevant field is:
 ```bash
 python3 -c "
 import json, sys
-records = [json.loads(l) for l in open('benchmark_runs/<run_id>/stage_5c_probed_records.jsonl')]
+records = [json.loads(l) for l in open('benchmark_runs/<run_id>/contamination_probe.jsonl')]
 model = 'gpt-4o-2025-01-01'
 total = len(records)
 contaminated = sum(1 for r in records if r.get('contamination_probes', {}).get(model))
@@ -113,7 +113,7 @@ Filter the probed records to produce an answer-core set:
 python3 -c "
 import json, pathlib
 model = 'gpt-4o-2025-01-01'
-src = pathlib.Path('benchmark_runs/<run_id>/stage_5c_probed_records.jsonl')
+src = pathlib.Path('benchmark_runs/<run_id>/contamination_probe.jsonl')
 dst = pathlib.Path('eval/datasets/answer_core_v1.jsonl')
 clean = [
     r for r in (json.loads(l) for l in src.read_text().splitlines() if l)
@@ -150,6 +150,6 @@ For a **75-query corpus** using `gpt-4o-2025-01-01`:
 
 **To estimate before running:**
 ```bash
-wc -l benchmark_runs/<run_id>/stage_6_gold_answers.jsonl
+wc -l benchmark_runs/<run_id>/gold_answer_synthesis.jsonl
 ```
 Each line = one record = two LLM calls.
