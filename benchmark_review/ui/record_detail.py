@@ -69,14 +69,19 @@ def _render_evidence(rec: ReviewRecord) -> None:
     ]:
         if not spans:
             continue
-        with st.expander(f"{tier_label} ({len(spans)} span{'s' if len(spans) != 1 else ''})", expanded=(tier_label == "Critical evidence")):
+        with st.expander(
+            f"{tier_label} ({len(spans)} span{'s' if len(spans) != 1 else ''})",
+            expanded=(tier_label == "Critical evidence"),
+        ):
             for span in spans:
                 st.markdown(f"**{span.citation}** · `{span.span_id}`")
                 st.markdown(f"> {span.text}")
 
 
 def _render_duplicate_hint(rec: ReviewRecord, all_records: list[ReviewRecord]) -> None:
-    same_unit = [r for r in all_records if r.unit_id == rec.unit_id and r.candidate_id != rec.candidate_id]
+    same_unit = [
+        r for r in all_records if r.unit_id == rec.unit_id and r.candidate_id != rec.candidate_id
+    ]
     if not same_unit:
         return
     with st.expander(f"Similar queries — same unit ({len(same_unit)})", expanded=False):
@@ -98,7 +103,9 @@ def _render_actions(rec: ReviewRecord, run_dir: Path, all_records: list[ReviewRe
     col1, col2, col3 = st.columns(3)
     approve = col1.button("✅ Approve", key=f"approve_{rec.candidate_id}", use_container_width=True)
     reject = col2.button("❌ Reject", key=f"reject_{rec.candidate_id}", use_container_width=True)
-    revise = col3.button("🔶 Needs revision", key=f"revise_{rec.candidate_id}", use_container_width=True)
+    revise = col3.button(
+        "🔶 Needs revision", key=f"revise_{rec.candidate_id}", use_container_width=True
+    )
 
     if revise:
         st.session_state[f"pending_action_{rec.candidate_id}"] = "needs_revision"
@@ -114,7 +121,11 @@ def _render_actions(rec: ReviewRecord, run_dir: Path, all_records: list[ReviewRe
             placeholder="Describe what needs fixing or why rejected",
         )
         if st.button("Save", key=f"save_note_{rec.candidate_id}", disabled=not note_text):
-            status = ReviewStatus.NEEDS_REVISION if pending_action == "needs_revision" else ReviewStatus.REJECTED
+            status = (
+                ReviewStatus.NEEDS_REVISION
+                if pending_action == "needs_revision"
+                else ReviewStatus.REJECTED
+            )
             save_decision(
                 run_dir=run_dir,
                 candidate_id=rec.candidate_id,
@@ -144,6 +155,6 @@ def _render_actions(rec: ReviewRecord, run_dir: Path, all_records: list[ReviewRe
 def _advance_to_next_pending(current_id: str, records: list[ReviewRecord]) -> None:
     ids = [r.candidate_id for r in records]
     current_idx = ids.index(current_id) if current_id in ids else -1
-    pending = [r for r in records[current_idx + 1:] if r.review_status == ReviewStatus.PENDING]
+    pending = [r for r in records[current_idx + 1 :] if r.review_status == ReviewStatus.PENDING]
     if pending:
         st.session_state["selected_id"] = pending[0].candidate_id

@@ -9,11 +9,15 @@ _BENCHMARK_RUNS_DIR = Path("benchmark_runs")
 
 def render() -> Path | None:
     """Render run + reviewer selector. Returns selected run_dir or None."""
-    run_dirs = sorted(
-        [d for d in _BENCHMARK_RUNS_DIR.iterdir() if d.is_dir()],
-        key=lambda d: d.name,
-        reverse=True,
-    ) if _BENCHMARK_RUNS_DIR.exists() else []
+    run_dirs = (
+        sorted(
+            [d for d in _BENCHMARK_RUNS_DIR.iterdir() if d.is_dir()],
+            key=lambda d: d.name,
+            reverse=True,
+        )
+        if _BENCHMARK_RUNS_DIR.exists()
+        else []
+    )
 
     if not run_dirs:
         st.error(f"No benchmark runs found in `{_BENCHMARK_RUNS_DIR}/`.")

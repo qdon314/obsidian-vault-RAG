@@ -30,9 +30,14 @@ def render(records: list[ReviewRecord]) -> str | None:
 
     status_filter = _FILTER_MAP[filter_choice]
     filtered = [
-        r for r in records
+        r
+        for r in records
         if (status_filter is None or r.review_status == status_filter)
-        and (not search or search.lower() in r.query.lower() or any(search.lower() in c.lower() for c in r.source_citations))
+        and (
+            not search
+            or search.lower() in r.query.lower()
+            or any(search.lower() in c.lower() for c in r.source_citations)
+        )
     ]
 
     if not filtered:
@@ -49,7 +54,12 @@ def render(records: list[ReviewRecord]) -> str | None:
         icon = _STATUS_ICON[rec.review_status]
         label = f"{icon} {rec.candidate_id}"
         is_selected = rec.candidate_id == selected_id
-        if st.button(label, key=f"btn_{rec.candidate_id}", use_container_width=True, type="primary" if is_selected else "secondary"):
+        if st.button(
+            label,
+            key=f"btn_{rec.candidate_id}",
+            use_container_width=True,
+            type="primary" if is_selected else "secondary",
+        ):
             selected_id = rec.candidate_id
 
     return selected_id

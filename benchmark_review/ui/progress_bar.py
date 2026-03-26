@@ -29,7 +29,16 @@ def render(records: list[ReviewRecord]) -> None:
     cols = st.columns([3, 1, 1, 1, 1])
     with cols[0]:
         st.progress(reviewed / total if total else 0, text=f"{reviewed} / {total} reviewed")
-    for col, status in zip(cols[1:], [ReviewStatus.PENDING, ReviewStatus.APPROVED, ReviewStatus.REJECTED, ReviewStatus.NEEDS_REVISION]):
+    for col, status in zip(
+        cols[1:],
+        [
+            ReviewStatus.PENDING,
+            ReviewStatus.APPROVED,
+            ReviewStatus.REJECTED,
+            ReviewStatus.NEEDS_REVISION,
+        ],
+        strict=True,
+    ):
         colour = _STATUS_COLOURS[status]
         label = _STATUS_LABELS[status]
         with col:
