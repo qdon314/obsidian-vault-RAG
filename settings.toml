@@ -188,7 +188,7 @@ max_retries = 3
 # Prompt Compression (ScaleDown)
 # -------------------------------------------------------------------
 [compression]
-enabled = true
+enabled = false
 backend = "scaledown"              # "noop" | "scaledown"
 api_url = "https://api.scaledown.xyz/compress/raw/"
 rate = "auto"
