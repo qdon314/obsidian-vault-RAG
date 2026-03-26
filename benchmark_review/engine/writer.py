@@ -34,6 +34,4 @@ def save_decision(
         "rejection_note": rejection_note,
     }
 
-    sidecar.write_text(
-        "\n".join(json.dumps(e) for e in existing.values()) + "\n"
-    )
+    sidecar.write_text("\n".join(json.dumps(e) for e in existing.values()) + "\n")

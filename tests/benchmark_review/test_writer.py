@@ -1,7 +1,8 @@
 import json
 from pathlib import Path
-from benchmark_review.engine.writer import save_decision
+
 from benchmark_review.engine.models import ReviewStatus
+from benchmark_review.engine.writer import save_decision
 
 
 def test_save_decision_creates_sidecar(tmp_path: Path):
