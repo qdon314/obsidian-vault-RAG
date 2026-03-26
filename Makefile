@@ -138,6 +138,9 @@ resultsv2:  ## Launch results analyzer app
 curate:  ## Launch query curator app
 	$(PYTHON) -m streamlit run eval/app/query_curator.py
 
+benchmark-review:  ## Launch benchmark review app
+	$(PYTHON) -m streamlit run benchmark_review/app.py
+
 verdict:  ## Generate eval verdict from latest run (requires baseline)
 	# Produces eval/verdicts/verdict.md + verdict.json for human + CI consumption.
 	$(PYTHON) eval/scripts/verdict.py \
