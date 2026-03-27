@@ -41,7 +41,9 @@ class DeterministicValidator:
     """Stage 5a: Deterministic validation of query candidates.
 
     Each failing check adds a descriptive flag string to the result.
-    ``is_valid`` is ``True`` only when no flags are raised.
+    ``is_valid`` is ``True`` only when no *blocking* flags are raised.
+    Flags listed in ``warn_only_flags`` are still recorded but do not
+    cause ``is_valid=False``.
     """
 
     def __init__(
@@ -51,7 +53,9 @@ class DeterministicValidator:
         max_query_length: int = 500,
         min_query_length: int = 10,
         max_evidence_spans: int = 6,
+        warn_only_flags: frozenset[str] | None = None,
     ) -> None:
+        self._warn_only_flags: frozenset[str] = warn_only_flags or frozenset()
         self._max_query_length = max_query_length
         self._min_query_length = min_query_length
         self._max_evidence_spans = max_evidence_spans
@@ -75,9 +79,10 @@ class DeterministicValidator:
         # Track this query for future dedup checks.
         self._known_normalized.add(self._normalize(candidate.query))
 
+        blocking = [f for f in flags if f not in self._warn_only_flags]
         return ValidationResult(
             candidate_id=candidate.candidate_id,
-            is_valid=len(flags) == 0,
+            is_valid=len(blocking) == 0,
             flags=tuple(flags),
         )
 

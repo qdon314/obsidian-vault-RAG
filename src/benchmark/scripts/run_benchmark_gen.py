@@ -106,6 +106,16 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--warn-only-flags",
+        default="",
+        metavar="FLAGS",
+        help=(
+            "Comma-separated validation flags that are recorded but do not block a query "
+            "(e.g. missing_snapshot_id,too_many_evidence_spans). "
+            "Useful when resuming older runs that predate certain checks."
+        ),
+    )
+    parser.add_argument(
         "--rpm-limit",
         type=float,
         default=0.0,
@@ -187,8 +197,13 @@ def main() -> None:
         query_generators[QueryClass.UNANSWERABLE] = UnanswerableGenerator(llm_client, stage_config)
 
     # -- Wire validator ---------------------------------------------------
-    deterministic = DeterministicValidator()
-    validator = LLMValidator(llm_client, stage_config, deterministic=deterministic)
+    warn_only: frozenset[str] = frozenset(
+        f.strip() for f in args.warn_only_flags.split(",") if f.strip()
+    )
+    deterministic = DeterministicValidator(warn_only_flags=warn_only or None)
+    validator = LLMValidator(
+        llm_client, stage_config, deterministic=deterministic, warn_only_flags=warn_only or None
+    )
 
     # -- Wire retriever (optional) ----------------------------------------
     retriever = None
@@ -248,7 +263,6 @@ def main() -> None:
         from benchmark.adapters.extraction.llm_classifier import (  # type: ignore[import-untyped]
             LLMUnitClassifier,
         )
-
         from benchmark.stages.source_spans import build_source_spans
 
         unit_extractor = ECFRUnitExtractor()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
@@ -196,6 +197,28 @@ class TestFieldMapping:
     def test_is_unanswerable_false_by_default(self, tmp_path: Path) -> None:
         row = self._load_first(tmp_path, _make_record())
         assert row["is_unanswerable"] is False
+
+    def test_gold_answer_mapped_to_expected_answer(self, tmp_path: Path) -> None:
+        record = dataclasses.replace(_make_record(), gold_answer="The limit is 2200°F.")
+        row = self._load_first(tmp_path, record)
+        assert row["expected_answer"] == "The limit is 2200°F."
+
+    def test_acceptable_answer_variants_mapped(self, tmp_path: Path) -> None:
+        record = dataclasses.replace(
+            _make_record(),
+            gold_answer="The limit is 2200°F.",
+            acceptable_answer_variants=("2200 degrees Fahrenheit", "1204°C"),
+        )
+        row = self._load_first(tmp_path, record)
+        assert row["expected_answer_alternatives"] == ["2200 degrees Fahrenheit", "1204°C"]
+
+    def test_expected_answer_null_when_no_gold_answer(self, tmp_path: Path) -> None:
+        row = self._load_first(tmp_path, _make_record())
+        assert row["expected_answer"] is None
+
+    def test_expected_answer_alternatives_empty_when_no_variants(self, tmp_path: Path) -> None:
+        row = self._load_first(tmp_path, _make_record())
+        assert row["expected_answer_alternatives"] == []
 
 
 # -- Query type mapping -------------------------------------------------------

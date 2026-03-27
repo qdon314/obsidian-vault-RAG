@@ -87,6 +87,8 @@ def _to_eval_query(record: BenchmarkRecord) -> EvalQuery:
         query_type=query_type,
         is_unanswerable=record.is_unanswerable,
         unanswerable_reason=record.unanswerable_reason,
+        expected_answer=record.gold_answer,
+        expected_answer_alternatives=list(record.acceptable_answer_variants),
         metadata={
             "corpus_snapshot_id": record.corpus_snapshot_id,
             "valid_as_of": record.valid_as_of,

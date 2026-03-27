@@ -1,6 +1,6 @@
 {
   "run_id": "first_run",
   "output_dir": "benchmark_runs/",
-  "resume_from": "unit_classification",
+  "resume_from": "gold_answer_synthesis",
   "corpus_snapshot_id": ""
 }

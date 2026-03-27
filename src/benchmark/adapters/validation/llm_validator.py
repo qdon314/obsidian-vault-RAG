@@ -131,6 +131,7 @@ class LLMValidator:
         *,
         deterministic: DeterministicValidator,
         score_thresholds: dict[str, float] | None = None,
+        warn_only_flags: frozenset[str] | None = None,
     ) -> None:
         self._llm_client = llm_client
         self._config = config
@@ -138,6 +139,7 @@ class LLMValidator:
         self._thresholds = dict(_DEFAULT_THRESHOLDS)
         if score_thresholds:
             self._thresholds.update(score_thresholds)
+        self._warn_only_flags: frozenset[str] = warn_only_flags or frozenset()
 
     def validate(self, candidate: QueryCandidate) -> ValidationResult:
         """Run deterministic checks first; if passed, run LLM scoring.
@@ -167,9 +169,10 @@ class LLMValidator:
             if score < threshold:
                 flags.append(f"low_{dim}:{score:.2f}")
 
+        blocking = [f for f in flags if f not in self._warn_only_flags]
         return ValidationResult(
             candidate_id=candidate.candidate_id,
-            is_valid=len(flags) == 0,
+            is_valid=len(blocking) == 0,
             flags=tuple(flags),
             scores=scores,
         )
